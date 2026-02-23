@@ -1,0 +1,61 @@
+Project Title:
+Client Dashboard Platform for Bauwerksbuch‑Archkorab
+About the Company:
+We operate the website www.bauwerksbuch-archkorab.at and specialize in creating Bauwerksbücher (building documentation books) for our clients. Many of our clients manage multiple buildings or construction projects with us. We want to provide them with a centralized digital platform to access and manage all their projects efficiently.
+
+Goal of the Platform
+Build a secure, user-friendly client dashboard system where clients with multiple projects can log in and:
+- View all their projects in a clean, organized list
+- Open each project to access detailed information
+- Download all associated files and documents
+- See the building’s location (map integration)
+- View a calendar with upcoming events, deadlines, and inspections
+- Access a logbook of past inspections
+- Track yearly engineering visits required for building condition checks
+
+Core Features to Implement
+1. Authentication & Client Accounts
+- Secure login system (email + password, optional 2FA)
+- Role-based access (admin, engineer, client)
+- Each client sees only their own projects
+2. Client Dashboard
+- Overview page listing all projects assigned to the client
+- Search, filter, and sort options
+- Quick status indicators (e.g., next inspection due, missing documents)
+3. Project Detail Page
+- Project name, address, and metadata
+- Map integration (Google Maps or OpenStreetMap)
+- Download section for all project files (PDFs, reports, images, etc.)
+- Upload option for clients (optional)
+- Timeline of project milestones
+4. Calendar System
+- Upcoming inspections
+- Deadlines for document updates
+- Engineer visit scheduling
+- Sync option with Google Calendar / Outlook (optional)
+5. Inspection Logbook
+- List of all past inspections
+- Date, engineer name, notes, and attached reports
+- Status indicators (OK, needs repair, urgent)
+6. Admin / Engineer Backend
+- Create and manage projects
+- Upload documents
+- Add inspection entries
+- Manage client accounts
+- Set reminders for yearly inspections
+
+Technical Requirements
+- Modern web stack (React, Next.js, Vue, or similar)
+- Backend with Node.js, Python, or similar
+- Database (PostgreSQL, MySQL, or MongoDB)
+- Secure file storage (local, S3, or similar)
+- Authentication system (JWT or session-based)
+- Responsive UI for desktop and mobile
+
+Deliverables
+- Full project structure
+- Frontend + backend implementation
+- Database schema for clients, projects, files, inspections, events
+- API endpoints for all features
+- UI components for dashboard, project pages, calendar, and logbook
+- Documentation for deployment and maintenance
