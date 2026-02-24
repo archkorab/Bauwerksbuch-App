@@ -65,6 +65,7 @@ export default function LandingPage() {
           </p>
 
           <button 
+            data-testid="button-login"
             onClick={() => window.location.href = '/api/login'}
             className="w-full py-4 px-6 rounded-xl font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
           >

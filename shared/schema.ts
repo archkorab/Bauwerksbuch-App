@@ -15,7 +15,7 @@ export const projectStatusEnum = z.enum(["active", "completed", "archived"]);
 // --- Table Definitions ---
 export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
+  userId: text("user_id").notNull().unique().references(() => users.id),
   role: text("role", { enum: ["admin", "engineer", "client"] }).notNull().default("client"),
   phone: text("phone"),
   company: text("company"),

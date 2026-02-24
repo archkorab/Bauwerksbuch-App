@@ -51,7 +51,7 @@ export function Layout({ children }: LayoutProps) {
             {navItems.map((item) => {
               const isActive = location === item.href || (location === "/" && item.href === "/projects");
               return (
-                <Link key={item.name} href={item.href} className="block">
+                <Link key={item.name} href={item.href} className="block" data-testid={`link-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
                   <div
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer
                       ${isActive 
@@ -85,6 +85,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <Button 
+              data-testid="button-logout"
               variant="ghost" 
               className="w-full justify-start gap-3 mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
               onClick={() => logout()}

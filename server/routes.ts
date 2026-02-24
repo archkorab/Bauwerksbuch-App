@@ -136,10 +136,22 @@ export async function registerRoutes(
     }
   });
 
+  // Helper to check project access for clients
+  async function checkProjectAccess(userId: string, projectId: number): Promise<boolean> {
+    const profile = await storage.getProfile(userId);
+    if (profile?.role === "admin" || profile?.role === "engineer") return true;
+    const project = await storage.getProject(projectId);
+    return project?.clientId === userId;
+  }
+
   // --- Documents ---
   app.get(api.documents.list.path, isAuthenticated, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      if (!(await checkProjectAccess(userId, projectId))) {
+        return res.status(404).json({ message: "Project not found" });
+      }
       const docs = await storage.getDocuments(projectId);
       res.json(docs);
     } catch (error) {
@@ -175,9 +187,28 @@ export async function registerRoutes(
   // --- Events ---
   app.get(api.events.list.path, isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string, 10) : undefined;
-      const allEvents = await storage.getEvents(projectId);
-      res.json(allEvents);
+      
+      if (projectId) {
+        if (!(await checkProjectAccess(userId, projectId))) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+        const projectEvents = await storage.getEvents(projectId);
+        return res.json(projectEvents);
+      }
+      
+      if (profile?.role === "admin" || profile?.role === "engineer") {
+        const allEvents = await storage.getEvents();
+        return res.json(allEvents);
+      }
+      
+      const clientProjects = await storage.getProjects(userId);
+      const clientProjectIds = clientProjects.map(p => p.id);
+      const allEvents = await storage.getEvents();
+      const filteredEvents = allEvents.filter(e => e.projectId && clientProjectIds.includes(e.projectId));
+      res.json(filteredEvents);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch events" });
     }
@@ -230,6 +261,10 @@ export async function registerRoutes(
   app.get(api.inspections.list.path, isAuthenticated, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      if (!(await checkProjectAccess(userId, projectId))) {
+        return res.status(404).json({ message: "Project not found" });
+      }
       const insps = await storage.getInspections(projectId);
       res.json(insps);
     } catch (error) {
