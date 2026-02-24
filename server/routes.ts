@@ -6,6 +6,38 @@ import { authStorage } from "./replit_integrations/auth/storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import XLSX from "xlsx";
+
+const uploadsBaseDir = path.join(process.cwd(), "uploads", "bauakt");
+fs.mkdirSync(uploadsBaseDir, { recursive: true });
+
+function getProjectUploadsDir(projectId: number): string {
+  const dir = path.join(uploadsBaseDir, String(projectId));
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const bauaktUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req: any, _file, cb) => {
+      const projectId = parseInt(req.params.projectId, 10);
+      cb(null, getProjectUploadsDir(projectId));
+    },
+    filename: (_req, file, cb) => {
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      cb(null, originalName);
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 },
+});
+
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -421,6 +453,109 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: "Failed to update defect" });
     }
+  });
+
+  // --- Bauakt (Digitaler Bauakt) ---
+  app.get(api.bauakte.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const projectId = parseInt(req.params.projectId, 10);
+      if (!(await checkProjectAccess(userId, projectId))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const bauakte = await storage.getBauakte(projectId);
+      res.json(bauakte);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bauakte" });
+    }
+  });
+
+  app.post(api.bauakte.import.path, isAuthenticated, excelUpload.single('file'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Only admins can import bauakt data" });
+      }
+      const projectId = parseInt(req.params.projectId, 10);
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      if (rows.length < 2) {
+        return res.status(400).json({ message: "Excel file has no data rows" });
+      }
+
+      const projectDir = getProjectUploadsDir(projectId);
+      const entries = rows.slice(1).filter((row: any[]) => row[0]).map((row: any[]) => {
+        const dateiname = String(row[0]).trim();
+        let fileUrl: string | null = null;
+        const extensions = ['.pdf', '.PDF', '.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.tif', '.TIF', '.tiff', '.TIFF'];
+        for (const ext of extensions) {
+          if (fs.existsSync(path.join(projectDir, dateiname + ext))) {
+            fileUrl = `/api/bauakt-files/${projectId}/${encodeURIComponent(dateiname + ext)}`;
+            break;
+          }
+        }
+        if (!fileUrl && fs.existsSync(path.join(projectDir, dateiname))) {
+          fileUrl = `/api/bauakt-files/${projectId}/${encodeURIComponent(dateiname)}`;
+        }
+        return {
+          projectId,
+          dateiname,
+          jahr: row[2] != null ? String(row[2]) : null,
+          beschreibung: row[3] != null ? String(row[3]).trim() : null,
+          art: row[4] != null ? String(row[4]).trim() : null,
+          anmerkung: row[5] != null ? String(row[5]).trim() : null,
+          fileUrl,
+        };
+      });
+
+      await storage.deleteBauakteByProject(projectId);
+      const created = await storage.createBauaktBatch(entries);
+      res.json({ count: created.length });
+    } catch (err) {
+      console.error("Bauakt import error:", err);
+      res.status(500).json({ message: "Failed to import bauakt data" });
+    }
+  });
+
+  app.post(api.bauakte.uploadFile.path, isAuthenticated, bauaktUpload.array('files', 100), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Only admins can upload bauakt files" });
+      }
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+      res.json({ filename: files.map(f => f.filename).join(', '), url: 'uploaded' });
+    } catch (err) {
+      console.error("Bauakt file upload error:", err);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
+  });
+
+  app.get('/api/bauakt-files/:projectId/:filename', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const projectId = parseInt(req.params.projectId, 10);
+    if (!(await checkProjectAccess(userId, projectId))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    const filename = decodeURIComponent(req.params.filename);
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ message: "Invalid filename" });
+    }
+    const filePath = path.join(getProjectUploadsDir(projectId), filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    res.sendFile(filePath);
   });
 
   // Seed the database with sample data on startup

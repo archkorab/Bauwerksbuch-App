@@ -6,12 +6,14 @@ import {
   insertEventSchema, 
   insertInspectionSchema,
   insertDefectSchema,
+  insertBauaktSchema,
   projects,
   profiles,
   documents,
   events,
   inspections,
   defects,
+  bauakt,
   users
 } from './schema';
 
@@ -301,6 +303,45 @@ export const api = {
         200: defectSchema,
         400: errorSchemas.validation,
         404: errorSchemas.notFound,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
+    }
+  },
+  bauakte: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/projects/:projectId/bauakte' as const,
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          projectId: z.number(),
+          dateiname: z.string(),
+          jahr: z.string().nullable(),
+          beschreibung: z.string().nullable(),
+          art: z.string().nullable(),
+          anmerkung: z.string().nullable(),
+          fileUrl: z.string().nullable(),
+        })),
+        401: errorSchemas.unauthorized
+      }
+    },
+    import: {
+      method: 'POST' as const,
+      path: '/api/projects/:projectId/bauakte/import' as const,
+      responses: {
+        200: z.object({ count: z.number() }),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
+    },
+    uploadFile: {
+      method: 'POST' as const,
+      path: '/api/projects/:projectId/bauakte/upload' as const,
+      responses: {
+        200: z.object({ filename: z.string(), url: z.string() }),
+        400: errorSchemas.validation,
         401: errorSchemas.unauthorized,
         403: errorSchemas.unauthorized
       }

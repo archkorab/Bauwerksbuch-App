@@ -47,6 +47,7 @@ client/src/
 - events (title, date, type, projectId)
 - inspections (date, status, notes, engineerId, projectId) - primary inspections
 - defects (defectId, dateFound, description, location, status, parentDefectId, inspectionId) - defect findings per inspection, with follow-up support via parentDefectId
+- bauakt (dateiname, jahr, beschreibung, art, anmerkung, fileUrl, projectId) - digital building records imported from Excel
 
 ## Inspection/Defect Model
 - Each inspection is a "primary inspection" with a date, engineer, status, and notes
@@ -68,6 +69,8 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-24: Added "Digitaler Bauakt" tab to project details - Excel import, file upload/hosting, searchable table with Dateiname/Jahr/Beschreibung/Art/Anmerkung columns
+- 2026-02-24: Added project edit function to Projektdetails page (admin/engineer only)
 - 2026-02-24: Added Verwaltung (verwaltungId FK to users) and Eigentümer (free text) fields to projects; displayed in project details and creation form
 - 2026-02-24: Translated entire app interface to German
 - 2026-02-24: Added defects table with primary/follow-up structure; inspection logbook shows Defect ID, Date, Description, Location in table format

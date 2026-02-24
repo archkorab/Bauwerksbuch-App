@@ -6,6 +6,7 @@ import {
   events,
   inspections,
   defects,
+  bauakt,
   users,
   type Profile,
   type InsertProfile,
@@ -26,6 +27,8 @@ import {
   type Defect,
   type InsertDefect,
   type UpdateDefectRequest,
+  type Bauakt,
+  type InsertBauakt,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -59,6 +62,11 @@ export interface IStorage {
   getDefects(inspectionId: number): Promise<Defect[]>;
   createDefect(data: InsertDefect): Promise<Defect>;
   updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect>;
+
+  getBauakte(projectId: number): Promise<Bauakt[]>;
+  createBauakt(data: InsertBauakt): Promise<Bauakt>;
+  createBauaktBatch(data: InsertBauakt[]): Promise<Bauakt[]>;
+  deleteBauakteByProject(projectId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,6 +257,25 @@ export class DatabaseStorage implements IStorage {
   async updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect> {
     const [updated] = await db.update(defects).set(data).where(eq(defects.id, id)).returning();
     return updated;
+  }
+
+  async getBauakte(projectId: number): Promise<Bauakt[]> {
+    return await db.select().from(bauakt).where(eq(bauakt.projectId, projectId)).orderBy(bauakt.jahr);
+  }
+
+  async createBauakt(data: InsertBauakt): Promise<Bauakt> {
+    const [entry] = await db.insert(bauakt).values(data).returning();
+    return entry;
+  }
+
+  async createBauaktBatch(data: InsertBauakt[]): Promise<Bauakt[]> {
+    if (data.length === 0) return [];
+    const entries = await db.insert(bauakt).values(data).returning();
+    return entries;
+  }
+
+  async deleteBauakteByProject(projectId: number): Promise<void> {
+    await db.delete(bauakt).where(eq(bauakt.projectId, projectId));
   }
 }
 

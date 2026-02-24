@@ -7,10 +7,11 @@ import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
 import { useInspections, useCreateInspection } from "@/hooks/use-inspections";
+import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil
+  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,15 +53,19 @@ export default function ProjectDetails() {
   const { data: profile } = useProfile();
   
   const { data: clients } = useClients();
+  const { data: bauakte } = useBauakte(projectId);
   const createDocument = useCreateDocument();
   const createEvent = useCreateEvent();
   const createInspection = useCreateInspection();
   const updateProject = useUpdateProject();
+  const importBauakt = useImportBauakt();
+  const uploadBauaktFiles = useUploadBauaktFiles();
   
   const [docDialogOpen, setDocDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [bauaktSearch, setBauaktSearch] = useState("");
 
   const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
 
@@ -297,6 +302,7 @@ export default function ProjectDetails() {
           <Tabs defaultValue="documents" className="w-full">
             <TabsList className="bg-card border border-border p-1 rounded-xl mb-6">
               <TabsTrigger value="documents" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dokumente</TabsTrigger>
+              <TabsTrigger value="bauakt" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-bauakt">Digitaler Bauakt</TabsTrigger>
               <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Prüfungen</TabsTrigger>
               <TabsTrigger value="events" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Zeitleiste</TabsTrigger>
             </TabsList>
@@ -348,6 +354,142 @@ export default function ProjectDetails() {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            {/* Digitaler Bauakt Tab */}
+            <TabsContent value="bauakt" className="space-y-4" data-testid="tab-bauakt">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <h3 className="font-display font-bold text-xl">Digitaler Bauakt</h3>
+                <div className="flex items-center gap-2">
+                  {profile?.role === "admin" && (
+                    <>
+                      <label htmlFor="bauakt-file-upload" className="cursor-pointer">
+                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" asChild>
+                          <span><FileUp className="w-4 h-4 mr-2" /> Dateien hochladen</span>
+                        </Button>
+                        <input
+                          id="bauakt-file-upload"
+                          type="file"
+                          multiple
+                          accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff"
+                          className="hidden"
+                          data-testid="input-bauakt-file-upload"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              uploadBauaktFiles.mutate({ projectId, files: e.target.files });
+                            }
+                          }}
+                        />
+                      </label>
+                      <label htmlFor="bauakt-excel-import" className="cursor-pointer">
+                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" asChild>
+                          <span><Upload className="w-4 h-4 mr-2" /> Excel importieren</span>
+                        </Button>
+                        <input
+                          id="bauakt-excel-import"
+                          type="file"
+                          accept=".xlsx,.xls"
+                          className="hidden"
+                          data-testid="input-bauakt-excel-import"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              importBauakt.mutate({ projectId, file: e.target.files[0] });
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {(importBauakt.isPending || uploadBauaktFiles.isPending) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card border border-border rounded-xl p-3">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {importBauakt.isPending ? "Excel wird importiert..." : "Dateien werden hochgeladen..."}
+                </div>
+              )}
+
+              <div className="mb-4">
+                <Input
+                  placeholder="Suche nach Dateiname, Beschreibung, Art..."
+                  value={bauaktSearch}
+                  onChange={(e) => setBauaktSearch(e.target.value)}
+                  className="bg-background border-border"
+                  data-testid="input-bauakt-search"
+                />
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl overflow-hidden">
+                {!bauakte || bauakte.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <Archive className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>Noch keine Bauakt-Einträge vorhanden.</p>
+                    {profile?.role === "admin" && <p className="text-sm mt-1">Importieren Sie eine Excel-Datei, um Einträge hinzuzufügen.</p>}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" data-testid="table-bauakt">
+                      <thead>
+                        <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                          <th className="text-left px-5 py-3 font-semibold">Dateiname</th>
+                          <th className="text-left px-5 py-3 font-semibold">Jahr</th>
+                          <th className="text-left px-5 py-3 font-semibold">Beschreibung</th>
+                          <th className="text-left px-5 py-3 font-semibold">Art</th>
+                          <th className="text-left px-5 py-3 font-semibold">Anmerkung</th>
+                          <th className="text-left px-5 py-3 font-semibold w-16">Datei</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {bauakte
+                          .filter((entry: any) => {
+                            if (!bauaktSearch) return true;
+                            const s = bauaktSearch.toLowerCase();
+                            return (
+                              entry.dateiname?.toLowerCase().includes(s) ||
+                              entry.beschreibung?.toLowerCase().includes(s) ||
+                              entry.art?.toLowerCase().includes(s) ||
+                              entry.anmerkung?.toLowerCase().includes(s) ||
+                              entry.jahr?.includes(s)
+                            );
+                          })
+                          .map((entry: any) => (
+                            <tr key={entry.id} className="hover:bg-white/[0.02] transition-colors" data-testid={`bauakt-row-${entry.id}`}>
+                              <td className="px-5 py-3 font-medium text-foreground">{entry.dateiname}</td>
+                              <td className="px-5 py-3 text-foreground">{entry.jahr || '—'}</td>
+                              <td className="px-5 py-3 text-foreground max-w-xs">{entry.beschreibung || '—'}</td>
+                              <td className="px-5 py-3">
+                                <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
+                                  ${entry.art === 'Plan' ? 'text-blue-400 border-blue-400/30 bg-blue-400/10' : 
+                                    entry.art === 'Bescheid' ? 'text-amber-400 border-amber-400/30 bg-amber-400/10' :
+                                    'text-muted-foreground border-border bg-muted/20'}`}>
+                                  {entry.art || '—'}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3 text-foreground text-xs max-w-xs">{entry.anmerkung || '—'}</td>
+                              <td className="px-5 py-3">
+                                {entry.fileUrl ? (
+                                  <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80" data-testid={`bauakt-file-link-${entry.id}`}>
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground/30">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {bauakte && bauakte.length > 0 && (
+                <p className="text-xs text-muted-foreground">{bauakte.filter((e: any) => {
+                  if (!bauaktSearch) return true;
+                  const s = bauaktSearch.toLowerCase();
+                  return e.dateiname?.toLowerCase().includes(s) || e.beschreibung?.toLowerCase().includes(s) || e.art?.toLowerCase().includes(s) || e.anmerkung?.toLowerCase().includes(s) || e.jahr?.includes(s);
+                }).length} von {bauakte.length} Einträgen</p>
+              )}
             </TabsContent>
 
             {/* Inspections Tab */}

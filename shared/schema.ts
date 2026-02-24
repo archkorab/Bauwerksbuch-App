@@ -75,6 +75,17 @@ export const defects = pgTable("defects", {
   parentDefectId: integer("parent_defect_id"),
 });
 
+export const bauakt = pgTable("bauakt", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  dateiname: text("dateiname").notNull(),
+  jahr: text("jahr"),
+  beschreibung: text("beschreibung"),
+  art: text("art"),
+  anmerkung: text("anmerkung"),
+  fileUrl: text("file_url"),
+});
+
 // --- Relations ---
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, {
@@ -107,6 +118,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   documents: many(documents),
   events: many(events),
   inspections: many(inspections),
+  bauakte: many(bauakt),
 }));
 
 export const documentsRelations = relations(documents, ({ one }) => ({
@@ -152,6 +164,12 @@ export const defectsRelations = relations(defects, ({ one }) => ({
   }),
 }));
 
+export const bauaktRelations = relations(bauakt, ({ one }) => ({
+  project: one(projects, {
+    fields: [bauakt.projectId],
+    references: [projects.id],
+  }),
+}));
 
 // --- Base Schemas ---
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true });
@@ -160,6 +178,7 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({ id: tru
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertInspectionSchema = createInsertSchema(inspections).omit({ id: true });
 export const insertDefectSchema = createInsertSchema(defects).omit({ id: true });
+export const insertBauaktSchema = createInsertSchema(bauakt).omit({ id: true });
 
 // --- Explicit API Contract Types ---
 
@@ -201,4 +220,8 @@ export type Defect = typeof defects.$inferSelect;
 export type InsertDefect = z.infer<typeof insertDefectSchema>;
 export type CreateDefectRequest = InsertDefect;
 export type UpdateDefectRequest = Partial<InsertDefect>;
+
+// Bauakt
+export type Bauakt = typeof bauakt.$inferSelect;
+export type InsertBauakt = z.infer<typeof insertBauaktSchema>;
 
