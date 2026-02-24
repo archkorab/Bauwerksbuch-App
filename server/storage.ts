@@ -64,6 +64,7 @@ export interface IStorage {
   getDefects(inspectionId: number): Promise<Defect[]>;
   createDefect(data: InsertDefect): Promise<Defect>;
   updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect>;
+  deleteDefect(id: number): Promise<void>;
 
   getBauakte(projectId: number): Promise<Bauakt[]>;
   createBauakt(data: InsertBauakt): Promise<Bauakt>;
@@ -278,6 +279,10 @@ export class DatabaseStorage implements IStorage {
   async updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect> {
     const [updated] = await db.update(defects).set(data).where(eq(defects.id, id)).returning();
     return updated;
+  }
+
+  async deleteDefect(id: number): Promise<void> {
+    await db.delete(defects).where(eq(defects.id, id));
   }
 
   async getBauakte(projectId: number): Promise<Bauakt[]> {

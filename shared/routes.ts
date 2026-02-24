@@ -335,6 +335,16 @@ export const api = {
         401: errorSchemas.unauthorized,
         403: errorSchemas.unauthorized
       }
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/defects/:id' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
     }
   },
   bauakte: {
@@ -396,6 +406,7 @@ export type {
   UpdateProjectRequest, 
   CreateEventRequest, 
   CreateInspectionRequest, 
+  UpdateInspectionRequest,
   CreateDocumentRequest,
   CreateDefectRequest,
   UpdateDefectRequest,

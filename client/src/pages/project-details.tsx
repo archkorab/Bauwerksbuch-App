@@ -6,7 +6,7 @@ import { useProject, useUpdateProject } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
-import { useInspections, useCreateInspection, useCreateDefect } from "@/hooks/use-inspections";
+import { useInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useUpdateDefect, useDeleteDefect } from "@/hooks/use-inspections";
 import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
@@ -70,6 +70,9 @@ export default function ProjectDetails() {
   const createEvent = useCreateEvent();
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
+  const updateInspection = useUpdateInspection();
+  const updateDefect = useUpdateDefect();
+  const deleteDefect = useDeleteDefect();
   const updateProject = useUpdateProject();
   const importBauakt = useImportBauakt();
   const uploadBauaktFiles = useUploadBauaktFiles();
@@ -83,6 +86,11 @@ export default function ProjectDetails() {
   const isAdmin = profile?.role === "admin";
 
   const [defectEntries, setDefectEntries] = useState<DefectEntry[]>([]);
+  const [editInspDialogOpen, setEditInspDialogOpen] = useState(false);
+  const [editingInspection, setEditingInspection] = useState<any>(null);
+  const [editDefectEntries, setEditDefectEntries] = useState<(DefectEntry & { existingId?: number })[]>([]);
+  const [editInspSubmitting, setEditInspSubmitting] = useState(false);
+  const [deletedDefectIds, setDeletedDefectIds] = useState<number[]>([]);
 
   const addDefectEntry = () => {
     setDefectEntries(prev => [...prev, {
@@ -179,6 +187,93 @@ export default function ProjectDetails() {
       console.error("Failed to create inspection:", error);
     } finally {
       setInspSubmitting(false);
+    }
+  };
+
+  const openEditInspection = (ins: any) => {
+    setEditingInspection(ins);
+    resetEditInspForm({
+      date: ins.date ? format(new Date(ins.date), 'yyyy-MM-dd') : "",
+      status: ins.status || "OK",
+      type: (ins as any).type || "erstpruefung",
+      notes: ins.notes || "",
+    });
+    const existingDefects = (ins.defects || []).map((d: any) => ({
+      existingId: d.id,
+      defectId: d.defectId,
+      dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
+      description: d.description,
+      location: d.location,
+      status: d.status,
+    }));
+    setEditDefectEntries(existingDefects);
+    setDeletedDefectIds([]);
+    setEditInspDialogOpen(true);
+  };
+
+  const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp } = useForm({
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
+  });
+  const editInspType = watchEditInsp("type");
+  const editInspStatus = watchEditInsp("status");
+
+  const onEditInspSubmit = async (data: any) => {
+    if (!editingInspection) return;
+    setEditInspSubmitting(true);
+    try {
+      await updateInspection.mutateAsync({
+        id: editingInspection.id,
+        projectId,
+        data: {
+          date: new Date(data.date),
+          status: data.status,
+          type: data.type,
+          notes: data.notes || null,
+        }
+      });
+
+      for (const id of deletedDefectIds) {
+        await deleteDefect.mutateAsync({ id, projectId });
+      }
+
+      for (const entry of editDefectEntries) {
+        if (!entry.defectId || !entry.dateFound || !entry.description || !entry.location) continue;
+        if (entry.existingId) {
+          await updateDefect.mutateAsync({
+            id: entry.existingId,
+            projectId,
+            data: {
+              defectId: entry.defectId,
+              dateFound: new Date(entry.dateFound),
+              description: entry.description,
+              location: entry.location,
+              status: entry.status as "leichter_mangel" | "grober_mangel",
+            }
+          });
+        } else {
+          await createDefect.mutateAsync({
+            inspectionId: editingInspection.id,
+            projectId,
+            data: {
+              inspectionId: editingInspection.id,
+              defectId: entry.defectId,
+              dateFound: new Date(entry.dateFound),
+              description: entry.description,
+              location: entry.location,
+              status: entry.status as "leichter_mangel" | "grober_mangel",
+            }
+          });
+        }
+      }
+
+      setEditInspDialogOpen(false);
+      setEditingInspection(null);
+      setEditDefectEntries([]);
+      setDeletedDefectIds([]);
+    } catch (error) {
+      console.error("Failed to update inspection:", error);
+    } finally {
+      setEditInspSubmitting(false);
     }
   };
 
@@ -700,6 +795,119 @@ export default function ProjectDetails() {
                   </Dialog>
                 )}
               </div>
+              <Dialog open={editInspDialogOpen} onOpenChange={(open) => { setEditInspDialogOpen(open); if (!open) { setEditingInspection(null); setEditDefectEntries([]); setDeletedDefectIds([]); } }}>
+                <DialogContent className="bg-card border-border sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle className="font-display text-xl">Prüfung bearbeiten</DialogTitle></DialogHeader>
+                  <form onSubmit={handleEditInspSubmit(onEditInspSubmit)} className="space-y-6 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Art der Prüfung</Label>
+                        <Select value={editInspType} onValueChange={(val) => setEditInspValue("type", val)}>
+                          <SelectTrigger className="bg-background border-border" data-testid="edit-select-inspection-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="erstpruefung">Erstprüfung</SelectItem>
+                            <SelectItem value="folgepruefung">Folgeprüfung</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Prüfdatum</Label>
+                        <Input type="date" {...editInspReg("date")} required className="bg-background border-border" data-testid="edit-input-inspection-date" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={editInspStatus} onValueChange={(val) => setEditInspValue("status", val)}>
+                          <SelectTrigger className="bg-background border-border" data-testid="edit-select-inspection-status">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="OK">OK</SelectItem>
+                            <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
+                            <SelectItem value="urgent">Dringend</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Anmerkungen</Label>
+                        <Input {...editInspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="edit-input-inspection-notes" />
+                      </div>
+                    </div>
+
+                    <div className="border-t border-border pt-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-display font-bold text-base">Mängel</h4>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", dateFound: "", description: "", location: "", status: "leichter_mangel" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
+                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
+                        </Button>
+                      </div>
+
+                      {editDefectEntries.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Keine Mängel vorhanden.</p>
+                      )}
+
+                      <div className="space-y-4">
+                        {editDefectEntries.map((entry, index) => (
+                          <div key={index} className="bg-background border border-border rounded-xl p-4 space-y-3" data-testid={`edit-defect-entry-${index}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                {entry.existingId ? "Mangel" : "Neuer Mangel"} {index + 1}
+                              </span>
+                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => {
+                                if (entry.existingId) setDeletedDefectIds(prev => [...prev, entry.existingId!]);
+                                setEditDefectEntries(prev => prev.filter((_, i) => i !== index));
+                              }} data-testid={`edit-button-remove-defect-${index}`}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Mangel-Nr.</Label>
+                                <Input value={entry.defectId} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, defectId: e.target.value } : ent))} placeholder="z.B. M-001" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-id-${index}`} />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Datum der Feststellung</Label>
+                                <Input type="date" value={entry.dateFound} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, dateFound: e.target.value } : ent))} required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-date-${index}`} />
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Beschreibung</Label>
+                              <Textarea value={entry.description} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, description: e.target.value } : ent))} placeholder="Beschreibung des Mangels..." required className="bg-card border-border min-h-[60px] text-sm" data-testid={`edit-input-defect-description-${index}`} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Ort</Label>
+                                <Input value={entry.location} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, location: e.target.value } : ent))} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-location-${index}`} />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Status</Label>
+                                <Select value={entry.status} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, status: val } : ent))}>
+                                  <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-status-${index}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+                                    <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={editInspSubmitting} data-testid="button-submit-edit-inspection">
+                      {editInspSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      Änderungen speichern
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
               <div className="space-y-6">
                 {inspections?.length === 0 ? (
                   <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground">Keine Prüfungen erfasst.</div>
@@ -728,12 +936,19 @@ export default function ProjectDetails() {
                                 )}
                               </div>
                             </div>
-                            <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase shrink-0
-                              ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
-                                ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
-                                'text-amber-500 border-amber-500/30'}`}>
-                              {inspStatusLabels[ins.status] || ins.status}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isAdmin && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditInspection(ins)} data-testid={`button-edit-inspection-${ins.id}`}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase
+                                ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
+                                  ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
+                                  'text-amber-500 border-amber-500/30'}`}>
+                                {inspStatusLabels[ins.status] || ins.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
 

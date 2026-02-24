@@ -572,6 +572,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.defects.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await storage.deleteDefect(id);
+      res.json({ message: "Defect deleted" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete defect" });
+    }
+  });
+
   // --- Bauakt (Digitaler Bauakt) ---
   app.get(api.bauakte.list.path, isAuthenticated, async (req: any, res) => {
     try {
