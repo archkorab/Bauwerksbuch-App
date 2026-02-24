@@ -548,10 +548,13 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Nur Administratoren können Mängel erstellen" });
       }
       const inspectionId = parseInt(req.params.inspectionId, 10);
-      const input = { ...req.body, inspectionId };
+      const body = { ...req.body };
+      if (body.dateFound && typeof body.dateFound === 'string') body.dateFound = new Date(body.dateFound);
+      const input = { ...body, inspectionId };
       const defect = await storage.createDefect(input);
       res.status(201).json(defect);
     } catch (err) {
+      console.error("Defect creation error:", err);
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
       }
