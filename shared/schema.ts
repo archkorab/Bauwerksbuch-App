@@ -8,7 +8,7 @@ import { users } from "./models/auth";
 export * from "./models/auth";
 
 // --- Enums ---
-export const roleEnum = z.enum(["admin", "engineer", "client"]);
+export const roleEnum = z.enum(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"]);
 export const inspectionStatusEnum = z.enum(["OK", "needs_repair", "urgent"]);
 export const projectStatusEnum = z.enum(["active", "completed", "archived"]);
 
@@ -16,7 +16,7 @@ export const projectStatusEnum = z.enum(["active", "completed", "archived"]);
 export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().unique().references(() => users.id),
-  role: text("role", { enum: ["admin", "engineer", "client"] }).notNull().default("client"),
+  role: text("role").notNull().default("auftraggeber"),
   phone: text("phone"),
   company: text("company"),
 });

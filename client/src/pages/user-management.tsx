@@ -1,13 +1,22 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { useAllUsers, useUpdateUserRole, useDeleteUser } from "@/hooks/use-users";
+import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser } from "@/hooks/use-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
-  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle
+  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useForm } from "react-hook-form";
 
 export default function UserManagement() {
   const { data: allUsers, isLoading } = useAllUsers();
@@ -26,9 +36,16 @@ export default function UserManagement() {
   const { data: profile } = useProfile();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
+  const createUser = useCreateUser();
   const { toast } = useToast();
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+
+  const { register, handleSubmit, reset, setValue, watch } = useForm({
+    defaultValues: { firstName: "", lastName: "", email: "", role: "auftraggeber", company: "", phone: "" }
+  });
+  const selectedRole = watch("role");
 
   if (profile?.role !== "admin") {
     return (
@@ -57,7 +74,7 @@ export default function UserManagement() {
   const handleRoleChange = (userId: string, role: string) => {
     updateRole.mutate({ userId, role }, {
       onSuccess: () => {
-        toast({ title: "Rolle aktualisiert", description: `Benutzerrolle geändert zu ${role}.` });
+        toast({ title: "Rolle aktualisiert", description: `Benutzerrolle geändert zu ${roleLabels[role] || role}.` });
       },
       onError: (err: any) => {
         toast({ title: "Fehler", description: err.message, variant: "destructive" });
@@ -79,59 +96,124 @@ export default function UserManagement() {
     });
   };
 
+  const onAddUser = (data: any) => {
+    createUser.mutate(data, {
+      onSuccess: () => {
+        toast({ title: "Benutzer erstellt", description: `${data.firstName} ${data.lastName} wurde hinzugefügt.` });
+        setAddUserOpen(false);
+        reset();
+      },
+      onError: (err: any) => {
+        toast({ title: "Fehler", description: err.message, variant: "destructive" });
+      }
+    });
+  };
+
   const roleLabels: Record<string, string> = {
     admin: "Administrator",
-    engineer: "Ingenieur",
-    client: "Auftraggeber",
+    hausverwaltung: "Hausverwaltung",
+    eigentuemer: "Eigentümer",
+    auftraggeber: "Auftraggeber",
   };
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
       case "admin": return "bg-primary/10 text-primary border-primary/20";
-      case "engineer": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-      case "client": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+      case "hausverwaltung": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+      case "eigentuemer": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+      case "auftraggeber": return "bg-violet-500/10 text-violet-500 border-violet-500/20";
       default: return "bg-muted text-muted-foreground border-border";
+    }
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin": return <Shield className="w-7 h-7 text-primary" />;
+      case "hausverwaltung": return <Building className="w-7 h-7 text-amber-500" />;
+      case "eigentuemer": return <Home className="w-7 h-7 text-emerald-500" />;
+      case "auftraggeber": return <Briefcase className="w-7 h-7 text-violet-500" />;
+      default: return <Users className="w-7 h-7 text-muted-foreground" />;
     }
   };
 
   return (
     <Layout>
       <div className="mb-10">
-        <div className="flex items-center gap-3 mb-2">
-          <UserCog className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Benutzerverwaltung</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <UserCog className="w-8 h-8 text-primary" />
+              <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Benutzerverwaltung</h1>
+            </div>
+            <p className="text-muted-foreground">Benutzerkonten verwalten und Rollen auf der Plattform zuweisen.</p>
+          </div>
+          <Dialog open={addUserOpen} onOpenChange={setAddUserOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2" data-testid="button-add-user">
+                <UserPlus className="w-4 h-4" /> Benutzer hinzufügen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border">
+              <DialogHeader><DialogTitle>Neuen Benutzer hinzufügen</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit(onAddUser)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Vorname</Label>
+                    <Input {...register("firstName")} required className="bg-background" data-testid="input-user-firstname" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nachname</Label>
+                    <Input {...register("lastName")} required className="bg-background" data-testid="input-user-lastname" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>E-Mail</Label>
+                  <Input {...register("email")} type="email" required className="bg-background" data-testid="input-user-email" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Rolle</Label>
+                  <Select value={selectedRole} onValueChange={(val) => setValue("role", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-user-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrator</SelectItem>
+                      <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
+                      <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                      <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Unternehmen (optional)</Label>
+                  <Input {...register("company")} className="bg-background" data-testid="input-user-company" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefon (optional)</Label>
+                  <Input {...register("phone")} className="bg-background" data-testid="input-user-phone" />
+                </div>
+                <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">
+                  {createUser.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                  Benutzer erstellen
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
-        <p className="text-muted-foreground">Benutzerkonten verwalten und Rollen auf der Plattform zuweisen.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-            <Users className="w-7 h-7 text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        {(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"] as const).map((role) => (
+          <div key={role} className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${getRoleBadgeClass(role)}`}>
+              {getRoleIcon(role)}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">{roleLabels[role]}</p>
+              <h3 className="text-3xl font-display font-bold text-foreground">{allUsers?.filter(u => u.profile?.role === role).length || 0}</h3>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Benutzer gesamt</p>
-            <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-total-users">{allUsers?.length || 0}</h3>
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
-            <Shield className="w-7 h-7 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Administratoren</p>
-            <h3 className="text-3xl font-display font-bold text-foreground">{allUsers?.filter(u => u.profile?.role === "admin").length || 0}</h3>
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-            <Building className="w-7 h-7 text-emerald-500" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Auftraggeber</p>
-            <h3 className="text-3xl font-display font-bold text-foreground">{allUsers?.filter(u => u.profile?.role === "client").length || 0}</h3>
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
@@ -177,22 +259,23 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       {isCurrentUser ? (
-                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${getRoleBadgeClass(user.profile?.role || "client")}`}>
-                          {roleLabels[user.profile?.role || "client"] || user.profile?.role}
+                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${getRoleBadgeClass(user.profile?.role || "auftraggeber")}`}>
+                          {roleLabels[user.profile?.role || "auftraggeber"] || user.profile?.role}
                         </span>
                       ) : (
                         <Select
-                          defaultValue={user.profile?.role || "client"}
+                          defaultValue={user.profile?.role || "auftraggeber"}
                           onValueChange={(val) => handleRoleChange(user.id, val)}
                           disabled={updateRole.isPending}
                         >
-                          <SelectTrigger className="w-32 h-8 text-xs bg-background border-border" data-testid={`select-role-${user.id}`}>
+                          <SelectTrigger className="w-40 h-8 text-xs bg-background border-border" data-testid={`select-role-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="admin">Administrator</SelectItem>
-                            <SelectItem value="engineer">Ingenieur</SelectItem>
-                            <SelectItem value="client">Auftraggeber</SelectItem>
+                            <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
+                            <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                            <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
                           </SelectContent>
                         </Select>
                       )}

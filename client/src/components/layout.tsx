@@ -23,13 +23,14 @@ export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { data: profile } = useProfile();
 
-  const role = profile?.role || "client";
-  const isAdminOrEngineer = role === "admin" || role === "engineer";
+  const role = profile?.role || "auftraggeber";
+  const isAdmin = role === "admin";
 
   const roleLabels: Record<string, string> = {
     admin: "Administrator",
-    engineer: "Ingenieur",
-    client: "Auftraggeber",
+    hausverwaltung: "Hausverwaltung",
+    eigentuemer: "Eigentümer",
+    auftraggeber: "Auftraggeber",
   };
 
   const navItems = [

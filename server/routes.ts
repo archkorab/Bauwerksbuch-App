@@ -79,7 +79,7 @@ export async function registerRoutes(
       const profile = await storage.getProfile(userId);
       if (!profile) {
         const allProfiles = await storage.getAllProfiles();
-        const role = allProfiles.length === 0 ? "admin" : "client";
+        const role = allProfiles.length === 0 ? "admin" : "auftraggeber";
         const newProfile = await storage.upsertProfile({ userId, role });
         return res.json(newProfile);
       }
@@ -120,8 +120,10 @@ export async function registerRoutes(
 
   app.get(api.users.listClients.path, isAuthenticated, async (req: any, res) => {
     try {
-      const clients = await storage.getUsersByRole("client");
-      res.json(clients);
+      const hausverwaltungen = await storage.getUsersByRole("hausverwaltung");
+      const eigentuemer = await storage.getUsersByRole("eigentuemer");
+      const auftraggeber = await storage.getUsersByRole("auftraggeber");
+      res.json([...hausverwaltungen, ...eigentuemer, ...auftraggeber]);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
     }
@@ -129,10 +131,10 @@ export async function registerRoutes(
 
   app.get(api.users.listEngineers.path, isAuthenticated, async (req: any, res) => {
     try {
-      const engineers = await storage.getUsersByRole("engineer");
-      res.json(engineers);
+      const admins = await storage.getUsersByRole("admin");
+      res.json(admins);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch engineers" });
+      res.status(500).json({ message: "Failed to fetch admins" });
     }
   });
 
@@ -163,6 +165,41 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.users.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user.claims.sub;
+      const currentProfile = await storage.getProfile(currentUserId);
+      if (currentProfile?.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const input = api.users.create.input.parse(req.body);
+      const existingUsers = await storage.getAllUsers();
+      const emailExists = existingUsers.find(u => u.email === input.email);
+      if (emailExists) {
+        return res.status(400).json({ message: "Ein Benutzer mit dieser E-Mail existiert bereits." });
+      }
+      const user = await storage.createUser({
+        email: input.email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+      });
+      await storage.upsertProfile({
+        userId: user.id,
+        role: input.role,
+        company: input.company || null,
+        phone: input.phone || null,
+      });
+      const fullUser = await storage.getUserWithProfile(user.id);
+      res.status(201).json(fullUser);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      console.error("Create user error:", err);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   app.delete(api.users.delete.path, isAuthenticated, async (req: any, res) => {
     try {
       const currentUserId = req.user.claims.sub;
@@ -186,9 +223,9 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      const role = profile?.role || "client";
+      const role = profile?.role || "auftraggeber";
 
-      if (role === "admin" || role === "engineer") {
+      if (role === "admin") {
         const allProjects = await storage.getProjects();
         return res.json(allProjects);
       }
@@ -208,8 +245,8 @@ export async function registerRoutes(
       }
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      const role = profile?.role || "client";
-      if (role === "client" && project.clientId !== userId) {
+      const role = profile?.role || "auftraggeber";
+      if (role !== "admin" && project.clientId !== userId) {
         return res.status(404).json({ message: "Project not found" });
       }
       res.json(project);
@@ -222,8 +259,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin" && profile?.role !== "engineer") {
-        return res.status(403).json({ message: "Only admins and engineers can create projects" });
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Projekte erstellen" });
       }
       const input = api.projects.create.input.parse(req.body);
       const project = await storage.createProject(input);
@@ -240,8 +277,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin" && profile?.role !== "engineer") {
-        return res.status(403).json({ message: "Only admins and engineers can update projects" });
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Projekte bearbeiten" });
       }
       const id = parseInt(req.params.id, 10);
       const body = { ...req.body };
@@ -263,7 +300,7 @@ export async function registerRoutes(
   // Helper to check project access for clients
   async function checkProjectAccess(userId: string, projectId: number): Promise<boolean> {
     const profile = await storage.getProfile(userId);
-    if (profile?.role === "admin" || profile?.role === "engineer") return true;
+    if (profile?.role === "admin") return true;
     const project = await storage.getProject(projectId);
     return project?.clientId === userId;
   }
@@ -288,8 +325,8 @@ export async function registerRoutes(
       const projectId = parseInt(req.params.projectId, 10);
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (!profile || (profile.role !== "admin" && profile.role !== "engineer")) {
-        return res.status(403).json({ message: "Only admins and engineers can upload documents" });
+      if (!profile || profile.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Dokumente hochladen" });
       }
       const file = req.file as Express.Multer.File | undefined;
       const name = req.body.name || (file ? file.filename : "Unnamed");
@@ -352,7 +389,7 @@ export async function registerRoutes(
         return res.json(projectEvents);
       }
       
-      if (profile?.role === "admin" || profile?.role === "engineer") {
+      if (profile?.role === "admin") {
         const allEvents = await storage.getEvents();
         return res.json(allEvents);
       }
@@ -371,8 +408,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin" && profile?.role !== "engineer") {
-        return res.status(403).json({ message: "Only admins and engineers can create events" });
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Ereignisse erstellen" });
       }
       const input = api.events.create.input.parse(req.body);
       const event = await storage.createEvent(input);
@@ -429,8 +466,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin" && profile?.role !== "engineer") {
-        return res.status(403).json({ message: "Only admins and engineers can create inspections" });
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Prüfungen erstellen" });
       }
       const projectId = parseInt(req.params.projectId, 10);
       const body = req.body;
@@ -480,8 +517,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin" && profile?.role !== "engineer") {
-        return res.status(403).json({ message: "Only admins and engineers can create defects" });
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Mängel erstellen" });
       }
       const inspectionId = parseInt(req.params.inspectionId, 10);
       const input = { ...req.body, inspectionId };
@@ -652,8 +689,8 @@ async function seedDatabase() {
 
     await database.insert(profilesTable).values([
       { userId: demoUserId, role: "admin", company: "Archkorab GmbH" },
-      { userId: demoClientId, role: "client", company: "Wiener Hausverwaltung" },
-      { userId: demoEngineerId, role: "engineer", company: "Archkorab GmbH" },
+      { userId: demoClientId, role: "hausverwaltung", company: "Wiener Hausverwaltung" },
+      { userId: demoEngineerId, role: "admin", company: "Archkorab GmbH" },
     ]).onConflictDoUpdate({
       target: profilesTable.userId,
       set: { company: sql`EXCLUDED.company` },

@@ -31,7 +31,9 @@ client/src/
 
 ## Key Features
 - Replit Auth login (no signup forms)
-- Role-based access: admin/engineer see all, clients see only their projects
+- Role-based access: admin sees all + full management, other roles see only their assigned projects
+- Four roles: Administrator, Hausverwaltung, Eigentümer, Auftraggeber
+- Manual user creation via Benutzerverwaltung (admin only)
 - Project listings with search/filter
 - Project detail views with documents, events, inspections tabs
 - Global calendar for inspections/deadlines
@@ -69,8 +71,9 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-24: Redesigned role system: replaced admin/engineer/client with admin/hausverwaltung/eigentuemer/auftraggeber; admin-only management; added user creation dialog in Benutzerverwaltung
 - 2026-02-24: Added "Digitaler Bauakt" tab to project details - Excel import, file upload/hosting, searchable table with Dateiname/Jahr/Beschreibung/Art/Anmerkung columns
-- 2026-02-24: Added project edit function to Projektdetails page (admin/engineer only)
+- 2026-02-24: Added project edit function to Projektdetails page (admin only)
 - 2026-02-24: Added Verwaltung (verwaltungId FK to users) and Eigentümer (free text) fields to projects; displayed in project details and creation form
 - 2026-02-24: Translated entire app interface to German
 - 2026-02-24: Added defects table with primary/follow-up structure; inspection logbook shows Defect ID, Date, Description, Location in table format

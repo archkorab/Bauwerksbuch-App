@@ -62,6 +62,30 @@ export function useUpdateUserRole() {
   });
 }
 
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; email: string; role: string; company?: string; phone?: string }) => {
+      const res = await fetch(api.users.create.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.users.listAll.path] });
+      queryClient.invalidateQueries({ queryKey: [api.users.listClients.path] });
+      queryClient.invalidateQueries({ queryKey: [api.users.listEngineers.path] });
+    },
+  });
+}
+
 export function useDeleteUser() {
   const queryClient = useQueryClient();
   return useMutation({

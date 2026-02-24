@@ -39,6 +39,8 @@ export interface IStorage {
   updateProfile(userId: string, data: UpdateProfileRequest): Promise<Profile>;
   getUsersByRole(role: string): Promise<any[]>;
   getAllUsers(): Promise<any[]>;
+  createUser(data: { email: string; firstName: string; lastName: string }): Promise<any>;
+  getUserWithProfile(userId: string): Promise<any>;
   deleteUser(userId: string): Promise<void>;
 
   getProjects(clientId?: string): Promise<ProjectResponse[]>;
@@ -115,6 +117,25 @@ export class DatabaseStorage implements IStorage {
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.userId));
     return result.map(r => ({ ...r.users, profile: r.profiles || undefined }));
+  }
+
+  async createUser(data: { email: string; firstName: string; lastName: string }): Promise<any> {
+    const [user] = await db.insert(users).values({
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    }).returning();
+    return user;
+  }
+
+  async getUserWithProfile(userId: string): Promise<any> {
+    const result = await db
+      .select()
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .where(eq(users.id, userId));
+    if (result.length === 0) return undefined;
+    return { ...result[0].users, profile: result[0].profiles || undefined };
   }
 
   async deleteUser(userId: string): Promise<void> {

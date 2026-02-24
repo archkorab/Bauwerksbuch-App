@@ -67,7 +67,7 @@ export default function ProjectDetails() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [bauaktSearch, setBauaktSearch] = useState("");
 
-  const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
+  const isAdmin = profile?.role === "admin";
 
   const [docFile, setDocFile] = useState<File | null>(null);
   const { register: docReg, handleSubmit: handleDocSubmit, reset: resetDocForm } = useForm({
@@ -201,7 +201,7 @@ export default function ProjectDetails() {
               <span>{project.address}</span>
             </div>
           </div>
-          {isAdminOrEngineer && (
+          {isAdmin && (
             <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-white/5" data-testid="button-edit-project">
               <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
             </Button>
@@ -320,7 +320,7 @@ export default function ProjectDetails() {
             <TabsContent value="documents" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Projektdokumente</h3>
-                {isAdminOrEngineer && (
+                {isAdmin && (
                   <Dialog open={docDialogOpen} onOpenChange={setDocDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">
@@ -527,7 +527,7 @@ export default function ProjectDetails() {
             <TabsContent value="inspections" className="space-y-6" data-testid="tab-inspections">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Prüfprotokoll</h3>
-                {isAdminOrEngineer && (
+                {isAdmin && (
                   <Dialog open={inspDialogOpen} onOpenChange={setInspDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" data-testid="button-add-inspection">
@@ -704,7 +704,7 @@ export default function ProjectDetails() {
             <TabsContent value="events" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Projektzeitleiste</h3>
-                {isAdminOrEngineer && (
+                {isAdmin && (
                   <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">

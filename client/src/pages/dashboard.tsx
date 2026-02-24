@@ -60,7 +60,7 @@ export default function Dashboard() {
     });
   };
 
-  const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
+  const isAdmin = profile?.role === "admin";
 
   if (isLoading) {
     return (
@@ -83,7 +83,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Übersicht aller aktiven Baustellen und Dokumentationen.</p>
         </div>
         
-        {isAdminOrEngineer && (
+        {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-project">
@@ -227,7 +227,7 @@ export default function Dashboard() {
                     </div>
                   )}
                   
-                  {isAdminOrEngineer && project.client && (
+                  {isAdmin && project.client && (
                     <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-primary">
                         {project.client.firstName?.[0]}{project.client.lastName?.[0]}
