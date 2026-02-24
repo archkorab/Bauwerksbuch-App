@@ -9,7 +9,8 @@ import {
   LayoutDashboard, 
   LogOut, 
   User as UserIcon,
-  ChevronRight
+  ChevronRight,
+  UserCog
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +30,7 @@ export function Layout({ children }: LayoutProps) {
     { name: "Dashboard", href: "/projects", icon: LayoutDashboard },
     { name: "Global Calendar", href: "/calendar", icon: CalendarDays },
     { name: "Inspections Log", href: "/inspections", icon: ClipboardCheck },
+    ...(role === "admin" ? [{ name: "User Management", href: "/admin/users", icon: UserCog }] : []),
   ];
 
   return (

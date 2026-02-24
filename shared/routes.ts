@@ -73,6 +73,15 @@ export const api = {
     }
   },
   users: {
+    listAll: {
+      method: 'GET' as const,
+      path: '/api/users' as const,
+      responses: {
+        200: z.array(userSchema.and(z.object({ profile: profileSchema.optional() }))),
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
+    },
     listClients: {
       method: 'GET' as const,
       path: '/api/users/clients' as const,
@@ -89,6 +98,27 @@ export const api = {
         200: z.array(userSchema.and(z.object({ profile: profileSchema.optional() }))),
         401: errorSchemas.unauthorized,
         403: errorSchemas.unauthorized
+      }
+    },
+    updateRole: {
+      method: 'PUT' as const,
+      path: '/api/users/:userId/role' as const,
+      input: z.object({ role: z.enum(["admin", "engineer", "client"]) }),
+      responses: {
+        200: profileSchema,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound
+      }
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/users/:userId' as const,
+      responses: {
+        204: z.void(),
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound
       }
     }
   },

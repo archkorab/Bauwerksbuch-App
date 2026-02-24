@@ -45,6 +45,20 @@ export async function registerRoutes(
   });
 
   // --- Users (admin only) ---
+  app.get(api.users.listAll.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
   app.get(api.users.listClients.path, isAuthenticated, async (req: any, res) => {
     try {
       const clients = await storage.getUsersByRole("client");
@@ -60,6 +74,51 @@ export async function registerRoutes(
       res.json(engineers);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch engineers" });
+    }
+  });
+
+  app.put(api.users.updateRole.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user.claims.sub;
+      const currentProfile = await storage.getProfile(currentUserId);
+      if (currentProfile?.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const targetUserId = req.params.userId;
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ message: "Cannot change your own role" });
+      }
+      const { role } = api.users.updateRole.input.parse(req.body);
+      const existingProfile = await storage.getProfile(targetUserId);
+      if (!existingProfile) {
+        const newProfile = await storage.upsertProfile({ userId: targetUserId, role });
+        return res.json(newProfile);
+      }
+      const updated = await storage.updateProfile(targetUserId, { role });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  app.delete(api.users.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user.claims.sub;
+      const currentProfile = await storage.getProfile(currentUserId);
+      if (currentProfile?.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const targetUserId = req.params.userId;
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      await storage.deleteUser(targetUserId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
