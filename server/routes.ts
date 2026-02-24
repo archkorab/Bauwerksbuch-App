@@ -186,7 +186,11 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Only admins and engineers can update projects" });
       }
       const id = parseInt(req.params.id, 10);
-      const input = api.projects.update.input.parse(req.body);
+      const body = { ...req.body };
+      if (body.nextInspectionDue && typeof body.nextInspectionDue === 'string') {
+        body.nextInspectionDue = new Date(body.nextInspectionDue);
+      }
+      const input = api.projects.update.input.parse(body);
       const project = await storage.updateProject(id, input);
       if (!project) return res.status(404).json({ message: "Project not found" });
       res.json(project);

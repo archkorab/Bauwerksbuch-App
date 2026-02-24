@@ -2,14 +2,15 @@ import { useState, Fragment } from "react";
 import { useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { MapPlaceholder } from "@/components/map-placeholder";
-import { useProject } from "@/hooks/use-projects";
+import { useProject, useUpdateProject } from "@/hooks/use-projects";
+import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
 import { useInspections, useCreateInspection } from "@/hooks/use-inspections";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned
+  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,13 +51,16 @@ export default function ProjectDetails() {
   const { data: inspections } = useInspections(projectId);
   const { data: profile } = useProfile();
   
+  const { data: clients } = useClients();
   const createDocument = useCreateDocument();
   const createEvent = useCreateEvent();
   const createInspection = useCreateInspection();
+  const updateProject = useUpdateProject();
   
   const [docDialogOpen, setDocDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
 
@@ -106,6 +110,48 @@ export default function ProjectDetails() {
     });
   };
 
+  const { register: editReg, handleSubmit: handleEditSubmit, setValue: setEditValue, reset: resetEditForm } = useForm({
+    defaultValues: {
+      name: "",
+      address: "",
+      status: "active",
+      eigentuemer: "",
+      verwaltungId: "",
+      nextInspectionDue: "",
+    }
+  });
+
+  const openEditDialog = () => {
+    if (!project) return;
+    resetEditForm({
+      name: project.name,
+      address: project.address,
+      status: project.status,
+      eigentuemer: project.eigentuemer || "",
+      verwaltungId: project.verwaltungId || "",
+      nextInspectionDue: project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd') : "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const onEditSubmit = (data: any) => {
+    const updates: any = {
+      name: data.name,
+      address: data.address,
+      status: data.status,
+      eigentuemer: data.eigentuemer || null,
+      verwaltungId: data.verwaltungId || null,
+    };
+    if (data.nextInspectionDue) {
+      updates.nextInspectionDue = new Date(data.nextInspectionDue);
+    } else {
+      updates.nextInspectionDue = null;
+    }
+    updateProject.mutate({ id: projectId, updates }, {
+      onSuccess: () => setEditDialogOpen(false)
+    });
+  };
+
   if (projectLoading || !project) {
     return (
       <Layout>
@@ -141,7 +187,71 @@ export default function ProjectDetails() {
               <span>{project.address}</span>
             </div>
           </div>
+          {isAdminOrEngineer && (
+            <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-white/5" data-testid="button-edit-project">
+              <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
+            </Button>
+          )}
         </div>
+
+        {/* Edit Project Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px] bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl">Projekt bearbeiten</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-5 mt-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Projektname</Label>
+                <Input id="edit-name" {...editReg("name")} required className="bg-background border-border" data-testid="input-edit-name" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Adresse</Label>
+                <Input id="edit-address" {...editReg("address")} required className="bg-background border-border" data-testid="input-edit-address" />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select defaultValue={project.status} onValueChange={(val) => setEditValue("status", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Aktiv</SelectItem>
+                    <SelectItem value="completed">Abgeschlossen</SelectItem>
+                    <SelectItem value="archived">Archiviert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Verwaltung</Label>
+                <Select defaultValue={project.verwaltungId || ""} onValueChange={(val) => setEditValue("verwaltungId", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-verwaltung">
+                    <SelectValue placeholder="Verwaltung wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients?.map(client => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.firstName} {client.lastName} ({client.profile?.company || ""})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-eigentuemer">Eigentümer</Label>
+                <Input id="edit-eigentuemer" {...editReg("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border" data-testid="input-edit-eigentuemer" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-nextInspection">Nächste Prüfung</Label>
+                <Input id="edit-nextInspection" type="date" {...editReg("nextInspectionDue")} className="bg-background border-border" data-testid="input-edit-next-inspection" />
+              </div>
+              <Button type="submit" className="w-full" disabled={updateProject.isPending} data-testid="button-submit-edit">
+                {updateProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Änderungen speichern
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
