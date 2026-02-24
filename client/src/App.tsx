@@ -18,7 +18,7 @@ function RootRouter() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     );
   }
@@ -28,13 +28,13 @@ function RootRouter() {
     return (
       <Switch>
         <Route path="/" component={LandingPage} />
-        {/* We rely on /api/login directly, wouter handles client side */}
+        {/* Fallback for unauthenticated users */}
         <Route component={LandingPage} />
       </Switch>
     );
   }
 
-  // Authenticated routes
+  // Authenticated routes mapped accurately
   return (
     <Switch>
       <Route path="/" component={Dashboard} />

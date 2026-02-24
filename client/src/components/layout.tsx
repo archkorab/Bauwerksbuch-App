@@ -1,144 +1,107 @@
+import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  SidebarProvider, 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarGroupLabel, 
-  SidebarMenu, 
-  SidebarMenuButton, 
-  SidebarMenuItem,
-  SidebarTrigger,
-  SidebarHeader
-} from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
-import { useMyProfile } from "@/hooks/use-users";
-import { Home, FolderKanban, Calendar, FileCheck, LogOut, Loader2, Building2 } from "lucide-react";
+import { useProfile } from "@/hooks/use-profile";
+import { 
+  Building2, 
+  CalendarDays, 
+  ClipboardCheck, 
+  LayoutDashboard, 
+  LogOut, 
+  User as UserIcon,
+  ChevronRight
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-function AppSidebar() {
+interface LayoutProps {
+  children: ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
   const { user, logout } = useAuth();
-  const { data: profile } = useMyProfile();
-  
-  const role = profile?.role || 'client';
-  
-  const items = [
-    { title: "Dashboard", url: "/", icon: Home },
-    { title: "Projects", url: "/projects", icon: FolderKanban },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
-    { title: "Inspections", url: "/inspections", icon: FileCheck },
+  const { data: profile } = useProfile();
+
+  const role = profile?.role || "client";
+  const isAdminOrEngineer = role === "admin" || role === "engineer";
+
+  const navItems = [
+    { name: "Dashboard", href: "/projects", icon: LayoutDashboard },
+    { name: "Global Calendar", href: "/calendar", icon: CalendarDays },
+    { name: "Inspections Log", href: "/inspections", icon: ClipboardCheck },
   ];
 
   return (
-    <Sidebar className="border-r border-border/50 bg-sidebar/50 backdrop-blur-xl">
-      <SidebarHeader className="h-16 flex items-center px-4 border-b border-border/50">
-        <div className="flex items-center gap-3 w-full px-2">
-          <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
-            <Building2 className="w-5 h-5 text-primary" />
+    <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/20">
+      {/* Sidebar */}
+      <aside className="w-72 flex-shrink-0 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col justify-between hidden md:flex z-20 shadow-xl shadow-black/50">
+        <div className="p-6 flex flex-col h-full">
+          <div className="flex items-center gap-3 px-2 mb-10">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/25">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-display font-bold text-lg leading-tight tracking-tight text-foreground">Archkorab</h1>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Bauwerksbuch</p>
+            </div>
           </div>
-          <span className="font-display font-semibold text-lg tracking-tight truncate">Bauwerksbuch</span>
-        </div>
-      </SidebarHeader>
-      <SidebarContent className="py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-2">Platform</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => {
-                const isActive = location === item.url || (item.url !== "/" && location.startsWith(item.url));
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive}
-                      className={`
-                        transition-all duration-200 py-5
-                        ${isActive ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground hover:text-foreground"}
-                      `}
-                    >
-                      <Link href={item.url} className="flex items-center gap-3 w-full">
-                        <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : ""}`} />
-                        <span className="font-medium">{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      
-      <div className="mt-auto p-4 border-t border-border/50 bg-background/30">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <Avatar className="h-9 w-9 border border-border/50 shadow-sm">
-            <AvatarImage src={user?.profileImageUrl || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary font-medium">
-              {user?.firstName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</span>
-            <span className="text-xs text-muted-foreground capitalize">{role}</span>
+
+          <nav className="flex-1 space-y-2">
+            <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Platform</div>
+            {navItems.map((item) => {
+              const isActive = location === item.href || (location === "/" && item.href === "/projects");
+              return (
+                <Link key={item.name} href={item.href} className="block">
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer
+                      ${isActive 
+                        ? "bg-primary/10 text-primary border border-primary/20 shadow-inner" 
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground border border-transparent"
+                      }`}
+                  >
+                    <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
+                    <span className="font-medium text-sm">{item.name}</span>
+                    {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
+                  </div>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="mt-auto pt-6 border-t border-border">
+            <div className="bg-background/50 border border-border rounded-xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
+                {user?.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="User" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <UserIcon className="w-5 h-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}
+                </p>
+                <p className="text-xs text-primary font-medium uppercase tracking-wider">{role}</p>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-3 mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              onClick={() => logout()}
+            >
+              <LogOut className="w-4 h-4" />
+              Sign out
+            </Button>
           </div>
         </div>
-        <Button 
-          variant="outline" 
-          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-accent/50 border-border/50"
-          onClick={() => logout()}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
-      </div>
-    </Sidebar>
-  );
-}
+      </aside>
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useAuth();
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    window.location.href = "/api/login";
-    return null;
-  }
-
-  const style = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "4rem",
-  } as React.CSSProperties;
-
-  return (
-    <SidebarProvider style={style}>
-      <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/30">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 relative overflow-hidden">
-          <header className="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-            </div>
-            <div className="text-sm font-medium text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </div>
-          </header>
-          <main className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
-            <div className="max-w-7xl mx-auto">
-              {children}
-            </div>
-          </main>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-background to-background">
+        <div className="flex-1 overflow-auto p-4 md:p-8 relative z-10">
+          {children}
         </div>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 }

@@ -1,96 +1,92 @@
 import { Layout } from "@/components/layout";
 import { useProjects } from "@/hooks/use-projects";
-// To get all inspections easily, one would ideally have a global endpoint. 
-// For UI completeness, we will simulate a view that would fetch from global.
-import { StatusBadge } from "@/components/status-badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
+import { ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { FileCheck, Search, Filter } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function InspectionsGlobal() {
   const { data: projects, isLoading } = useProjects();
-  
-  // Aggregate inspections from loaded projects (in real app, use global hook)
-  const allInspections = projects?.flatMap(p => 
-    p.inspections?.map(i => ({...i, projectName: p.name})) || []
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) || [];
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex h-full items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      </Layout>
+    );
+  }
+
+  const projectsNeedingInspection = projects?.filter(p => p.nextInspectionDue && new Date(p.nextInspectionDue) < new Date()) || [];
+  const otherProjects = projects?.filter(p => !projectsNeedingInspection.includes(p)) || [];
 
   return (
     <Layout>
-      <div className="flex flex-col gap-8 max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-display font-bold">Global Inspection Log</h1>
-            <p className="text-muted-foreground mt-2 text-lg">Central registry of all site inspections.</p>
+      <div className="mb-10">
+        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Inspections Directory</h1>
+        <p className="text-muted-foreground">Select a project to review its full inspection logbook or schedule new site visits.</p>
+      </div>
+
+      {projectsNeedingInspection.length > 0 && (
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl inline-flex shadow-sm">
+            <AlertTriangle className="w-5 h-5" />
+            <h2 className="font-display font-bold">Action Required: Inspections Overdue</h2>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search records..." className="pl-9 bg-card/50 border-border/60" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projectsNeedingInspection.map(project => (
+              <ProjectInspectionCard key={project.id} project={project} isUrgent />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 className="font-display text-xl font-bold text-foreground mb-6">All Projects Logbooks</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {otherProjects.map(project => (
+            <ProjectInspectionCard key={project.id} project={project} />
+          ))}
+          {projects?.length === 0 && (
+            <div className="col-span-full p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">
+              No projects available in the directory.
             </div>
-            <Button variant="outline" size="icon" className="shrink-0 border-border/60">
-              <Filter className="w-4 h-4" />
-            </Button>
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+function ProjectInspectionCard({ project, isUrgent = false }: { project: any, isUrgent?: boolean }) {
+  return (
+    <Link href={`/projects/${project.id}?tab=inspections`}>
+      <div className={`group bg-card border rounded-2xl p-6 hover-elevate cursor-pointer h-full flex flex-col transition-all shadow-sm
+        ${isUrgent ? 'border-destructive/30 hover:border-destructive/60' : 'border-border'}`}>
+        
+        <div className="flex items-center gap-4 mb-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+            ${isUrgent ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-primary'}`}>
+            <ClipboardCheck className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-bold text-lg text-foreground line-clamp-1 group-hover:text-primary transition-colors">{project.name}</h3>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+              <Building className="w-3.5 h-3.5" />
+              <span className="truncate">{project.address}</span>
+            </div>
           </div>
         </div>
 
-        <Card className="bg-card/40 border-border/60 overflow-hidden backdrop-blur-md shadow-lg shadow-black/10">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-secondary/40">
-                <TableRow className="border-border/60 hover:bg-transparent">
-                  <TableHead className="font-semibold text-foreground">Date</TableHead>
-                  <TableHead className="font-semibold text-foreground">Project</TableHead>
-                  <TableHead className="font-semibold text-foreground">Status</TableHead>
-                  <TableHead className="font-semibold text-foreground">Inspector</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground">Report</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      <div className="animate-pulse w-full h-4 bg-secondary/50 rounded" />
-                    </TableCell>
-                  </TableRow>
-                ) : allInspections.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                      <FileCheck className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                      No inspections logged across any projects.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  allInspections.map((insp) => (
-                    <TableRow key={insp.id} className="border-border/40 hover:bg-secondary/30 transition-colors">
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        {format(new Date(insp.date), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {insp.projectName}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={insp.status} />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {insp.engineer?.firstName || insp.engineer?.email || 'Unknown'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+        <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className={`w-4 h-4 ${isUrgent ? 'text-destructive' : 'text-muted-foreground'}`} />
+            <span className={`text-sm font-medium ${isUrgent ? 'text-destructive' : 'text-foreground'}`}>
+              Due: {project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMM d, yyyy') : 'Unscheduled'}
+            </span>
           </div>
-        </Card>
+          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+        </div>
       </div>
-    </Layout>
+    </Link>
   );
 }

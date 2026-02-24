@@ -1,11 +1,13 @@
 ## Packages
-date-fns | Required for human-readable date formatting across the dashboard
-recharts | For basic project analytics and charts
-lucide-react | Used extensively for iconography
+date-fns | Formatting and manipulating dates
+recharts | Beautiful data visualization for the dashboard
+react-hook-form | Form state management
+@hookform/resolvers | Zod validation resolver for forms
+clsx | Class name merging
+tailwind-merge | Tailwind class merging
 
 ## Notes
-- Using Replit Auth; user is fetched from `/api/auth/user`.
-- No custom login forms generated; utilizing `/api/login` route.
-- Project IDs are numbers, User IDs are strings. Zod coerce used accordingly.
-- Dark mode enterprise theme applied by default via CSS.
-- Map view is implemented as a stylized conceptual placeholder with coordinates support.
+- The application uses Replit Auth for authentication. Links to `/api/login` and `/api/logout` handle the flows.
+- Map view is implemented using a custom SVG placeholder to maintain high visual fidelity without leaflet CSS overhead.
+- Dark mode enterprise theme is enforced natively via `index.css`.
+- API endpoints are heavily relational; we use local form schemas to ensure proper coercion of strings/numbers before submitting.

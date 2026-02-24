@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
-import { type InsertInspection } from "@shared/schema";
+import { api, buildUrl, type CreateInspectionRequest } from "@shared/routes";
 
 export function useInspections(projectId: number) {
   return useQuery({
@@ -9,7 +8,8 @@ export function useInspections(projectId: number) {
       const url = buildUrl(api.inspections.list.path, { projectId });
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch inspections");
-      return api.inspections.list.responses[200].parse(await res.json());
+      const data = await res.json();
+      return api.inspections.list.responses[200].parse(data);
     },
     enabled: !!projectId,
   });
@@ -18,17 +18,17 @@ export function useInspections(projectId: number) {
 export function useCreateInspection() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: InsertInspection) => {
-      const validated = api.inspections.create.input.parse(data);
-      const url = buildUrl(api.inspections.create.path, { projectId: data.projectId! });
+    mutationFn: async ({ projectId, data }: { projectId: number; data: CreateInspectionRequest }) => {
+      const url = buildUrl(api.inspections.create.path, { projectId });
       const res = await fetch(url, {
         method: api.inspections.create.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
+        body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to create inspection");
-      return api.inspections.create.responses[201].parse(await res.json());
+      const resData = await res.json();
+      return api.inspections.create.responses[201].parse(resData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });

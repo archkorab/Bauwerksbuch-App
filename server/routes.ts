@@ -1,16 +1,354 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
+import { api } from "@shared/routes";
+import { z } from "zod";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // --- Profiles ---
+  app.get(api.profiles.get.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (!profile) {
+        const newProfile = await storage.upsertProfile({ userId, role: "client" });
+        return res.json(newProfile);
+      }
+      res.json(profile);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  app.put(api.profiles.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updates = api.profiles.update.input.parse(req.body);
+      const profile = await storage.updateProfile(userId, updates);
+      res.json(profile);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // --- Users (admin only) ---
+  app.get(api.users.listClients.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const clients = await storage.getUsersByRole("client");
+      res.json(clients);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.get(api.users.listEngineers.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const engineers = await storage.getUsersByRole("engineer");
+      res.json(engineers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch engineers" });
+    }
+  });
+
+  // --- Projects ---
+  app.get(api.projects.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      const role = profile?.role || "client";
+
+      if (role === "admin" || role === "engineer") {
+        const allProjects = await storage.getProjects();
+        return res.json(allProjects);
+      }
+      const clientProjects = await storage.getProjects(userId);
+      res.json(clientProjects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.get(api.projects.get.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      const role = profile?.role || "client";
+      if (role === "client" && project.clientId !== userId) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.post(api.projects.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin" && profile?.role !== "engineer") {
+        return res.status(403).json({ message: "Only admins and engineers can create projects" });
+      }
+      const input = api.projects.create.input.parse(req.body);
+      const project = await storage.createProject(input);
+      res.status(201).json(project);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.put(api.projects.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin" && profile?.role !== "engineer") {
+        return res.status(403).json({ message: "Only admins and engineers can update projects" });
+      }
+      const id = parseInt(req.params.id, 10);
+      const input = api.projects.update.input.parse(req.body);
+      const project = await storage.updateProject(id, input);
+      if (!project) return res.status(404).json({ message: "Project not found" });
+      res.json(project);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // --- Documents ---
+  app.get(api.documents.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const docs = await storage.getDocuments(projectId);
+      res.json(docs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  app.post(api.documents.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      const input = { ...req.body, projectId, uploadedBy: userId };
+      const doc = await storage.createDocument(input);
+      res.status(201).json(doc);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to create document" });
+    }
+  });
+
+  app.delete(api.documents.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await storage.deleteDocument(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // --- Events ---
+  app.get(api.events.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string, 10) : undefined;
+      const allEvents = await storage.getEvents(projectId);
+      res.json(allEvents);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  app.post(api.events.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin" && profile?.role !== "engineer") {
+        return res.status(403).json({ message: "Only admins and engineers can create events" });
+      }
+      const input = api.events.create.input.parse(req.body);
+      const event = await storage.createEvent(input);
+      res.status(201).json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to create event" });
+    }
+  });
+
+  app.put(api.events.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const input = api.events.update.input.parse(req.body);
+      const event = await storage.updateEvent(id, input);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+      res.json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update event" });
+    }
+  });
+
+  app.delete(api.events.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      await storage.deleteEvent(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+
+  // --- Inspections ---
+  app.get(api.inspections.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const insps = await storage.getInspections(projectId);
+      res.json(insps);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch inspections" });
+    }
+  });
+
+  app.post(api.inspections.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin" && profile?.role !== "engineer") {
+        return res.status(403).json({ message: "Only admins and engineers can create inspections" });
+      }
+      const projectId = parseInt(req.params.projectId, 10);
+      const input = { ...req.body, projectId, engineerId: userId };
+      const insp = await storage.createInspection(input);
+      res.status(201).json(insp);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to create inspection" });
+    }
+  });
+
+  app.put(api.inspections.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const input = api.inspections.update.input.parse(req.body);
+      const insp = await storage.updateInspection(id, input);
+      if (!insp) return res.status(404).json({ message: "Inspection not found" });
+      res.json(insp);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update inspection" });
+    }
+  });
+
+  // Seed the database with sample data on startup
+  await seedDatabase();
 
   return httpServer;
+}
+
+async function seedDatabase() {
+  try {
+    const existingProjects = await storage.getProjects();
+    if (existingProjects.length > 0) return;
+
+    const { db: database } = await import("./db");
+    const { users: usersTable, profiles: profilesTable } = await import("@shared/schema");
+
+    const demoUserId = "demo-admin-001";
+    const demoClientId = "demo-client-001";
+    const demoEngineerId = "demo-engineer-001";
+
+    await database.insert(usersTable).values([
+      { id: demoUserId, email: "admin@archkorab.at", firstName: "Thomas", lastName: "Archkorab" },
+      { id: demoClientId, email: "client@wienerhaus.at", firstName: "Maria", lastName: "Huber" },
+      { id: demoEngineerId, email: "engineer@archkorab.at", firstName: "Stefan", lastName: "Wagner" },
+    ]).onConflictDoNothing();
+
+    await database.insert(profilesTable).values([
+      { userId: demoUserId, role: "admin", company: "Archkorab GmbH" },
+      { userId: demoClientId, role: "client", company: "Wiener Hausverwaltung" },
+      { userId: demoEngineerId, role: "engineer", company: "Archkorab GmbH" },
+    ]).onConflictDoNothing();
+
+    const project1 = await storage.createProject({
+      clientId: demoClientId,
+      name: "Wohnhaus Meidlinger Hauptstrasse 42",
+      address: "Meidlinger Hauptstrasse 42, 1120 Wien",
+      latitude: "48.1753",
+      longitude: "16.3282",
+      status: "active",
+      nextInspectionDue: new Date("2026-04-15"),
+    });
+
+    const project2 = await storage.createProject({
+      clientId: demoClientId,
+      name: "Burogebude Mariahilfer Strasse 88",
+      address: "Mariahilfer Strasse 88, 1070 Wien",
+      latitude: "48.1966",
+      longitude: "16.3459",
+      status: "active",
+      nextInspectionDue: new Date("2026-03-20"),
+    });
+
+    const project3 = await storage.createProject({
+      clientId: demoClientId,
+      name: "Altbauwohnung Josefstadt",
+      address: "Josefstadter Strasse 15, 1080 Wien",
+      latitude: "48.2106",
+      longitude: "16.3494",
+      status: "completed",
+    });
+
+    await storage.createEvent({ projectId: project1.id, title: "Annual Building Inspection", description: "Yearly structural assessment of facade and common areas", date: new Date("2026-04-15"), type: "inspection" });
+    await storage.createEvent({ projectId: project1.id, title: "Fire Safety Certificate Renewal", description: "Due for recertification per local regulation", date: new Date("2026-05-01"), type: "deadline" });
+    await storage.createEvent({ projectId: project2.id, title: "HVAC System Check", description: "Quarterly heating and ventilation inspection", date: new Date("2026-03-20"), type: "visit" });
+    await storage.createEvent({ projectId: project2.id, title: "Elevator Safety Inspection", description: "Mandatory annual elevator check", date: new Date("2026-06-10"), type: "inspection" });
+    await storage.createEvent({ projectId: project3.id, title: "Final Documentation Delivery", description: "All building documentation compiled and delivered to client", date: new Date("2025-11-20"), type: "deadline" });
+
+    await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-09-15"), status: "OK", notes: "Facade in good condition. Minor crack in stairwell wall noted, cosmetic only." });
+    await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-03-10"), status: "needs_repair", notes: "Roof drainage partially blocked. Cleaning recommended before next rain season." });
+    await storage.createInspection({ projectId: project2.id, engineerId: demoEngineerId, date: new Date("2025-12-01"), status: "OK", notes: "All systems operating within normal parameters. No immediate action required." });
+    await storage.createInspection({ projectId: project3.id, engineerId: demoEngineerId, date: new Date("2025-10-05"), status: "urgent", notes: "Water damage detected in basement. Immediate waterproofing repair needed." });
+
+    await storage.createDocument({ projectId: project1.id, name: "Bauwerksbuch 2025 - Meidlinger Hauptstrasse", url: "/docs/bauwerksbuch-meidlinger-2025.pdf", type: "pdf", uploadedBy: demoEngineerId });
+    await storage.createDocument({ projectId: project1.id, name: "Facade Inspection Report Sept 2025", url: "/docs/facade-report-sept2025.pdf", type: "pdf", uploadedBy: demoEngineerId });
+    await storage.createDocument({ projectId: project2.id, name: "HVAC Maintenance Schedule 2026", url: "/docs/hvac-schedule-2026.pdf", type: "pdf", uploadedBy: demoEngineerId });
+    await storage.createDocument({ projectId: project2.id, name: "Building Floor Plans", url: "/docs/mariahilfer-floorplans.pdf", type: "pdf", uploadedBy: demoEngineerId });
+    await storage.createDocument({ projectId: project3.id, name: "Final Bauwerksbuch - Josefstadt", url: "/docs/bauwerksbuch-josefstadt-final.pdf", type: "pdf", uploadedBy: demoEngineerId });
+
+    console.log("Database seeded with sample data");
+  } catch (error) {
+    console.error("Seed error:", error);
+  }
 }

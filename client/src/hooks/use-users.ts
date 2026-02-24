@@ -7,7 +7,8 @@ export function useClients() {
     queryFn: async () => {
       const res = await fetch(api.users.listClients.path, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch clients");
-      return api.users.listClients.responses[200].parse(await res.json());
+      const data = await res.json();
+      return api.users.listClients.responses[200].parse(data);
     },
   });
 }
@@ -18,19 +19,8 @@ export function useEngineers() {
     queryFn: async () => {
       const res = await fetch(api.users.listEngineers.path, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch engineers");
-      return api.users.listEngineers.responses[200].parse(await res.json());
-    },
-  });
-}
-
-export function useMyProfile() {
-  return useQuery({
-    queryKey: [api.profiles.get.path],
-    queryFn: async () => {
-      const res = await fetch(api.profiles.get.path, { credentials: "include" });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch profile");
-      return api.profiles.get.responses[200].parse(await res.json());
+      const data = await res.json();
+      return api.users.listEngineers.responses[200].parse(data);
     },
   });
 }

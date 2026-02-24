@@ -251,3 +251,12 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
+
+// Re-export types from schema for frontend hooks
+export type { 
+  CreateProjectRequest, 
+  UpdateProjectRequest, 
+  CreateEventRequest, 
+  CreateInspectionRequest, 
+  CreateDocumentRequest 
+} from './schema';

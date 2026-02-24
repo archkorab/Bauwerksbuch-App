@@ -1,17 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
-import { type InsertEvent } from "@shared/schema";
+import { api, buildUrl, type CreateEventRequest } from "@shared/routes";
 
 export function useEvents(projectId?: number) {
   return useQuery({
     queryKey: [api.events.list.path, projectId],
     queryFn: async () => {
-      const url = new URL(api.events.list.path, window.location.origin);
-      if (projectId) url.searchParams.append("projectId", projectId.toString());
-      
-      const res = await fetch(url.toString(), { credentials: "include" });
+      let url = api.events.list.path;
+      if (projectId) {
+        url += `?projectId=${projectId}`;
+      }
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch events");
-      return api.events.list.responses[200].parse(await res.json());
+      const data = await res.json();
+      return api.events.list.responses[200].parse(data);
     },
   });
 }
@@ -19,17 +20,19 @@ export function useEvents(projectId?: number) {
 export function useCreateEvent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: InsertEvent) => {
-      const validated = api.events.create.input.parse(data);
+    mutationFn: async (data: CreateEventRequest) => {
       const res = await fetch(api.events.create.path, {
         method: api.events.create.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
+        body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to create event");
-      return api.events.create.responses[201].parse(await res.json());
+      const resData = await res.json();
+      return api.events.create.responses[201].parse(resData);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.events.list.path] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.events.list.path] });
+    },
   });
 }

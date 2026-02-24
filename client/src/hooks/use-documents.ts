@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
-import { type InsertDocument } from "@shared/schema";
+import { api, buildUrl, type CreateDocumentRequest } from "@shared/routes";
 
 export function useDocuments(projectId: number) {
   return useQuery({
@@ -9,7 +8,8 @@ export function useDocuments(projectId: number) {
       const url = buildUrl(api.documents.list.path, { projectId });
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch documents");
-      return api.documents.list.responses[200].parse(await res.json());
+      const data = await res.json();
+      return api.documents.list.responses[200].parse(data);
     },
     enabled: !!projectId,
   });
@@ -18,17 +18,17 @@ export function useDocuments(projectId: number) {
 export function useCreateDocument() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: InsertDocument) => {
-      const validated = api.documents.create.input.parse(data);
-      const url = buildUrl(api.documents.create.path, { projectId: data.projectId });
+    mutationFn: async ({ projectId, data }: { projectId: number; data: CreateDocumentRequest }) => {
+      const url = buildUrl(api.documents.create.path, { projectId });
       const res = await fetch(url, {
         method: api.documents.create.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
+        body: JSON.stringify(data),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to add document metadata");
-      return api.documents.create.responses[201].parse(await res.json());
+      if (!res.ok) throw new Error("Failed to create document metadata");
+      const resData = await res.json();
+      return api.documents.create.responses[201].parse(resData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.documents.list.path, variables.projectId] });

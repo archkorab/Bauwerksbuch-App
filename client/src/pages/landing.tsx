@@ -1,92 +1,84 @@
-import { Button } from "@/components/ui/button";
-import { Building2, ArrowRight, ShieldCheck, FileCheck, CalendarClock } from "lucide-react";
+import { ShieldCheck, Building2, TrendingUp, ChevronRight } from "lucide-react";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-primary/30">
-      <header className="h-20 border-b border-border/40 bg-background/50 backdrop-blur-xl fixed top-0 w-full z-50 flex items-center justify-between px-6 lg:px-12">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden selection:bg-primary/30">
+      
+      {/* Left Panel: Hero & Branding */}
+      <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/20 via-background to-background">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 p-2 rounded-xl border border-primary/20">
-            <Building2 className="w-6 h-6 text-primary" />
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/30">
+            <Building2 className="w-6 h-6 text-white" />
           </div>
-          <span className="font-display font-bold text-xl tracking-tight">Bauwerksbuch</span>
+          <div>
+            <h1 className="font-display font-bold text-2xl tracking-tight text-foreground">Archkorab</h1>
+            <p className="text-xs text-primary font-bold uppercase tracking-[0.2em]">Bauwerksbuch</p>
+          </div>
         </div>
-        <Button 
-          onClick={() => window.location.href = '/api/login'}
-          className="rounded-full px-6 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 transition-all duration-300"
-        >
-          Client Portal Login
-        </Button>
-      </header>
 
-      <main className="flex-1 flex flex-col mt-20">
-        {/* Hero Section */}
-        <section className="relative flex-1 flex items-center justify-center py-20 lg:py-32 px-6 overflow-hidden">
-          {/* Abstract background gradient */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] opacity-50 pointer-events-none" />
+        <div className="max-w-2xl my-20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-8">
+            <ShieldCheck className="w-4 h-4" /> Enterprise Grade
+          </div>
+          <h2 className="font-display text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-8">
+            The standard in <br/>
+            <span className="text-gradient-primary">construction lifecycle</span> <br/>
+            management.
+          </h2>
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
+            A centralized hub for clients and engineers to view project timelines, access critical documents, and manage compliance seamlessly.
+          </p>
+
+          <div className="mt-12 flex flex-col sm:flex-row gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Real-time tracking</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Multi-project views</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground font-medium">
+          © {new Date().getFullYear()} Archkorab Bauwerksbuch. All rights reserved.
+        </div>
+      </div>
+
+      {/* Right Panel: Login Action */}
+      <div className="w-full md:w-[450px] lg:w-[500px] bg-card/30 flex flex-col justify-center items-center p-8 relative">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-luminosity pointer-events-none"></div>
+        
+        <div className="w-full max-w-sm glass-panel rounded-3xl p-10 flex flex-col relative z-10">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-8 border border-primary/20">
+            <ShieldCheck className="w-8 h-8 text-primary" />
+          </div>
           
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 border border-white/10 backdrop-blur-md mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">Secure Architecture Management</span>
-            </div>
-            
-            <h1 className="text-5xl lg:text-7xl font-display font-bold tracking-tight leading-[1.1] mb-8 bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">
-              Elevate your <br className="hidden sm:block" /> construction overview.
-            </h1>
-            
-            <p className="text-lg lg:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
-              The central hub for clients and engineers to manage building logs, track inspections, and securely share critical architectural documentation.
+          <h3 className="font-display text-2xl font-bold mb-3 text-foreground">Welcome back</h3>
+          <p className="text-muted-foreground text-sm mb-10 leading-relaxed">
+            Sign in with your Replit account to access your construction projects, inspection logs, and securely stored documents.
+          </p>
+
+          <button 
+            onClick={() => window.location.href = '/api/login'}
+            className="w-full py-4 px-6 rounded-xl font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
+          >
+            Access Platform
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          <div className="mt-8 text-center border-t border-border/50 pt-8">
+            <p className="text-xs text-muted-foreground">
+              By accessing the platform, you agree to the <a href="#" className="text-primary hover:underline">Terms of Service</a>.
             </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                size="lg" 
-                className="w-full sm:w-auto h-14 px-8 text-lg rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-1"
-              >
-                Access Dashboard
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </div>
           </div>
-        </section>
-
-        {/* Features Bento */}
-        <section className="py-24 px-6 bg-secondary/30 border-t border-border/50">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-              <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <FileCheck className="w-10 h-10 text-primary mb-6" />
-                <h3 className="text-xl font-bold mb-3">Inspection Logs</h3>
-                <p className="text-muted-foreground leading-relaxed">Access real-time reports and status updates from on-site engineers instantly.</p>
-              </div>
-              
-              <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <ShieldCheck className="w-10 h-10 text-primary mb-6" />
-                <h3 className="text-xl font-bold mb-3">Secure Documents</h3>
-                <p className="text-muted-foreground leading-relaxed">End-to-end encrypted storage for blueprints, permits, and sensitive files.</p>
-              </div>
-              
-              <div className="glass-panel p-8 rounded-3xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <CalendarClock className="w-10 h-10 text-primary mb-6" />
-                <h3 className="text-xl font-bold mb-3">Project Timeline</h3>
-                <p className="text-muted-foreground leading-relaxed">Track critical milestones, upcoming deadlines, and scheduled site visits.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="py-8 px-6 border-t border-border/40 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} Bauwerksbuch-Archkorab Platform. All rights reserved.</p>
-      </footer>
+        </div>
+      </div>
     </div>
   );
 }
