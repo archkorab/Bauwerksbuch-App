@@ -454,6 +454,8 @@ async function seedDatabase() {
 
     const project1 = await storage.createProject({
       clientId: demoClientId,
+      verwaltungId: demoClientId,
+      eigentuemer: "Familie Gruber",
       name: "Wohnhaus Meidlinger Hauptstrasse 42",
       address: "Meidlinger Hauptstrasse 42, 1120 Wien",
       latitude: "48.1753",
@@ -464,6 +466,8 @@ async function seedDatabase() {
 
     const project2 = await storage.createProject({
       clientId: demoClientId,
+      verwaltungId: demoClientId,
+      eigentuemer: "Immobilien AG Wien",
       name: "Burogebude Mariahilfer Strasse 88",
       address: "Mariahilfer Strasse 88, 1070 Wien",
       latitude: "48.1966",
@@ -474,6 +478,8 @@ async function seedDatabase() {
 
     const project3 = await storage.createProject({
       clientId: demoClientId,
+      verwaltungId: demoClientId,
+      eigentuemer: "Dr. Hans Müller",
       name: "Altbauwohnung Josefstadt",
       address: "Josefstadter Strasse 15, 1080 Wien",
       latitude: "48.2106",

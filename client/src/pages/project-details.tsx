@@ -152,7 +152,19 @@ export default function ProjectDetails() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Auftraggeber</p>
-                <p className="font-medium">{project.client?.firstName} {project.client?.lastName}</p>
+                <p className="font-medium" data-testid="text-client-name">{project.client?.firstName} {project.client?.lastName}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
+                <p className="font-medium" data-testid="text-verwaltung">
+                  {project.verwaltung 
+                    ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? ` (${project.verwaltung.profile.company})` : ''}`
+                    : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
+                <p className="font-medium" data-testid="text-eigentuemer">{project.eigentuemer || '—'}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>

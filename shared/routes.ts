@@ -41,7 +41,8 @@ const inspectionSchema = z.custom<typeof inspections.$inferSelect>();
 const defectSchema = z.custom<typeof defects.$inferSelect>();
 
 const projectWithClientSchema = projectSchema.and(z.object({
-  client: userSchema.and(z.object({ profile: profileSchema.optional() })).optional()
+  client: userSchema.and(z.object({ profile: profileSchema.optional() })).optional(),
+  verwaltung: userSchema.and(z.object({ profile: profileSchema.optional() })).optional()
 }));
 
 const inspectionWithEngineerSchema = inspectionSchema.and(z.object({

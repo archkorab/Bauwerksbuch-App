@@ -28,6 +28,8 @@ const createProjectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
   address: z.string().min(1, "Adresse ist erforderlich"),
   clientId: z.string().min(1, "Auftraggeber ist erforderlich"),
+  verwaltungId: z.string().optional(),
+  eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
 });
 
@@ -108,7 +110,7 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <Label>Auftraggeber zuweisen</Label>
                   <Select onValueChange={(val) => setValue("clientId", val)}>
-                    <SelectTrigger className="bg-background border-border">
+                    <SelectTrigger className="bg-background border-border" data-testid="select-client">
                       <SelectValue placeholder="Auftraggeber wählen..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -120,6 +122,27 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
                   {errors.clientId && <p className="text-xs text-destructive">{errors.clientId.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Verwaltung</Label>
+                  <Select onValueChange={(val) => setValue("verwaltungId", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-verwaltung">
+                      <SelectValue placeholder="Verwaltung wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients?.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName} ({client.profile?.company || ""})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="eigentuemer">Eigentümer</Label>
+                  <Input id="eigentuemer" {...register("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer" />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>

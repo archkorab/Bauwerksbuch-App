@@ -42,7 +42,7 @@ client/src/
 - users (from Replit Auth)
 - sessions (from Replit Auth)
 - profiles (role, phone, company)
-- projects (name, address, coordinates, status, nextInspectionDue)
+- projects (name, address, coordinates, status, nextInspectionDue, verwaltungId, eigentuemer)
 - documents (name, url, type, uploadedBy)
 - events (title, date, type, projectId)
 - inspections (date, status, notes, engineerId, projectId) - primary inspections
@@ -61,6 +61,14 @@ client/src/
 - Blue primary accent color
 - Minimal, clean design
 
+## Project Model - Verwaltung & Eigentümer
+- verwaltungId: FK to users table (client type) - the building management company
+- eigentuemer: free text field - the building owner (doesn't have to be a registered user)
+- Both shown in project details sidebar and available in project creation form
+- Verwaltung displays user name + company from profile
+
 ## Recent Changes
+- 2026-02-24: Added Verwaltung (verwaltungId FK to users) and Eigentümer (free text) fields to projects; displayed in project details and creation form
+- 2026-02-24: Translated entire app interface to German
 - 2026-02-24: Added defects table with primary/follow-up structure; inspection logbook shows Defect ID, Date, Description, Location in table format
 - 2026-02-24: Initial build - schema, backend, frontend, auth, seed data, role-based access

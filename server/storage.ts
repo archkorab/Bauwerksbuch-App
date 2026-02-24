@@ -114,22 +114,43 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, userId));
   }
 
-  async getProjects(clientId?: string): Promise<ProjectResponse[]> {
-    if (clientId) {
-      const result = await db
-        .select()
-        .from(projects)
-        .leftJoin(users, eq(projects.clientId, users.id))
-        .where(eq(projects.clientId, clientId))
-        .orderBy(desc(projects.createdAt));
-      return result.map(r => ({ ...r.projects, client: r.users || undefined }));
+  private async enrichProjectWithVerwaltung(project: any, clientUser: any): Promise<ProjectResponse> {
+    let verwaltung: any = undefined;
+    if (project.verwaltungId) {
+      const [vUser] = await db.select().from(users).where(eq(users.id, project.verwaltungId));
+      if (vUser) {
+        const [vProfile] = await db.select().from(profiles).where(eq(profiles.userId, project.verwaltungId));
+        verwaltung = { ...vUser, profile: vProfile || undefined };
+      }
     }
-    const result = await db
+    let clientProfile: any = undefined;
+    if (clientUser) {
+      const [cp] = await db.select().from(profiles).where(eq(profiles.userId, clientUser.id));
+      clientProfile = cp || undefined;
+    }
+    return {
+      ...project,
+      client: clientUser ? { ...clientUser, profile: clientProfile } : undefined,
+      verwaltung,
+    };
+  }
+
+  async getProjects(clientId?: string): Promise<ProjectResponse[]> {
+    const baseQuery = db
       .select()
       .from(projects)
       .leftJoin(users, eq(projects.clientId, users.id))
       .orderBy(desc(projects.createdAt));
-    return result.map(r => ({ ...r.projects, client: r.users || undefined }));
+
+    const result = clientId
+      ? await baseQuery.where(eq(projects.clientId, clientId))
+      : await baseQuery;
+
+    const enriched: ProjectResponse[] = [];
+    for (const r of result) {
+      enriched.push(await this.enrichProjectWithVerwaltung(r.projects, r.users));
+    }
+    return enriched;
   }
 
   async getProject(id: number): Promise<ProjectResponse | undefined> {
@@ -139,7 +160,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(projects.clientId, users.id))
       .where(eq(projects.id, id));
     if (!result) return undefined;
-    return { ...result.projects, client: result.users || undefined };
+    return this.enrichProjectWithVerwaltung(result.projects, result.users);
   }
 
   async createProject(data: InsertProject): Promise<Project> {
