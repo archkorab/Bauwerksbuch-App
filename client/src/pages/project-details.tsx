@@ -46,8 +46,11 @@ const inspTypeLabels: Record<string, string> = {
   folgepruefung: "Folgeprüfung",
 };
 
+const BAUTEIL_OPTIONS = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
+
 interface DefectEntry {
   defectId: string;
+  bauteil: string[];
   dateFound: string;
   description: string;
   location: string;
@@ -119,6 +122,7 @@ export default function ProjectDetails() {
   const addDefectEntry = () => {
     setDefectEntries(prev => [...prev, {
       defectId: "",
+      bauteil: [],
       dateFound: "",
       description: "",
       location: "",
@@ -207,11 +211,12 @@ export default function ProjectDetails() {
           data: {
             inspectionId: inspection.id,
             defectId: entry.defectId,
+            bauteil: entry.bauteil.length > 0 ? entry.bauteil : null,
             dateFound: new Date(entry.dateFound),
             description: entry.description,
             location: entry.location,
             status: entry.status as "leichter_mangel" | "grober_mangel",
-            frist: entry.frist || null,
+            frist: (entry.frist || null) as any,
             repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
           }
         });
@@ -238,6 +243,7 @@ export default function ProjectDetails() {
     const existingDefects = (ins.defects || []).map((d: any) => ({
       existingId: d.id,
       defectId: d.defectId,
+      bauteil: d.bauteil || [],
       dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
       description: d.description,
       location: d.location,
@@ -283,11 +289,12 @@ export default function ProjectDetails() {
             projectId,
             data: {
               defectId: entry.defectId,
+              bauteil: entry.bauteil.length > 0 ? entry.bauteil : null,
               dateFound: new Date(entry.dateFound),
               description: entry.description,
               location: entry.location,
               status: entry.status as "leichter_mangel" | "grober_mangel",
-              frist: entry.frist || null,
+              frist: (entry.frist || null) as any,
               repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
@@ -298,11 +305,12 @@ export default function ProjectDetails() {
             data: {
               inspectionId: editingInspection.id,
               defectId: entry.defectId,
+              bauteil: entry.bauteil.length > 0 ? entry.bauteil : null,
               dateFound: new Date(entry.dateFound),
               description: entry.description,
               location: entry.location,
               status: entry.status as "leichter_mangel" | "grober_mangel",
-              frist: entry.frist || null,
+              frist: (entry.frist || null) as any,
               repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
@@ -798,31 +806,47 @@ export default function ProjectDetails() {
                                     <Input value={entry.defectId} onChange={(e) => updateDefectEntry(index, "defectId", e.target.value)} placeholder="z.B. M-001" required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-id-${index}`} />
                                   </div>
                                   <div className="space-y-1.5">
+                                    <Label className="text-xs">Bauteil</Label>
+                                    <div className="flex flex-wrap gap-1.5" data-testid={`bauteil-select-${index}`}>
+                                      {BAUTEIL_OPTIONS.map(opt => (
+                                        <button key={opt} type="button" onClick={() => {
+                                          setDefectEntries(prev => prev.map((ent, i) => {
+                                            if (i !== index) return ent;
+                                            const has = ent.bauteil.includes(opt);
+                                            return { ...ent, bauteil: has ? ent.bauteil.filter(b => b !== opt) : [...ent.bauteil, opt] };
+                                          }));
+                                        }} className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${entry.bauteil.includes(opt) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary/50'}`}>
+                                          {opt}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
                                     <Label className="text-xs">Datum der Feststellung</Label>
                                     <Input type="date" value={entry.dateFound} onChange={(e) => updateDefectEntry(index, "dateFound", e.target.value)} required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-date-${index}`} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Lage</Label>
+                                    <Input value={entry.location} onChange={(e) => updateDefectEntry(index, "location", e.target.value)} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-location-${index}`} />
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
                                   <Label className="text-xs">Beschreibung</Label>
                                   <Textarea value={entry.description} onChange={(e) => updateDefectEntry(index, "description", e.target.value)} placeholder="Beschreibung des Mangels..." required className="bg-card border-border min-h-[60px] text-sm" data-testid={`input-defect-description-${index}`} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div className="space-y-1.5">
-                                    <Label className="text-xs">Ort</Label>
-                                    <Input value={entry.location} onChange={(e) => updateDefectEntry(index, "location", e.target.value)} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-location-${index}`} />
-                                  </div>
-                                  <div className="space-y-1.5">
-                                    <Label className="text-xs">Status</Label>
-                                    <Select value={entry.status} onValueChange={(val) => updateDefectEntry(index, "status", val)}>
-                                      <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`select-defect-status-${index}`}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                                        <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Status</Label>
+                                  <Select value={entry.status} onValueChange={(val) => updateDefectEntry(index, "status", val)}>
+                                    <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`select-defect-status-${index}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+                                      <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div className="space-y-1.5">
@@ -904,7 +928,7 @@ export default function ProjectDetails() {
                     <div className="border-t border-border pt-5">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-display font-bold text-base">Mängel</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", bauteil: [], dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
                           <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
                         </Button>
                       </div>
@@ -933,6 +957,24 @@ export default function ProjectDetails() {
                                 <Input value={entry.defectId} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, defectId: e.target.value } : ent))} placeholder="z.B. M-001" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-id-${index}`} />
                               </div>
                               <div className="space-y-1.5">
+                                <Label className="text-xs">Bauteil</Label>
+                                <div className="flex flex-wrap gap-1.5" data-testid={`edit-bauteil-select-${index}`}>
+                                  {BAUTEIL_OPTIONS.map(opt => (
+                                    <button key={opt} type="button" onClick={() => {
+                                      setEditDefectEntries(prev => prev.map((ent, i) => {
+                                        if (i !== index) return ent;
+                                        const has = ent.bauteil.includes(opt);
+                                        return { ...ent, bauteil: has ? ent.bauteil.filter(b => b !== opt) : [...ent.bauteil, opt] };
+                                      }));
+                                    }} className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${entry.bauteil.includes(opt) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary/50'}`}>
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
                                 <Label className="text-xs">Datum der Feststellung</Label>
                                 <Input type="date" value={entry.dateFound} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => {
                                   if (i !== index) return ent;
@@ -941,28 +983,26 @@ export default function ProjectDetails() {
                                   return updated;
                                 }))} required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-date-${index}`} />
                               </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Lage</Label>
+                                <Input value={entry.location} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, location: e.target.value } : ent))} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-location-${index}`} />
+                              </div>
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs">Beschreibung</Label>
                               <Textarea value={entry.description} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, description: e.target.value } : ent))} placeholder="Beschreibung des Mangels..." required className="bg-card border-border min-h-[60px] text-sm" data-testid={`edit-input-defect-description-${index}`} />
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Ort</Label>
-                                <Input value={entry.location} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, location: e.target.value } : ent))} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-location-${index}`} />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Status</Label>
-                                <Select value={entry.status} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, status: val } : ent))}>
-                                  <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-status-${index}`}>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                                    <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Status</Label>
+                              <Select value={entry.status} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, status: val } : ent))}>
+                                <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-status-${index}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+                                  <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1.5">
@@ -1059,9 +1099,10 @@ export default function ProjectDetails() {
                               <thead>
                                 <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
                                   <th className="text-left px-5 py-3 font-semibold">Mangel-Nr.</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Bauteil</th>
                                   <th className="text-left px-5 py-3 font-semibold">Datum der Feststellung</th>
                                   <th className="text-left px-5 py-3 font-semibold">Beschreibung</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Ort</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Lage</th>
                                   <th className="text-left px-5 py-3 font-semibold">Status</th>
                                   <th className="text-left px-5 py-3 font-semibold">Frist</th>
                                   <th className="text-left px-5 py-3 font-semibold">Reparatur bis</th>
@@ -1079,6 +1120,7 @@ export default function ProjectDetails() {
                                             <span className="font-mono font-semibold text-primary">{defect.defectId}</span>
                                           </div>
                                         </td>
+                                        <td className="px-5 py-3 text-foreground">{defect.bauteil && defect.bauteil.length > 0 ? defect.bauteil.join(", ") : "–"}</td>
                                         <td className="px-5 py-3">
                                           <div className="flex items-center gap-2 text-foreground">
                                             <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1110,6 +1152,7 @@ export default function ProjectDetails() {
                                               <span className="font-mono font-semibold text-muted-foreground">{child.defectId}</span>
                                             </div>
                                           </td>
+                                          <td className="px-5 py-3 text-foreground">{child.bauteil && child.bauteil.length > 0 ? child.bauteil.join(", ") : "–"}</td>
                                           <td className="px-5 py-3">
                                             <div className="flex items-center gap-2 text-foreground">
                                               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />

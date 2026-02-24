@@ -70,6 +70,7 @@ export const defects = pgTable("defects", {
   id: serial("id").primaryKey(),
   inspectionId: integer("inspection_id").notNull().references(() => inspections.id),
   defectId: text("defect_id").notNull(),
+  bauteil: text("bauteil").array(),
   dateFound: timestamp("date_found").notNull(),
   description: text("description").notNull(),
   location: text("location").notNull(),
