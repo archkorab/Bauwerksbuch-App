@@ -23,19 +23,19 @@ export default function CalendarPage() {
   return (
     <Layout>
       <div className="mb-10">
-        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Global Calendar</h1>
-        <p className="text-muted-foreground">Timeline of all upcoming inspections, deadlines, and project milestones.</p>
+        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Kalender</h1>
+        <p className="text-muted-foreground">Übersicht aller anstehenden Prüfungen, Fristen und Projektmeilensteine.</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
         {/* Upcoming */}
         <div>
           <h2 className="flex items-center gap-2 font-display text-xl font-bold text-foreground mb-6 pb-2 border-b border-border">
-            <Clock className="w-5 h-5 text-primary" /> Upcoming Events
+            <Clock className="w-5 h-5 text-primary" /> Anstehende Termine
           </h2>
           <div className="space-y-4">
             {upcomingEvents.length === 0 ? (
-              <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground shadow-sm">No upcoming events scheduled.</div>
+              <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground shadow-sm">Keine anstehenden Termine geplant.</div>
             ) : (
               upcomingEvents.map(event => (
                 <div key={event.id} className="group flex gap-4 bg-card border border-border rounded-2xl p-4 shadow-sm hover-elevate transition-all">
@@ -45,11 +45,11 @@ export default function CalendarPage() {
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <h3 className="font-bold text-foreground text-lg line-clamp-1">{event.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{event.description || 'No additional details.'}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{event.description || 'Keine weiteren Details.'}</p>
                     {event.projectId && (
                       <Link href={`/projects/${event.projectId}`}>
                         <div className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-primary hover:underline cursor-pointer">
-                          <Building className="w-3.5 h-3.5" /> View Project <ChevronRight className="w-3 h-3" />
+                          <Building className="w-3.5 h-3.5" /> Projekt ansehen <ChevronRight className="w-3 h-3" />
                         </div>
                       </Link>
                     )}
@@ -63,11 +63,11 @@ export default function CalendarPage() {
         {/* Past */}
         <div>
           <h2 className="flex items-center gap-2 font-display text-xl font-bold text-muted-foreground mb-6 pb-2 border-b border-border">
-            <CalendarIcon className="w-5 h-5 opacity-70" /> Past Events
+            <CalendarIcon className="w-5 h-5 opacity-70" /> Vergangene Termine
           </h2>
           <div className="space-y-4 opacity-70 hover:opacity-100 transition-opacity duration-300">
             {pastEvents.length === 0 ? (
-              <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">No past events recorded.</div>
+              <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">Keine vergangenen Termine vorhanden.</div>
             ) : (
               pastEvents.map(event => (
                 <div key={event.id} className="flex gap-4 bg-transparent border border-border rounded-2xl p-4">
@@ -80,7 +80,7 @@ export default function CalendarPage() {
                     {event.projectId && (
                       <Link href={`/projects/${event.projectId}`}>
                         <div className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer">
-                          <Building className="w-3.5 h-3.5" /> Project Ref
+                          <Building className="w-3.5 h-3.5" /> Projektreferenz
                         </div>
                       </Link>
                     )}

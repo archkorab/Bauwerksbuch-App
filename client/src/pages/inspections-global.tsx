@@ -21,15 +21,15 @@ export default function InspectionsGlobal() {
   return (
     <Layout>
       <div className="mb-10">
-        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Inspections Directory</h1>
-        <p className="text-muted-foreground">Select a project to review its full inspection logbook or schedule new site visits.</p>
+        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Prüfungsverzeichnis</h1>
+        <p className="text-muted-foreground">Wählen Sie ein Projekt, um das vollständige Prüfprotokoll einzusehen oder neue Begehungen zu planen.</p>
       </div>
 
       {projectsNeedingInspection.length > 0 && (
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-6 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl inline-flex shadow-sm">
             <AlertTriangle className="w-5 h-5" />
-            <h2 className="font-display font-bold">Action Required: Inspections Overdue</h2>
+            <h2 className="font-display font-bold">Handlungsbedarf: Prüfungen überfällig</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -41,14 +41,14 @@ export default function InspectionsGlobal() {
       )}
 
       <div>
-        <h2 className="font-display text-xl font-bold text-foreground mb-6">All Projects Logbooks</h2>
+        <h2 className="font-display text-xl font-bold text-foreground mb-6">Alle Projektprotokolle</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {otherProjects.map(project => (
             <ProjectInspectionCard key={project.id} project={project} />
           ))}
           {projects?.length === 0 && (
             <div className="col-span-full p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">
-              No projects available in the directory.
+              Keine Projekte im Verzeichnis vorhanden.
             </div>
           )}
         </div>
@@ -81,7 +81,7 @@ function ProjectInspectionCard({ project, isUrgent = false }: { project: any, is
           <div className="flex items-center gap-2">
             <Calendar className={`w-4 h-4 ${isUrgent ? 'text-destructive' : 'text-muted-foreground'}`} />
             <span className={`text-sm font-medium ${isUrgent ? 'text-destructive' : 'text-foreground'}`}>
-              Due: {project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMM d, yyyy') : 'Unscheduled'}
+              Fällig: {project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMM d, yyyy') : 'Nicht geplant'}
             </span>
           </div>
           <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />

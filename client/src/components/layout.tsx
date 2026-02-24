@@ -26,11 +26,17 @@ export function Layout({ children }: LayoutProps) {
   const role = profile?.role || "client";
   const isAdminOrEngineer = role === "admin" || role === "engineer";
 
+  const roleLabels: Record<string, string> = {
+    admin: "Administrator",
+    engineer: "Ingenieur",
+    client: "Auftraggeber",
+  };
+
   const navItems = [
-    { name: "Dashboard", href: "/projects", icon: LayoutDashboard },
-    { name: "Global Calendar", href: "/calendar", icon: CalendarDays },
-    { name: "Inspections Log", href: "/inspections", icon: ClipboardCheck },
-    ...(role === "admin" ? [{ name: "User Management", href: "/admin/users", icon: UserCog }] : []),
+    { name: "Übersicht", id: "dashboard", href: "/projects", icon: LayoutDashboard },
+    { name: "Kalender", id: "calendar", href: "/calendar", icon: CalendarDays },
+    { name: "Prüfprotokoll", id: "inspections", href: "/inspections", icon: ClipboardCheck },
+    ...(role === "admin" ? [{ name: "Benutzerverwaltung", id: "user-management", href: "/admin/users", icon: UserCog }] : []),
   ];
 
   return (
@@ -49,11 +55,11 @@ export function Layout({ children }: LayoutProps) {
           </div>
 
           <nav className="flex-1 space-y-2">
-            <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Platform</div>
+            <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Plattform</div>
             {navItems.map((item) => {
               const isActive = location === item.href || (location === "/" && item.href === "/projects");
               return (
-                <Link key={item.name} href={item.href} className="block" data-testid={`link-nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                <Link key={item.id} href={item.href} className="block" data-testid={`link-nav-${item.id}`}>
                   <div
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer
                       ${isActive 
@@ -74,16 +80,16 @@ export function Layout({ children }: LayoutProps) {
             <div className="bg-background/50 border border-border rounded-xl p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
                 {user?.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="User" className="w-full h-full rounded-full object-cover" />
+                  <img src={user.profileImageUrl} alt="Benutzer" className="w-full h-full rounded-full object-cover" />
                 ) : (
                   <UserIcon className="w-5 h-5 text-muted-foreground" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">
-                  {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}
+                  {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'Benutzer'}
                 </p>
-                <p className="text-xs text-primary font-medium uppercase tracking-wider">{role}</p>
+                <p className="text-xs text-primary font-medium uppercase tracking-wider">{roleLabels[role] || role}</p>
               </div>
             </div>
             <Button 
@@ -93,7 +99,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => logout()}
             >
               <LogOut className="w-4 h-4" />
-              Sign out
+              Abmelden
             </Button>
           </div>
         </div>

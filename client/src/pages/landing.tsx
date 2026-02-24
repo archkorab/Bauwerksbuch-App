@@ -18,15 +18,15 @@ export default function LandingPage() {
 
         <div className="max-w-2xl my-20">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-8">
-            <ShieldCheck className="w-4 h-4" /> Enterprise Grade
+            <ShieldCheck className="w-4 h-4" /> Enterprise-Qualität
           </div>
           <h2 className="font-display text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-8">
-            The standard in <br/>
-            <span className="text-gradient-primary">construction lifecycle</span> <br/>
-            management.
+            Der Standard im <br/>
+            <span className="text-gradient-primary">Bauwerkszyklus</span> <br/>
+            Management.
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-            A centralized hub for clients and engineers to view project timelines, access critical documents, and manage compliance seamlessly.
+            Eine zentrale Plattform für Auftraggeber und Ingenieure zur Einsicht in Projektzeitpläne, zum Zugriff auf wichtige Dokumente und zur nahtlosen Verwaltung der Compliance.
           </p>
 
           <div className="mt-12 flex flex-col sm:flex-row gap-6">
@@ -34,19 +34,19 @@ export default function LandingPage() {
               <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
-              <span className="text-sm font-medium text-foreground">Real-time tracking</span>
+              <span className="text-sm font-medium text-foreground">Echtzeit-Verfolgung</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
-              <span className="text-sm font-medium text-foreground">Multi-project views</span>
+              <span className="text-sm font-medium text-foreground">Mehrprojektansichten</span>
             </div>
           </div>
         </div>
 
         <div className="text-xs text-muted-foreground font-medium">
-          © {new Date().getFullYear()} Archkorab Bauwerksbuch. All rights reserved.
+          © {new Date().getFullYear()} Archkorab Bauwerksbuch. Alle Rechte vorbehalten.
         </div>
       </div>
 
@@ -59,9 +59,9 @@ export default function LandingPage() {
             <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
           
-          <h3 className="font-display text-2xl font-bold mb-3 text-foreground">Welcome back</h3>
+          <h3 className="font-display text-2xl font-bold mb-3 text-foreground">Willkommen zurück</h3>
           <p className="text-muted-foreground text-sm mb-10 leading-relaxed">
-            Sign in with your Replit account to access your construction projects, inspection logs, and securely stored documents.
+            Melden Sie sich mit Ihrem Replit-Konto an, um auf Ihre Bauprojekte, Prüfprotokolle und sicher gespeicherte Dokumente zuzugreifen.
           </p>
 
           <button 
@@ -69,13 +69,13 @@ export default function LandingPage() {
             onClick={() => window.location.href = '/api/login'}
             className="w-full py-4 px-6 rounded-xl font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
           >
-            Access Platform
+            Zur Plattform
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
           
           <div className="mt-8 text-center border-t border-border/50 pt-8">
             <p className="text-xs text-muted-foreground">
-              By accessing the platform, you agree to the <a href="#" className="text-primary hover:underline">Terms of Service</a>.
+              Mit dem Zugriff auf die Plattform stimmen Sie den <a href="#" className="text-primary hover:underline">Nutzungsbedingungen</a> zu.
             </p>
           </div>
         </div>

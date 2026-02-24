@@ -22,6 +22,24 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+const statusLabels: Record<string, string> = {
+  active: "Aktiv",
+  completed: "Abgeschlossen",
+  archived: "Archiviert",
+};
+
+const inspStatusLabels: Record<string, string> = {
+  OK: "OK",
+  needs_repair: "Reparaturbedarf",
+  urgent: "Dringend",
+};
+
+const defectStatusLabels: Record<string, string> = {
+  open: "Offen",
+  in_progress: "In Bearbeitung",
+  resolved: "Behoben",
+};
+
 export default function ProjectDetails() {
   const [, params] = useRoute("/projects/:id");
   const projectId = Number(params?.id);
@@ -102,7 +120,7 @@ export default function ProjectDetails() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mb-4">
           <Building className="w-4 h-4" />
-          <span>Projects</span>
+          <span>Projekte</span>
           <ChevronRight className="w-4 h-4" />
           <span className="text-foreground">{project.name}</span>
         </div>
@@ -115,7 +133,7 @@ export default function ProjectDetails() {
                 ${project.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
                   project.status === 'completed' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
                   'bg-muted text-muted-foreground border-border'}`}>
-                {project.status}
+                {statusLabels[project.status] || project.status}
               </span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -130,19 +148,19 @@ export default function ProjectDetails() {
         {/* Left Column */}
         <div className="lg:col-span-1 space-y-8">
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-display font-bold text-lg mb-4">Project Details</h3>
+            <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Client</p>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Auftraggeber</p>
                 <p className="font-medium">{project.client?.firstName} {project.client?.lastName}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Created On</p>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>
                 <p className="font-medium">{format(new Date(project.createdAt!), 'MMMM d, yyyy')}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Next Inspection</p>
-                <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Not scheduled'}</p>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
+                <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Nicht geplant'}</p>
               </div>
             </div>
           </div>
@@ -156,28 +174,28 @@ export default function ProjectDetails() {
         <div className="lg:col-span-2">
           <Tabs defaultValue="documents" className="w-full">
             <TabsList className="bg-card border border-border p-1 rounded-xl mb-6">
-              <TabsTrigger value="documents" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Documents</TabsTrigger>
-              <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Inspections</TabsTrigger>
-              <TabsTrigger value="events" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Timeline Events</TabsTrigger>
+              <TabsTrigger value="documents" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dokumente</TabsTrigger>
+              <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Prüfungen</TabsTrigger>
+              <TabsTrigger value="events" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Zeitleiste</TabsTrigger>
             </TabsList>
 
             {/* Documents Tab */}
             <TabsContent value="documents" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display font-bold text-xl">Project Documents</h3>
+                <h3 className="font-display font-bold text-xl">Projektdokumente</h3>
                 {isAdminOrEngineer && (
                   <Dialog open={docDialogOpen} onOpenChange={setDocDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">
-                        <Upload className="w-4 h-4 mr-2" /> Upload
+                        <Upload className="w-4 h-4 mr-2" /> Hochladen
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle>Upload Document Metadata</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>Dokumentmetadaten hochladen</DialogTitle></DialogHeader>
                       <form onSubmit={handleDocSubmit(onDocSubmit)} className="space-y-4">
-                        <div className="space-y-2"><Label>Document Name</Label><Input {...docReg("name")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>File Type</Label><Input {...docReg("type")} defaultValue="pdf" className="bg-background"/></div>
-                        <Button type="submit" className="w-full" disabled={createDocument.isPending}>Submit</Button>
+                        <div className="space-y-2"><Label>Dokumentname</Label><Input {...docReg("name")} required className="bg-background"/></div>
+                        <div className="space-y-2"><Label>Dateityp</Label><Input {...docReg("type")} defaultValue="pdf" className="bg-background"/></div>
+                        <Button type="submit" className="w-full" disabled={createDocument.isPending}>Absenden</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -186,7 +204,7 @@ export default function ProjectDetails() {
               
               <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {documents?.length === 0 ? (
-                   <div className="p-8 text-center text-muted-foreground">No documents uploaded yet.</div>
+                   <div className="p-8 text-center text-muted-foreground">Noch keine Dokumente hochgeladen.</div>
                 ) : (
                   <div className="divide-y divide-border">
                     {documents?.map(doc => (
@@ -213,19 +231,19 @@ export default function ProjectDetails() {
             {/* Inspections Tab */}
             <TabsContent value="inspections" className="space-y-6" data-testid="tab-inspections">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display font-bold text-xl">Inspection Logbook</h3>
+                <h3 className="font-display font-bold text-xl">Prüfprotokoll</h3>
                 {isAdminOrEngineer && (
                   <Dialog open={inspDialogOpen} onOpenChange={setInspDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" data-testid="button-add-inspection">
-                        <Plus className="w-4 h-4 mr-2" /> Add Inspection
+                        <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle className="font-display text-xl">Log New Inspection</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle></DialogHeader>
                       <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-5 mt-2">
                         <div className="space-y-2">
-                          <Label>Inspection Date</Label>
+                          <Label>Prüfdatum</Label>
                           <Input type="date" {...inspReg("date")} required className="bg-background border-border" data-testid="input-inspection-date" />
                         </div>
                         <div className="space-y-2">
@@ -236,18 +254,18 @@ export default function ProjectDetails() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="OK">OK</SelectItem>
-                              <SelectItem value="needs_repair">Needs Repair</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
+                              <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
+                              <SelectItem value="urgent">Dringend</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Notes</Label>
-                          <Textarea {...inspReg("notes")} placeholder="Describe findings, observations, and recommendations..." className="bg-background border-border min-h-[100px]" data-testid="input-inspection-notes" />
+                          <Label>Anmerkungen</Label>
+                          <Textarea {...inspReg("notes")} placeholder="Befunde, Beobachtungen und Empfehlungen beschreiben..." className="bg-background border-border min-h-[100px]" data-testid="input-inspection-notes" />
                         </div>
                         <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection">
                           {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                          Log Inspection
+                          Prüfung erfassen
                         </Button>
                       </form>
                     </DialogContent>
@@ -256,7 +274,7 @@ export default function ProjectDetails() {
               </div>
               <div className="space-y-6">
                 {inspections?.length === 0 ? (
-                  <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground">No inspections logged.</div>
+                  <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground">Keine Prüfungen erfasst.</div>
                 ) : (
                   inspections?.map(ins => {
                     const primaryDefects = ins.defects?.filter((d: any) => !d.parentDefectId) || [];
@@ -275,10 +293,10 @@ export default function ProjectDetails() {
                                 {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                               </div>
                               <div>
-                                <p className="font-semibold text-foreground text-lg">Primary Inspection — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
-                                <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'No notes provided.'}</p>
+                                <p className="font-semibold text-foreground text-lg">Hauptprüfung — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'Keine Anmerkungen.'}</p>
                                 {ins.engineer && (
-                                  <p className="text-xs text-muted-foreground mt-2 font-medium">Engineer: {ins.engineer.firstName} {ins.engineer.lastName}</p>
+                                  <p className="text-xs text-muted-foreground mt-2 font-medium">Ingenieur: {ins.engineer.firstName} {ins.engineer.lastName}</p>
                                 )}
                               </div>
                             </div>
@@ -286,7 +304,7 @@ export default function ProjectDetails() {
                               ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
                                 ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
                                 'text-amber-500 border-amber-500/30'}`}>
-                              {ins.status.replace('_', ' ')}
+                              {inspStatusLabels[ins.status] || ins.status}
                             </span>
                           </div>
                         </div>
@@ -297,10 +315,10 @@ export default function ProjectDetails() {
                             <table className="w-full text-sm" data-testid={`defects-table-${ins.id}`}>
                               <thead>
                                 <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                                  <th className="text-left px-5 py-3 font-semibold">Defect ID</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Date of Finding</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Description</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Location</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Mangel-Nr.</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Datum der Feststellung</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Beschreibung</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Ort</th>
                                   <th className="text-left px-5 py-3 font-semibold">Status</th>
                                 </tr>
                               </thead>
@@ -334,7 +352,7 @@ export default function ProjectDetails() {
                                             ${defect.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
                                               defect.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
                                               'text-destructive border-destructive/30 bg-destructive/10'}`}>
-                                            {defect.status.replace('_', ' ')}
+                                            {defectStatusLabels[defect.status] || defect.status}
                                           </span>
                                         </td>
                                       </tr>
@@ -364,7 +382,7 @@ export default function ProjectDetails() {
                                               ${child.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
                                                 child.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
                                                 'text-destructive border-destructive/30 bg-destructive/10'}`}>
-                                              {child.status.replace('_', ' ')}
+                                              {defectStatusLabels[child.status] || child.status}
                                             </span>
                                           </td>
                                         </tr>
@@ -378,7 +396,7 @@ export default function ProjectDetails() {
                         )}
 
                         {(!ins.defects || ins.defects.length === 0) && (
-                          <div className="px-5 py-4 text-sm text-muted-foreground">No defects recorded for this inspection.</div>
+                          <div className="px-5 py-4 text-sm text-muted-foreground">Keine Mängel für diese Prüfung erfasst.</div>
                         )}
                       </div>
                     );
@@ -390,21 +408,21 @@ export default function ProjectDetails() {
             {/* Events Timeline */}
             <TabsContent value="events" className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display font-bold text-xl">Project Timeline</h3>
+                <h3 className="font-display font-bold text-xl">Projektzeitleiste</h3>
                 {isAdminOrEngineer && (
                   <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">
-                        <Plus className="w-4 h-4 mr-2" /> Add Event
+                        <Plus className="w-4 h-4 mr-2" /> Termin hinzufügen
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle>Schedule Event</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>Termin planen</DialogTitle></DialogHeader>
                       <form onSubmit={handleEventSubmit(onEventSubmit)} className="space-y-4">
-                        <div className="space-y-2"><Label>Title</Label><Input {...eventReg("title")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>Date</Label><Input type="date" {...eventReg("date")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>Description</Label><Input {...eventReg("description")} className="bg-background"/></div>
-                        <Button type="submit" className="w-full" disabled={createEvent.isPending}>Add Event</Button>
+                        <div className="space-y-2"><Label>Titel</Label><Input {...eventReg("title")} required className="bg-background"/></div>
+                        <div className="space-y-2"><Label>Datum</Label><Input type="date" {...eventReg("date")} required className="bg-background"/></div>
+                        <div className="space-y-2"><Label>Beschreibung</Label><Input {...eventReg("description")} className="bg-background"/></div>
+                        <Button type="submit" className="w-full" disabled={createEvent.isPending}>Termin hinzufügen</Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -413,7 +431,7 @@ export default function ProjectDetails() {
               
               <div className="bg-card border border-border rounded-2xl p-6">
                 {events?.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">No upcoming events.</div>
+                  <div className="text-center text-muted-foreground py-4">Keine anstehenden Termine.</div>
                 ) : (
                   <div className="relative border-l-2 border-border ml-3 space-y-8 py-2">
                     {events?.map(ev => (

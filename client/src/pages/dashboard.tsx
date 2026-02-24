@@ -25,13 +25,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const createProjectSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  address: z.string().min(1, "Address is required"),
-  clientId: z.string().min(1, "Client is required"),
+  name: z.string().min(1, "Name ist erforderlich"),
+  address: z.string().min(1, "Adresse ist erforderlich"),
+  clientId: z.string().min(1, "Auftraggeber ist erforderlich"),
   status: z.enum(["active", "completed", "archived"]),
 });
 
 type CreateProjectForm = z.infer<typeof createProjectSchema>;
+
+const statusLabels: Record<string, string> = {
+  active: "Aktiv",
+  completed: "Abgeschlossen",
+  archived: "Archiviert",
+};
 
 export default function Dashboard() {
   const { data: projects, isLoading } = useProjects();
@@ -71,39 +77,39 @@ export default function Dashboard() {
     <Layout>
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Projects Dashboard</h1>
-          <p className="text-muted-foreground">Overview of all active construction sites and documentation.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Projektübersicht</h1>
+          <p className="text-muted-foreground">Übersicht aller aktiven Baustellen und Dokumentationen.</p>
         </div>
         
         {isAdminOrEngineer && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-project">
-                <Plus className="w-4 h-4 mr-2" /> Add Project
+                <Plus className="w-4 h-4 mr-2" /> Projekt hinzufügen
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] bg-card border-border">
               <DialogHeader>
-                <DialogTitle className="font-display text-xl">Create New Project</DialogTitle>
+                <DialogTitle className="font-display text-xl">Neues Projekt erstellen</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Project Name</Label>
+                  <Label htmlFor="name">Projektname</Label>
                   <Input id="name" {...register("name")} className="bg-background border-border focus:ring-primary/20" />
                   {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">Adresse</Label>
                   <Input id="address" {...register("address")} className="bg-background border-border focus:ring-primary/20" />
                   {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Assign Client</Label>
+                  <Label>Auftraggeber zuweisen</Label>
                   <Select onValueChange={(val) => setValue("clientId", val)}>
                     <SelectTrigger className="bg-background border-border">
-                      <SelectValue placeholder="Select a client..." />
+                      <SelectValue placeholder="Auftraggeber wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {clients?.map(client => (
@@ -118,7 +124,7 @@ export default function Dashboard() {
 
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>
                   {createProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Create Project
+                  Projekt erstellen
                 </Button>
               </form>
             </DialogContent>
@@ -133,7 +139,7 @@ export default function Dashboard() {
             <FolderGit2 className="w-7 h-7 text-blue-500" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Total Projects</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Projekte gesamt</p>
             <h3 className="text-3xl font-display font-bold text-foreground">{projects?.length || 0}</h3>
           </div>
         </div>
@@ -142,7 +148,7 @@ export default function Dashboard() {
             <CheckCircle2 className="w-7 h-7 text-emerald-500" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Active Projects</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Aktive Projekte</p>
             <h3 className="text-3xl font-display font-bold text-foreground">{activeProjects}</h3>
           </div>
         </div>
@@ -151,7 +157,7 @@ export default function Dashboard() {
             <Clock className="w-7 h-7 text-amber-500" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">Needs Inspection</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">Prüfung erforderlich</p>
             <h3 className="text-3xl font-display font-bold text-foreground">
               {projects?.filter(p => p.nextInspectionDue && new Date(p.nextInspectionDue) < new Date()).length || 0}
             </h3>
@@ -164,8 +170,8 @@ export default function Dashboard() {
         {projects?.length === 0 ? (
           <div className="col-span-full py-16 text-center border-2 border-dashed border-border rounded-2xl bg-card/30">
             <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-bold text-foreground mb-1">No projects found</h3>
-            <p className="text-muted-foreground">You don't have any assigned projects yet.</p>
+            <h3 className="text-lg font-bold text-foreground mb-1">Keine Projekte gefunden</h3>
+            <p className="text-muted-foreground">Ihnen sind noch keine Projekte zugewiesen.</p>
           </div>
         ) : (
           projects?.map((project) => (
@@ -179,7 +185,7 @@ export default function Dashboard() {
                     ${project.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
                       project.status === 'completed' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
                       'bg-muted text-muted-foreground border-border'}`}>
-                    {project.status}
+                    {statusLabels[project.status] || project.status}
                   </span>
                 </div>
                 
@@ -194,7 +200,7 @@ export default function Dashboard() {
                   {project.nextInspectionDue && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <CalendarIcon className="w-4 h-4 shrink-0" />
-                      <span>Next Inspection: <strong className="text-foreground">{format(new Date(project.nextInspectionDue), 'MMM d, yyyy')}</strong></span>
+                      <span>Nächste Prüfung: <strong className="text-foreground">{format(new Date(project.nextInspectionDue), 'MMM d, yyyy')}</strong></span>
                     </div>
                   )}
                   
@@ -204,7 +210,7 @@ export default function Dashboard() {
                         {project.client.firstName?.[0]}{project.client.lastName?.[0]}
                       </div>
                       <div className="text-xs">
-                        <p className="text-muted-foreground font-medium uppercase tracking-wider">Client</p>
+                        <p className="text-muted-foreground font-medium uppercase tracking-wider">Auftraggeber</p>
                         <p className="text-foreground font-semibold">{project.client.firstName} {project.client.lastName}</p>
                       </div>
                     </div>
