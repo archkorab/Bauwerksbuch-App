@@ -71,7 +71,7 @@ export const defects = pgTable("defects", {
   dateFound: timestamp("date_found").notNull(),
   description: text("description").notNull(),
   location: text("location").notNull(),
-  status: text("status", { enum: ["open", "in_progress", "resolved"] }).notNull().default("open"),
+  status: text("status", { enum: ["leichter_mangel", "grober_mangel"] }).notNull().default("leichter_mangel"),
   parentDefectId: integer("parent_defect_id"),
 });
 
