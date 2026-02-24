@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -36,6 +38,7 @@ export default function ProjectDetails() {
   
   const [docDialogOpen, setDocDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [inspDialogOpen, setInspDialogOpen] = useState(false);
 
   const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
 
@@ -54,13 +57,34 @@ export default function ProjectDetails() {
   });
 
   const onEventSubmit = (data: any) => {
-    // Requires date coercion
     createEvent.mutate({ 
       ...data, 
       projectId, 
       date: new Date(data.date).toISOString() 
     }, {
       onSuccess: () => setEventDialogOpen(false)
+    });
+  };
+
+  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
+    defaultValues: { date: "", status: "OK", notes: "" }
+  });
+
+  const onInspSubmit = (data: any) => {
+    createInspection.mutate({ 
+      projectId, 
+      data: { 
+        projectId,
+        engineerId: profile!.userId,
+        date: new Date(data.date), 
+        status: data.status, 
+        notes: data.notes || null 
+      } 
+    }, {
+      onSuccess: () => {
+        setInspDialogOpen(false);
+        resetInspForm();
+      }
     });
   };
 
@@ -190,6 +214,45 @@ export default function ProjectDetails() {
             <TabsContent value="inspections" className="space-y-6" data-testid="tab-inspections">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Inspection Logbook</h3>
+                {isAdminOrEngineer && (
+                  <Dialog open={inspDialogOpen} onOpenChange={setInspDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" data-testid="button-add-inspection">
+                        <Plus className="w-4 h-4 mr-2" /> Add Inspection
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-card border-border">
+                      <DialogHeader><DialogTitle className="font-display text-xl">Log New Inspection</DialogTitle></DialogHeader>
+                      <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-5 mt-2">
+                        <div className="space-y-2">
+                          <Label>Inspection Date</Label>
+                          <Input type="date" {...inspReg("date")} required className="bg-background border-border" data-testid="input-inspection-date" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Status</Label>
+                          <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
+                            <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status">
+                              <SelectValue placeholder="Select status..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="OK">OK</SelectItem>
+                              <SelectItem value="needs_repair">Needs Repair</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Notes</Label>
+                          <Textarea {...inspReg("notes")} placeholder="Describe findings, observations, and recommendations..." className="bg-background border-border min-h-[100px]" data-testid="input-inspection-notes" />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection">
+                          {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Log Inspection
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
               <div className="space-y-6">
                 {inspections?.length === 0 ? (

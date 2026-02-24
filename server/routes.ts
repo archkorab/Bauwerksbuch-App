@@ -342,7 +342,13 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Only admins and engineers can create inspections" });
       }
       const projectId = parseInt(req.params.projectId, 10);
-      const input = { ...req.body, projectId, engineerId: userId };
+      const body = req.body;
+      const input = { 
+        ...body, 
+        projectId, 
+        engineerId: userId,
+        date: new Date(body.date),
+      };
       const insp = await storage.createInspection(input);
       res.status(201).json(insp);
     } catch (err) {
