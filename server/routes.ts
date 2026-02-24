@@ -565,6 +565,9 @@ export async function registerRoutes(
       const inspectionId = parseInt(req.params.inspectionId, 10);
       const body = { ...req.body };
       if (body.dateFound && typeof body.dateFound === 'string') body.dateFound = new Date(body.dateFound);
+      if (body.repairDue && typeof body.repairDue === 'string') body.repairDue = new Date(body.repairDue);
+      if (!body.frist || body.frist === '') body.frist = null;
+      if (!body.repairDue || body.repairDue === '') body.repairDue = null;
       const input = { ...body, inspectionId };
       const defect = await storage.createDefect(input);
       res.status(201).json(defect);
@@ -582,6 +585,9 @@ export async function registerRoutes(
       const id = parseInt(req.params.id, 10);
       const body = { ...req.body };
       if (body.dateFound && typeof body.dateFound === 'string') body.dateFound = new Date(body.dateFound);
+      if (body.repairDue && typeof body.repairDue === 'string') body.repairDue = new Date(body.repairDue);
+      if (body.frist === '') body.frist = null;
+      if (body.repairDue === '') body.repairDue = null;
       const input = api.defects.update.input.parse(body);
       const defect = await storage.updateDefect(id, input);
       if (!defect) return res.status(404).json({ message: "Defect not found" });

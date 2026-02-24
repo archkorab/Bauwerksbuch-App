@@ -54,7 +54,7 @@ client/src/
 ## Inspection/Defect Model
 - Each inspection has a type (erstpruefung/folgepruefung), date, engineer, status, and notes
 - "Prüfung hinzufügen" dialog allows creating inspections with inline defect entries
-- Defect fields: Mangel-Nr, Datum der Feststellung, Beschreibung, Ort, Status (leichter_mangel/grober_mangel)
+- Defect fields: Mangel-Nr, Datum der Feststellung, Beschreibung, Ort, Status (leichter_mangel/grober_mangel), Frist (1_woche/2_wochen/1_monat/2_monate/6_monate), Reparatur bis (auto-calculated from dateFound + frist)
 - Follow-up defects reference a parentDefectId to group them under the original finding
 - API: GET /api/projects/:projectId/inspections returns inspections with nested defects[]
 - API: POST /api/projects/:projectId/inspections creates inspection

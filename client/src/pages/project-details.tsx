@@ -52,6 +52,29 @@ interface DefectEntry {
   description: string;
   location: string;
   status: string;
+  frist: string;
+  repairDue: string;
+}
+
+const fristLabels: Record<string, string> = {
+  "1_woche": "1 Woche",
+  "2_wochen": "2 Wochen",
+  "1_monat": "1 Monat",
+  "2_monate": "2 Monate",
+  "6_monate": "6 Monate",
+};
+
+function calcRepairDue(dateFound: string, frist: string): string {
+  if (!dateFound || !frist) return "";
+  const d = new Date(dateFound);
+  switch (frist) {
+    case "1_woche": d.setDate(d.getDate() + 7); break;
+    case "2_wochen": d.setDate(d.getDate() + 14); break;
+    case "1_monat": d.setMonth(d.getMonth() + 1); break;
+    case "2_monate": d.setMonth(d.getMonth() + 2); break;
+    case "6_monate": d.setMonth(d.getMonth() + 6); break;
+  }
+  return d.toISOString().split("T")[0];
 }
 
 export default function ProjectDetails() {
@@ -100,11 +123,22 @@ export default function ProjectDetails() {
       description: "",
       location: "",
       status: "leichter_mangel",
+      frist: "",
+      repairDue: "",
     }]);
   };
 
   const updateDefectEntry = (index: number, field: keyof DefectEntry, value: string) => {
-    setDefectEntries(prev => prev.map((entry, i) => i === index ? { ...entry, [field]: value } : entry));
+    setDefectEntries(prev => prev.map((entry, i) => {
+      if (i !== index) return entry;
+      const updated = { ...entry, [field]: value };
+      if (field === "frist" || field === "dateFound") {
+        const df = field === "dateFound" ? value : updated.dateFound;
+        const fr = field === "frist" ? value : updated.frist;
+        updated.repairDue = calcRepairDue(df, fr);
+      }
+      return updated;
+    }));
   };
 
   const removeDefectEntry = (index: number) => {
@@ -177,6 +211,8 @@ export default function ProjectDetails() {
             description: entry.description,
             location: entry.location,
             status: entry.status as "leichter_mangel" | "grober_mangel",
+            frist: entry.frist || null,
+            repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
           }
         });
       }
@@ -206,6 +242,8 @@ export default function ProjectDetails() {
       description: d.description,
       location: d.location,
       status: d.status,
+      frist: d.frist || "",
+      repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
     }));
     setEditDefectEntries(existingDefects);
     setDeletedDefectIds([]);
@@ -249,6 +287,8 @@ export default function ProjectDetails() {
               description: entry.description,
               location: entry.location,
               status: entry.status as "leichter_mangel" | "grober_mangel",
+              frist: entry.frist || null,
+              repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
         } else {
@@ -262,6 +302,8 @@ export default function ProjectDetails() {
               description: entry.description,
               location: entry.location,
               status: entry.status as "leichter_mangel" | "grober_mangel",
+              frist: entry.frist || null,
+              repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
         }
@@ -782,6 +824,27 @@ export default function ProjectDetails() {
                                     </Select>
                                   </div>
                                 </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Frist</Label>
+                                    <Select value={entry.frist} onValueChange={(val) => updateDefectEntry(index, "frist", val)}>
+                                      <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`select-defect-frist-${index}`}>
+                                        <SelectValue placeholder="Frist wählen" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="1_woche">1 Woche</SelectItem>
+                                        <SelectItem value="2_wochen">2 Wochen</SelectItem>
+                                        <SelectItem value="1_monat">1 Monat</SelectItem>
+                                        <SelectItem value="2_monate">2 Monate</SelectItem>
+                                        <SelectItem value="6_monate">6 Monate</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Reparatur bis</Label>
+                                    <Input type="date" value={entry.repairDue} readOnly className="bg-card border-border h-9 text-sm text-muted-foreground" data-testid={`input-defect-repair-due-${index}`} />
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -841,7 +904,7 @@ export default function ProjectDetails() {
                     <div className="border-t border-border pt-5">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-display font-bold text-base">Mängel</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", dateFound: "", description: "", location: "", status: "leichter_mangel" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
                           <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
                         </Button>
                       </div>
@@ -871,7 +934,12 @@ export default function ProjectDetails() {
                               </div>
                               <div className="space-y-1.5">
                                 <Label className="text-xs">Datum der Feststellung</Label>
-                                <Input type="date" value={entry.dateFound} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, dateFound: e.target.value } : ent))} required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-date-${index}`} />
+                                <Input type="date" value={entry.dateFound} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => {
+                                  if (i !== index) return ent;
+                                  const updated = { ...ent, dateFound: e.target.value };
+                                  if (updated.frist) updated.repairDue = calcRepairDue(e.target.value, updated.frist);
+                                  return updated;
+                                }))} required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-date-${index}`} />
                               </div>
                             </div>
                             <div className="space-y-1.5">
@@ -894,6 +962,32 @@ export default function ProjectDetails() {
                                     <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
                                   </SelectContent>
                                 </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Frist</Label>
+                                <Select value={entry.frist} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => {
+                                  if (i !== index) return ent;
+                                  const updated = { ...ent, frist: val };
+                                  if (updated.dateFound) updated.repairDue = calcRepairDue(updated.dateFound, val);
+                                  return updated;
+                                }))}>
+                                  <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-frist-${index}`}>
+                                    <SelectValue placeholder="Frist wählen" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1_woche">1 Woche</SelectItem>
+                                    <SelectItem value="2_wochen">2 Wochen</SelectItem>
+                                    <SelectItem value="1_monat">1 Monat</SelectItem>
+                                    <SelectItem value="2_monate">2 Monate</SelectItem>
+                                    <SelectItem value="6_monate">6 Monate</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label className="text-xs">Reparatur bis</Label>
+                                <Input type="date" value={entry.repairDue} readOnly className="bg-card border-border h-9 text-sm text-muted-foreground" data-testid={`edit-input-defect-repair-due-${index}`} />
                               </div>
                             </div>
                           </div>
@@ -969,6 +1063,8 @@ export default function ProjectDetails() {
                                   <th className="text-left px-5 py-3 font-semibold">Beschreibung</th>
                                   <th className="text-left px-5 py-3 font-semibold">Ort</th>
                                   <th className="text-left px-5 py-3 font-semibold">Status</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Frist</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Reparatur bis</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border">
@@ -1003,6 +1099,8 @@ export default function ProjectDetails() {
                                             {defectStatusLabels[defect.status] || defect.status}
                                           </span>
                                         </td>
+                                        <td className="px-5 py-3 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
+                                        <td className="px-5 py-3 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
                                       </tr>
                                       {children.map((child: any) => (
                                         <tr key={child.id} className="bg-muted/10 hover:bg-white/[0.02] transition-colors" data-testid={`defect-row-${child.defectId}`}>
@@ -1032,6 +1130,8 @@ export default function ProjectDetails() {
                                               {defectStatusLabels[child.status] || child.status}
                                             </span>
                                           </td>
+                                          <td className="px-5 py-3 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
+                                          <td className="px-5 py-3 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
                                         </tr>
                                       ))}
                                     </Fragment>
