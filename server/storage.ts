@@ -31,6 +31,7 @@ import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   getProfile(userId: string): Promise<Profile | undefined>;
+  getAllProfiles(): Promise<Profile[]>;
   upsertProfile(data: InsertProfile): Promise<Profile>;
   updateProfile(userId: string, data: UpdateProfileRequest): Promise<Profile>;
   getUsersByRole(role: string): Promise<any[]>;
@@ -62,6 +63,10 @@ export class DatabaseStorage implements IStorage {
   async getProfile(userId: string): Promise<Profile | undefined> {
     const [profile] = await db.select().from(profiles).where(eq(profiles.userId, userId));
     return profile;
+  }
+
+  async getAllProfiles(): Promise<Profile[]> {
+    return await db.select().from(profiles);
   }
 
   async upsertProfile(data: InsertProfile): Promise<Profile> {

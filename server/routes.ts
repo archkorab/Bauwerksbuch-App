@@ -19,7 +19,9 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
       if (!profile) {
-        const newProfile = await storage.upsertProfile({ userId, role: "client" });
+        const allProfiles = await storage.getAllProfiles();
+        const role = allProfiles.length === 0 ? "admin" : "client";
+        const newProfile = await storage.upsertProfile({ userId, role });
         return res.json(newProfile);
       }
       res.json(profile);
