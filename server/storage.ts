@@ -274,6 +274,12 @@ export class DatabaseStorage implements IStorage {
     return entries;
   }
 
+  async updateBauaktFileUrl(projectId: number, dateiname: string, fileUrl: string): Promise<void> {
+    await db.update(bauakt)
+      .set({ fileUrl })
+      .where(and(eq(bauakt.projectId, projectId), eq(bauakt.dateiname, dateiname)));
+  }
+
   async deleteBauakteByProject(projectId: number): Promise<void> {
     await db.delete(bauakt).where(eq(bauakt.projectId, projectId));
   }

@@ -530,10 +530,23 @@ export async function registerRoutes(
       if (profile?.role !== "admin") {
         return res.status(403).json({ message: "Only admins can upload bauakt files" });
       }
+      const projectId = parseInt(req.params.projectId, 10);
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "No files uploaded" });
       }
+
+      const bauakte = await storage.getBauakte(projectId);
+      for (const file of files) {
+        const filename = file.filename;
+        const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+        const matchingEntry = bauakte.find(b => b.dateiname === nameWithoutExt || b.dateiname === filename);
+        if (matchingEntry) {
+          const fileUrl = `/api/bauakt-files/${projectId}/${encodeURIComponent(filename)}`;
+          await storage.updateBauaktFileUrl(projectId, matchingEntry.dateiname, fileUrl);
+        }
+      }
+
       res.json({ filename: files.map(f => f.filename).join(', '), url: 'uploaded' });
     } catch (err) {
       console.error("Bauakt file upload error:", err);
