@@ -490,7 +490,9 @@ export async function registerRoutes(
   app.put(api.inspections.update.path, isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
-      const input = api.inspections.update.input.parse(req.body);
+      const body = { ...req.body };
+      if (body.date && typeof body.date === 'string') body.date = new Date(body.date);
+      const input = api.inspections.update.input.parse(body);
       const insp = await storage.updateInspection(id, input);
       if (!insp) return res.status(404).json({ message: "Inspection not found" });
       res.json(insp);
@@ -560,7 +562,9 @@ export async function registerRoutes(
   app.put(api.defects.update.path, isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
-      const input = api.defects.update.input.parse(req.body);
+      const body = { ...req.body };
+      if (body.dateFound && typeof body.dateFound === 'string') body.dateFound = new Date(body.dateFound);
+      const input = api.defects.update.input.parse(body);
       const defect = await storage.updateDefect(id, input);
       if (!defect) return res.status(404).json({ message: "Defect not found" });
       res.json(defect);
