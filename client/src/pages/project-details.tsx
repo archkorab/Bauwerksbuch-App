@@ -491,10 +491,6 @@ export default function ProjectDetails() {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
-                <p className="font-medium" data-testid="text-eigentuemer">{project.eigentuemer || '—'}</p>
-              </div>
-              <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>
                 <p className="font-medium">{format(new Date(project.createdAt!), 'MMMM d, yyyy')}</p>
               </div>
