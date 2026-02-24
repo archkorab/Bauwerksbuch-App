@@ -294,6 +294,17 @@ export const api = {
     }
   },
   defects: {
+    summary: {
+      method: 'GET' as const,
+      path: '/api/defects/summary' as const,
+      responses: {
+        200: z.array(z.object({
+          projectId: z.number(),
+          mangelStatus: z.enum(["kein_mangel", "leichter_mangel", "grober_mangel"]),
+        })),
+        401: errorSchemas.unauthorized
+      }
+    },
     list: {
       method: 'GET' as const,
       path: '/api/inspections/:inspectionId/defects' as const,

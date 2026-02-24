@@ -37,9 +37,8 @@ const inspStatusLabels: Record<string, string> = {
 };
 
 const defectStatusLabels: Record<string, string> = {
-  open: "Offen",
-  in_progress: "In Bearbeitung",
-  resolved: "Behoben",
+  leichter_mangel: "Leichter Mangel",
+  grober_mangel: "Grober Mangel",
 };
 
 export default function ProjectDetails() {
@@ -644,9 +643,8 @@ export default function ProjectDetails() {
                                         </td>
                                         <td className="px-5 py-3">
                                           <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                            ${defect.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
-                                              defect.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
-                                              'text-destructive border-destructive/30 bg-destructive/10'}`}>
+                                            ${defect.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
+                                              'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
                                             {defectStatusLabels[defect.status] || defect.status}
                                           </span>
                                         </td>
@@ -674,9 +672,8 @@ export default function ProjectDetails() {
                                           </td>
                                           <td className="px-5 py-3">
                                             <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                              ${child.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
-                                                child.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
-                                                'text-destructive border-destructive/30 bg-destructive/10'}`}>
+                                              ${child.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
+                                                'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
                                               {defectStatusLabels[child.status] || child.status}
                                             </span>
                                           </td>

@@ -48,6 +48,17 @@ export function useCreateProject() {
   });
 }
 
+export function useDefectSummary() {
+  return useQuery({
+    queryKey: [api.defects.summary.path],
+    queryFn: async () => {
+      const res = await fetch(api.defects.summary.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch defect summary");
+      return res.json() as Promise<{ projectId: number; mangelStatus: string }[]>;
+    },
+  });
+}
+
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
