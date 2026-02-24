@@ -5,6 +5,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { authStorage } from "./replit_integrations/auth/storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -440,7 +441,10 @@ async function seedDatabase() {
       { userId: demoUserId, role: "admin", company: "Archkorab GmbH" },
       { userId: demoClientId, role: "client", company: "Wiener Hausverwaltung" },
       { userId: demoEngineerId, role: "engineer", company: "Archkorab GmbH" },
-    ]).onConflictDoNothing();
+    ]).onConflictDoUpdate({
+      target: profilesTable.userId,
+      set: { company: sql`EXCLUDED.company` },
+    });
 
     const project1 = await storage.createProject({
       clientId: demoClientId,
