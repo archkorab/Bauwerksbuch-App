@@ -10,6 +10,7 @@ export * from "./models/auth";
 // --- Enums ---
 export const roleEnum = z.enum(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"]);
 export const inspectionStatusEnum = z.enum(["OK", "needs_repair", "urgent"]);
+export const inspectionTypeEnum = z.enum(["erstpruefung", "folgepruefung"]);
 export const projectStatusEnum = z.enum(["active", "completed", "archived"]);
 
 // --- Table Definitions ---
@@ -60,6 +61,7 @@ export const inspections = pgTable("inspections", {
   engineerId: text("engineer_id").notNull().references(() => users.id),
   date: timestamp("date").notNull(),
   status: text("status", { enum: ["OK", "needs_repair", "urgent"] }).notNull(),
+  type: text("type", { enum: ["erstpruefung", "folgepruefung"] }).notNull().default("erstpruefung"),
   notes: text("notes"),
   reportUrl: text("report_url"),
 });
