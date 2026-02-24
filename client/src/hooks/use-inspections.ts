@@ -36,6 +36,25 @@ export function useCreateInspection() {
   });
 }
 
+export function useDeleteInspection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: number; projectId: number }) => {
+      const url = buildUrl(api.inspections.delete.path, { id });
+      const res = await fetch(url, {
+        method: 'DELETE',
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete inspection");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: [api.defects.summary.path] });
+    },
+  });
+}
+
 export function useUpdateInspection() {
   const queryClient = useQueryClient();
   return useMutation({

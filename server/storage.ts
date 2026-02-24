@@ -60,6 +60,7 @@ export interface IStorage {
   getInspections(projectId: number): Promise<InspectionResponse[]>;
   createInspection(data: InsertInspection): Promise<Inspection>;
   updateInspection(id: number, data: UpdateInspectionRequest): Promise<Inspection>;
+  deleteInspection(id: number): Promise<void>;
 
   getDefects(inspectionId: number): Promise<Defect[]>;
   createDefect(data: InsertDefect): Promise<Defect>;
@@ -265,6 +266,11 @@ export class DatabaseStorage implements IStorage {
   async updateInspection(id: number, data: UpdateInspectionRequest): Promise<Inspection> {
     const [updated] = await db.update(inspections).set(data).where(eq(inspections.id, id)).returning();
     return updated;
+  }
+
+  async deleteInspection(id: number): Promise<void> {
+    await db.delete(defects).where(eq(defects.inspectionId, id));
+    await db.delete(inspections).where(eq(inspections.id, id));
   }
 
   async getDefects(inspectionId: number): Promise<Defect[]> {

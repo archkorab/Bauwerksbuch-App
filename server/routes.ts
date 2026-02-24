@@ -504,6 +504,21 @@ export async function registerRoutes(
     }
   });
 
+  app.delete(api.inspections.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Prüfungen löschen" });
+      }
+      const id = parseInt(req.params.id, 10);
+      await storage.deleteInspection(id);
+      res.json({ message: "Inspection deleted" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete inspection" });
+    }
+  });
+
   // --- Defects ---
   app.get(api.defects.summary.path, isAuthenticated, async (req: any, res) => {
     try {

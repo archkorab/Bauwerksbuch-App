@@ -6,7 +6,7 @@ import { useProject, useUpdateProject } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
-import { useInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useUpdateDefect, useDeleteDefect } from "@/hooks/use-inspections";
+import { useInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useUpdateDefect, useDeleteDefect, useDeleteInspection } from "@/hooks/use-inspections";
 import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
@@ -71,6 +71,7 @@ export default function ProjectDetails() {
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
   const updateInspection = useUpdateInspection();
+  const deleteInspection = useDeleteInspection();
   const updateDefect = useUpdateDefect();
   const deleteDefect = useDeleteDefect();
   const updateProject = useUpdateProject();
@@ -938,9 +939,14 @@ export default function ProjectDetails() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {isAdmin && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditInspection(ins)} data-testid={`button-edit-inspection-${ins.id}`}>
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditInspection(ins)} data-testid={`button-edit-inspection-${ins.id}`}>
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Prüfung und alle zugehörigen Mängel wirklich löschen?")) deleteInspection.mutate({ id: ins.id, projectId }); }} data-testid={`button-delete-inspection-${ins.id}`}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </>
                               )}
                               <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase
                                 ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
