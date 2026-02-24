@@ -78,8 +78,8 @@ export default function Dashboard() {
         {isAdminOrEngineer && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                <Plus className="w-4 h-4 mr-2" /> New Project
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-project">
+                <Plus className="w-4 h-4 mr-2" /> Add Project
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] bg-card border-border">
