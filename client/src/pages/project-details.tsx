@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -9,7 +9,7 @@ import { useInspections, useCreateInspection } from "@/hooks/use-inspections";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2
+  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -187,39 +187,139 @@ export default function ProjectDetails() {
             </TabsContent>
 
             {/* Inspections Tab */}
-            <TabsContent value="inspections" className="space-y-4">
+            <TabsContent value="inspections" className="space-y-6" data-testid="tab-inspections">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display font-bold text-xl">Inspection History</h3>
+                <h3 className="font-display font-bold text-xl">Inspection Logbook</h3>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {inspections?.length === 0 ? (
                   <div className="p-8 text-center bg-card border border-border rounded-2xl text-muted-foreground">No inspections logged.</div>
                 ) : (
-                  inspections?.map(ins => (
-                    <div key={ins.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center shadow-sm">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border
-                          ${ins.status === 'OK' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                            ins.status === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
-                            'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
-                          {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  inspections?.map(ins => {
+                    const primaryDefects = ins.defects?.filter((d: any) => !d.parentDefectId) || [];
+                    const followUps = ins.defects?.filter((d: any) => d.parentDefectId) || [];
+                    
+                    return (
+                      <div key={ins.id} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden" data-testid={`inspection-card-${ins.id}`}>
+                        {/* Inspection Header */}
+                        <div className="p-5 border-b border-border">
+                          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                            <div className="flex items-start gap-4">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border
+                                ${ins.status === 'OK' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                  ins.status === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
+                                  'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
+                                {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-foreground text-lg">Primary Inspection — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'No notes provided.'}</p>
+                                {ins.engineer && (
+                                  <p className="text-xs text-muted-foreground mt-2 font-medium">Engineer: {ins.engineer.firstName} {ins.engineer.lastName}</p>
+                                )}
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase shrink-0
+                              ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
+                                ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
+                                'text-amber-500 border-amber-500/30'}`}>
+                              {ins.status.replace('_', ' ')}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Inspection on {format(new Date(ins.date), 'MMM d, yyyy')}</p>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{ins.notes || 'No notes provided.'}</p>
-                          {ins.engineer && (
-                            <p className="text-xs text-muted-foreground mt-2 font-medium">Engineer: {ins.engineer.firstName} {ins.engineer.lastName}</p>
-                          )}
-                        </div>
+
+                        {/* Defects Table */}
+                        {ins.defects && ins.defects.length > 0 && (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm" data-testid={`defects-table-${ins.id}`}>
+                              <thead>
+                                <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                                  <th className="text-left px-5 py-3 font-semibold">Defect ID</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Date of Finding</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Description</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Location</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {primaryDefects.map((defect: any) => {
+                                  const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                                  return (
+                                    <Fragment key={defect.id}>
+                                      <tr key={defect.id} className="hover:bg-white/[0.02] transition-colors" data-testid={`defect-row-${defect.defectId}`}>
+                                        <td className="px-5 py-3">
+                                          <div className="flex items-center gap-2">
+                                            <Hash className="w-3.5 h-3.5 text-primary" />
+                                            <span className="font-mono font-semibold text-primary">{defect.defectId}</span>
+                                          </div>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                          <div className="flex items-center gap-2 text-foreground">
+                                            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                                            {format(new Date(defect.dateFound), 'MMM d, yyyy')}
+                                          </div>
+                                        </td>
+                                        <td className="px-5 py-3 text-foreground max-w-xs">{defect.description}</td>
+                                        <td className="px-5 py-3">
+                                          <div className="flex items-center gap-2 text-foreground">
+                                            <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                            {defect.location}
+                                          </div>
+                                        </td>
+                                        <td className="px-5 py-3">
+                                          <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
+                                            ${defect.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
+                                              defect.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
+                                              'text-destructive border-destructive/30 bg-destructive/10'}`}>
+                                            {defect.status.replace('_', ' ')}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                      {children.map((child: any) => (
+                                        <tr key={child.id} className="bg-muted/10 hover:bg-white/[0.02] transition-colors" data-testid={`defect-row-${child.defectId}`}>
+                                          <td className="px-5 py-3">
+                                            <div className="flex items-center gap-2 pl-4">
+                                              <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground" />
+                                              <span className="font-mono font-semibold text-muted-foreground">{child.defectId}</span>
+                                            </div>
+                                          </td>
+                                          <td className="px-5 py-3">
+                                            <div className="flex items-center gap-2 text-foreground">
+                                              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                                              {format(new Date(child.dateFound), 'MMM d, yyyy')}
+                                            </div>
+                                          </td>
+                                          <td className="px-5 py-3 text-foreground max-w-xs">{child.description}</td>
+                                          <td className="px-5 py-3">
+                                            <div className="flex items-center gap-2 text-foreground">
+                                              <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                              {child.location}
+                                            </div>
+                                          </td>
+                                          <td className="px-5 py-3">
+                                            <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
+                                              ${child.status === 'resolved' ? 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' : 
+                                                child.status === 'in_progress' ? 'text-amber-500 border-amber-500/30 bg-amber-500/10' : 
+                                                'text-destructive border-destructive/30 bg-destructive/10'}`}>
+                                              {child.status.replace('_', ' ')}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </Fragment>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {(!ins.defects || ins.defects.length === 0) && (
+                          <div className="px-5 py-4 text-sm text-muted-foreground">No defects recorded for this inspection.</div>
+                        )}
                       </div>
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase shrink-0
-                        ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
-                          ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
-                          'text-amber-500 border-amber-500/30'}`}>
-                        {ins.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </TabsContent>

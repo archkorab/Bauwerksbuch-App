@@ -45,7 +45,15 @@ client/src/
 - projects (name, address, coordinates, status, nextInspectionDue)
 - documents (name, url, type, uploadedBy)
 - events (title, date, type, projectId)
-- inspections (date, status, notes, engineerId, projectId)
+- inspections (date, status, notes, engineerId, projectId) - primary inspections
+- defects (defectId, dateFound, description, location, status, parentDefectId, inspectionId) - defect findings per inspection, with follow-up support via parentDefectId
+
+## Inspection/Defect Model
+- Each inspection is a "primary inspection" with a date, engineer, status, and notes
+- Defects are linked to an inspection and display: Defect ID, Date of Finding, Description, Location, Status
+- Follow-up defects reference a parentDefectId to group them under the original finding
+- API: GET /api/projects/:projectId/inspections returns inspections with nested defects[]
+- API: POST/GET /api/inspections/:inspectionId/defects for managing defects
 
 ## User Preferences
 - Professional dark mode enterprise theme
@@ -54,4 +62,5 @@ client/src/
 - Minimal, clean design
 
 ## Recent Changes
+- 2026-02-24: Added defects table with primary/follow-up structure; inspection logbook shows Defect ID, Date, Description, Location in table format
 - 2026-02-24: Initial build - schema, backend, frontend, auth, seed data, role-based access

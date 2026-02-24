@@ -5,11 +5,13 @@ import {
   insertDocumentSchema, 
   insertEventSchema, 
   insertInspectionSchema,
+  insertDefectSchema,
   projects,
   profiles,
   documents,
   events,
   inspections,
+  defects,
   users
 } from './schema';
 
@@ -36,13 +38,15 @@ const projectSchema = z.custom<typeof projects.$inferSelect>();
 const documentSchema = z.custom<typeof documents.$inferSelect>();
 const eventSchema = z.custom<typeof events.$inferSelect>();
 const inspectionSchema = z.custom<typeof inspections.$inferSelect>();
+const defectSchema = z.custom<typeof defects.$inferSelect>();
 
 const projectWithClientSchema = projectSchema.and(z.object({
   client: userSchema.and(z.object({ profile: profileSchema.optional() })).optional()
 }));
 
 const inspectionWithEngineerSchema = inspectionSchema.and(z.object({
-  engineer: userSchema.and(z.object({ profile: profileSchema.optional() })).optional()
+  engineer: userSchema.and(z.object({ profile: profileSchema.optional() })).optional(),
+  defects: z.array(defectSchema).optional()
 }));
 
 
@@ -237,6 +241,39 @@ export const api = {
         403: errorSchemas.unauthorized
       }
     }
+  },
+  defects: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/inspections/:inspectionId/defects' as const,
+      responses: {
+        200: z.array(defectSchema),
+        401: errorSchemas.unauthorized
+      }
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/inspections/:inspectionId/defects' as const,
+      input: insertDefectSchema,
+      responses: {
+        201: defectSchema,
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/defects/:id' as const,
+      input: insertDefectSchema.partial(),
+      responses: {
+        200: defectSchema,
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized
+      }
+    }
   }
 };
 
@@ -258,5 +295,8 @@ export type {
   UpdateProjectRequest, 
   CreateEventRequest, 
   CreateInspectionRequest, 
-  CreateDocumentRequest 
+  CreateDocumentRequest,
+  CreateDefectRequest,
+  UpdateDefectRequest,
+  Defect
 } from './schema';

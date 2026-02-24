@@ -5,6 +5,7 @@ import {
   documents,
   events,
   inspections,
+  defects,
   users,
   type Profile,
   type InsertProfile,
@@ -22,6 +23,9 @@ import {
   type InsertInspection,
   type UpdateInspectionRequest,
   type InspectionResponse,
+  type Defect,
+  type InsertDefect,
+  type UpdateDefectRequest,
 } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -48,6 +52,10 @@ export interface IStorage {
   getInspections(projectId: number): Promise<InspectionResponse[]>;
   createInspection(data: InsertInspection): Promise<Inspection>;
   updateInspection(id: number, data: UpdateInspectionRequest): Promise<Inspection>;
+
+  getDefects(inspectionId: number): Promise<Defect[]>;
+  createDefect(data: InsertDefect): Promise<Defect>;
+  updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -165,7 +173,17 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(inspections.engineerId, users.id))
       .where(eq(inspections.projectId, projectId))
       .orderBy(desc(inspections.date));
-    return result.map(r => ({ ...r.inspections, engineer: r.users || undefined }));
+    
+    const inspectionResults: InspectionResponse[] = [];
+    for (const r of result) {
+      const inspDefects = await db.select().from(defects).where(eq(defects.inspectionId, r.inspections.id)).orderBy(desc(defects.dateFound));
+      inspectionResults.push({
+        ...r.inspections,
+        engineer: r.users || undefined,
+        defects: inspDefects,
+      });
+    }
+    return inspectionResults;
   }
 
   async createInspection(data: InsertInspection): Promise<Inspection> {
@@ -175,6 +193,20 @@ export class DatabaseStorage implements IStorage {
 
   async updateInspection(id: number, data: UpdateInspectionRequest): Promise<Inspection> {
     const [updated] = await db.update(inspections).set(data).where(eq(inspections.id, id)).returning();
+    return updated;
+  }
+
+  async getDefects(inspectionId: number): Promise<Defect[]> {
+    return await db.select().from(defects).where(eq(defects.inspectionId, inspectionId)).orderBy(desc(defects.dateFound));
+  }
+
+  async createDefect(data: InsertDefect): Promise<Defect> {
+    const [defect] = await db.insert(defects).values(data).returning();
+    return defect;
+  }
+
+  async updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect> {
+    const [updated] = await db.update(defects).set(data).where(eq(defects.id, id)).returning();
     return updated;
   }
 }

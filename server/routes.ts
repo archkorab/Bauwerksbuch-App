@@ -306,6 +306,51 @@ export async function registerRoutes(
     }
   });
 
+  // --- Defects ---
+  app.get(api.defects.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const inspectionId = parseInt(req.params.inspectionId, 10);
+      const defectList = await storage.getDefects(inspectionId);
+      res.json(defectList);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch defects" });
+    }
+  });
+
+  app.post(api.defects.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin" && profile?.role !== "engineer") {
+        return res.status(403).json({ message: "Only admins and engineers can create defects" });
+      }
+      const inspectionId = parseInt(req.params.inspectionId, 10);
+      const input = { ...req.body, inspectionId };
+      const defect = await storage.createDefect(input);
+      res.status(201).json(defect);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to create defect" });
+    }
+  });
+
+  app.put(api.defects.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const input = api.defects.update.input.parse(req.body);
+      const defect = await storage.updateDefect(id, input);
+      if (!defect) return res.status(404).json({ message: "Defect not found" });
+      res.json(defect);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update defect" });
+    }
+  });
+
   // Seed the database with sample data on startup
   await seedDatabase();
 
@@ -371,10 +416,27 @@ async function seedDatabase() {
     await storage.createEvent({ projectId: project2.id, title: "Elevator Safety Inspection", description: "Mandatory annual elevator check", date: new Date("2026-06-10"), type: "inspection" });
     await storage.createEvent({ projectId: project3.id, title: "Final Documentation Delivery", description: "All building documentation compiled and delivered to client", date: new Date("2025-11-20"), type: "deadline" });
 
-    await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-09-15"), status: "OK", notes: "Facade in good condition. Minor crack in stairwell wall noted, cosmetic only." });
-    await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-03-10"), status: "needs_repair", notes: "Roof drainage partially blocked. Cleaning recommended before next rain season." });
-    await storage.createInspection({ projectId: project2.id, engineerId: demoEngineerId, date: new Date("2025-12-01"), status: "OK", notes: "All systems operating within normal parameters. No immediate action required." });
-    await storage.createInspection({ projectId: project3.id, engineerId: demoEngineerId, date: new Date("2025-10-05"), status: "urgent", notes: "Water damage detected in basement. Immediate waterproofing repair needed." });
+    const insp1 = await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-09-15"), status: "OK", notes: "Primary building inspection - facade and common areas assessed." });
+    const insp2 = await storage.createInspection({ projectId: project1.id, engineerId: demoEngineerId, date: new Date("2025-03-10"), status: "needs_repair", notes: "Primary inspection - roof and drainage systems." });
+    const insp3 = await storage.createInspection({ projectId: project2.id, engineerId: demoEngineerId, date: new Date("2025-12-01"), status: "OK", notes: "Primary inspection - all building systems." });
+    const insp4 = await storage.createInspection({ projectId: project3.id, engineerId: demoEngineerId, date: new Date("2025-10-05"), status: "urgent", notes: "Primary inspection - basement and structural elements." });
+
+    // Defects for inspection 1 (primary + follow-up)
+    const d1 = await storage.createDefect({ inspectionId: insp1.id, defectId: "DEF-001", dateFound: new Date("2025-09-15"), description: "Minor hairline crack in stairwell wall, 2nd floor landing", location: "Stairwell, 2nd Floor", status: "open" });
+    await storage.createDefect({ inspectionId: insp1.id, defectId: "DEF-001-F1", dateFound: new Date("2025-11-20"), description: "Follow-up: crack unchanged, no structural concern. Cosmetic repair scheduled.", location: "Stairwell, 2nd Floor", status: "in_progress", parentDefectId: d1.id });
+
+    // Defects for inspection 2
+    const d2 = await storage.createDefect({ inspectionId: insp2.id, defectId: "DEF-002", dateFound: new Date("2025-03-10"), description: "Roof drainage partially blocked with debris and leaves", location: "Roof, Northwest corner", status: "open" });
+    await storage.createDefect({ inspectionId: insp2.id, defectId: "DEF-003", dateFound: new Date("2025-03-10"), description: "Gutter joint separated at south-facing section", location: "Roof gutter, South side", status: "open" });
+    await storage.createDefect({ inspectionId: insp2.id, defectId: "DEF-002-F1", dateFound: new Date("2025-05-18"), description: "Follow-up: drainage cleaned, flow restored. Monitoring for recurrence.", location: "Roof, Northwest corner", status: "resolved", parentDefectId: d2.id });
+
+    // Defects for inspection 3
+    await storage.createDefect({ inspectionId: insp3.id, defectId: "DEF-004", dateFound: new Date("2025-12-01"), description: "HVAC filter at 85% capacity, replacement recommended within 30 days", location: "Mechanical Room, Basement Level B1", status: "in_progress" });
+
+    // Defects for inspection 4 (urgent)
+    const d5 = await storage.createDefect({ inspectionId: insp4.id, defectId: "DEF-005", dateFound: new Date("2025-10-05"), description: "Active water infiltration through basement wall, approx. 2m2 affected area", location: "Basement, East wall", status: "open" });
+    await storage.createDefect({ inspectionId: insp4.id, defectId: "DEF-006", dateFound: new Date("2025-10-05"), description: "Efflorescence and salt deposits on foundation wall indicating ongoing moisture", location: "Basement, Foundation wall SE corner", status: "open" });
+    await storage.createDefect({ inspectionId: insp4.id, defectId: "DEF-005-F1", dateFound: new Date("2025-12-10"), description: "Follow-up: waterproofing membrane applied, dehumidifier installed. Area drying.", location: "Basement, East wall", status: "in_progress", parentDefectId: d5.id });
 
     await storage.createDocument({ projectId: project1.id, name: "Bauwerksbuch 2025 - Meidlinger Hauptstrasse", url: "/docs/bauwerksbuch-meidlinger-2025.pdf", type: "pdf", uploadedBy: demoEngineerId });
     await storage.createDocument({ projectId: project1.id, name: "Facade Inspection Report Sept 2025", url: "/docs/facade-report-sept2025.pdf", type: "pdf", uploadedBy: demoEngineerId });

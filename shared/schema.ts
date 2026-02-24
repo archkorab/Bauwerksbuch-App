@@ -62,6 +62,17 @@ export const inspections = pgTable("inspections", {
   reportUrl: text("report_url"),
 });
 
+export const defects = pgTable("defects", {
+  id: serial("id").primaryKey(),
+  inspectionId: integer("inspection_id").notNull().references(() => inspections.id),
+  defectId: text("defect_id").notNull(),
+  dateFound: timestamp("date_found").notNull(),
+  description: text("description").notNull(),
+  location: text("location").notNull(),
+  status: text("status", { enum: ["open", "in_progress", "resolved"] }).notNull().default("open"),
+  parentDefectId: integer("parent_defect_id"),
+});
+
 // --- Relations ---
 export const usersRelations = relations(users, ({ one, many }) => ({
   profile: one(profiles, {
@@ -108,7 +119,7 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
 }));
 
-export const inspectionsRelations = relations(inspections, ({ one }) => ({
+export const inspectionsRelations = relations(inspections, ({ one, many }) => ({
   project: one(projects, {
     fields: [inspections.projectId],
     references: [projects.id],
@@ -117,6 +128,19 @@ export const inspectionsRelations = relations(inspections, ({ one }) => ({
     fields: [inspections.engineerId],
     references: [users.id],
     relationName: "engineer_inspections",
+  }),
+  defects: many(defects),
+}));
+
+export const defectsRelations = relations(defects, ({ one }) => ({
+  inspection: one(inspections, {
+    fields: [defects.inspectionId],
+    references: [inspections.id],
+  }),
+  parentDefect: one(defects, {
+    fields: [defects.parentDefectId],
+    references: [defects.id],
+    relationName: "defect_followups",
   }),
 }));
 
@@ -127,6 +151,7 @@ export const insertProjectSchema = createInsertSchema(projects).omit({ id: true,
 export const insertDocumentSchema = createInsertSchema(documents).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertInspectionSchema = createInsertSchema(inspections).omit({ id: true });
+export const insertDefectSchema = createInsertSchema(defects).omit({ id: true });
 
 // --- Explicit API Contract Types ---
 
@@ -161,5 +186,11 @@ export type Inspection = typeof inspections.$inferSelect;
 export type InsertInspection = z.infer<typeof insertInspectionSchema>;
 export type CreateInspectionRequest = InsertInspection;
 export type UpdateInspectionRequest = Partial<InsertInspection>;
-export type InspectionResponse = Inspection & { engineer?: typeof users.$inferSelect & { profile?: Profile } };
+export type InspectionResponse = Inspection & { engineer?: typeof users.$inferSelect & { profile?: Profile }, defects?: Defect[] };
+
+// Defects
+export type Defect = typeof defects.$inferSelect;
+export type InsertDefect = z.infer<typeof insertDefectSchema>;
+export type CreateDefectRequest = InsertDefect;
+export type UpdateDefectRequest = Partial<InsertDefect>;
 
