@@ -34,6 +34,32 @@ const bauaktUpload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
+const documentsBaseDir = path.join(process.cwd(), "uploads", "documents");
+fs.mkdirSync(documentsBaseDir, { recursive: true });
+
+function getProjectDocumentsDir(projectId: number): string {
+  const dir = path.join(documentsBaseDir, String(projectId));
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const documentUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req: any, _file, cb) => {
+      const projectId = parseInt(req.params.projectId, 10);
+      cb(null, getProjectDocumentsDir(projectId));
+    },
+    filename: (_req, file, cb) => {
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      const timestamp = Date.now();
+      const ext = path.extname(originalName);
+      const base = path.basename(originalName, ext);
+      cb(null, `${base}_${timestamp}${ext}`);
+    },
+  }),
+  limits: { fileSize: 100 * 1024 * 1024 },
+});
+
 const excelUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -257,19 +283,48 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.documents.create.path, isAuthenticated, async (req: any, res) => {
+  app.post(api.documents.create.path, isAuthenticated, documentUpload.single('file'), async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
       const userId = req.user.claims.sub;
-      const input = { ...req.body, projectId, uploadedBy: userId };
+      const profile = await storage.getProfile(userId);
+      if (!profile || (profile.role !== "admin" && profile.role !== "engineer")) {
+        return res.status(403).json({ message: "Only admins and engineers can upload documents" });
+      }
+      const file = req.file as Express.Multer.File | undefined;
+      const name = req.body.name || (file ? file.filename : "Unnamed");
+      const type = req.body.type || (file ? path.extname(file.originalname).replace('.', '') : "pdf");
+      let url = req.body.url || "";
+      if (file) {
+        url = `/api/document-files/${projectId}/${encodeURIComponent(file.filename)}`;
+      }
+      const input = { projectId, name, url, type, uploadedBy: userId };
       const doc = await storage.createDocument(input);
       res.status(201).json(doc);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
       }
+      console.error("Document upload error:", err);
       res.status(500).json({ message: "Failed to create document" });
     }
+  });
+
+  app.get('/api/document-files/:projectId/:filename', isAuthenticated, async (req: any, res) => {
+    const userId = req.user.claims.sub;
+    const projectId = parseInt(req.params.projectId, 10);
+    if (!(await checkProjectAccess(userId, projectId))) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    const filename = decodeURIComponent(req.params.filename);
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ message: "Invalid filename" });
+    }
+    const filePath = path.join(getProjectDocumentsDir(projectId), filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    res.sendFile(filePath);
   });
 
   app.delete(api.documents.delete.path, isAuthenticated, async (req: any, res) => {

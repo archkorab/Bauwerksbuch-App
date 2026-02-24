@@ -69,13 +69,22 @@ export default function ProjectDetails() {
 
   const isAdminOrEngineer = profile?.role === "admin" || profile?.role === "engineer";
 
-  const { register: docReg, handleSubmit: handleDocSubmit } = useForm({
-    defaultValues: { name: "", type: "pdf", url: "https://example.com/dummy.pdf", uploadedBy: profile?.userId || "" }
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const { register: docReg, handleSubmit: handleDocSubmit, reset: resetDocForm } = useForm({
+    defaultValues: { name: "" }
   });
 
   const onDocSubmit = (data: any) => {
-    createDocument.mutate({ projectId, data: { ...data, uploadedBy: profile!.userId } }, {
-      onSuccess: () => setDocDialogOpen(false)
+    if (!docFile) return;
+    const formData = new FormData();
+    formData.append('file', docFile);
+    formData.append('name', data.name || docFile.name);
+    createDocument.mutate({ projectId, formData }, {
+      onSuccess: () => {
+        setDocDialogOpen(false);
+        setDocFile(null);
+        resetDocForm();
+      }
     });
   };
 
@@ -319,11 +328,25 @@ export default function ProjectDetails() {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle>Dokumentmetadaten hochladen</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>Dokument hochladen</DialogTitle></DialogHeader>
                       <form onSubmit={handleDocSubmit(onDocSubmit)} className="space-y-4">
-                        <div className="space-y-2"><Label>Dokumentname</Label><Input {...docReg("name")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>Dateityp</Label><Input {...docReg("type")} defaultValue="pdf" className="bg-background"/></div>
-                        <Button type="submit" className="w-full" disabled={createDocument.isPending}>Absenden</Button>
+                        <div className="space-y-2">
+                          <Label>Datei auswählen</Label>
+                          <Input
+                            type="file"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] || null;
+                              setDocFile(f);
+                            }}
+                            required
+                            className="bg-background"
+                            data-testid="input-doc-file"
+                          />
+                        </div>
+                        <div className="space-y-2"><Label>Dokumentname (optional)</Label><Input {...docReg("name")} placeholder={docFile?.name || "Wird aus Dateiname übernommen"} className="bg-background" data-testid="input-doc-name"/></div>
+                        <Button type="submit" className="w-full" disabled={createDocument.isPending || !docFile} data-testid="button-doc-submit">
+                          {createDocument.isPending ? "Wird hochgeladen..." : "Hochladen"}
+                        </Button>
                       </form>
                     </DialogContent>
                   </Dialog>
@@ -336,19 +359,27 @@ export default function ProjectDetails() {
                 ) : (
                   <div className="divide-y divide-border">
                     {documents?.map(doc => (
-                      <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                      <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors" data-testid={`doc-row-${doc.id}`}>
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <FileText className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-foreground">{doc.name}</p>
+                            {doc.url && doc.url.startsWith('/api/') ? (
+                              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:text-primary/80" data-testid={`doc-link-${doc.id}`}>{doc.name}</a>
+                            ) : (
+                              <p className="font-semibold text-foreground">{doc.name}</p>
+                            )}
                             <p className="text-xs text-muted-foreground">{format(new Date(doc.createdAt!), 'MMM d, yyyy')} • {doc.type.toUpperCase()}</p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        {doc.url && doc.url.startsWith('/api/') && (
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" data-testid={`doc-download-${doc.id}`}>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </a>
+                        )}
                       </div>
                     ))}
                   </div>
