@@ -39,7 +39,7 @@ export function useCreateInspection() {
 export function useCreateDefect() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ inspectionId, data }: { inspectionId: number; data: CreateDefectRequest }) => {
+    mutationFn: async ({ inspectionId, projectId, data }: { inspectionId: number; projectId: number; data: CreateDefectRequest }) => {
       const url = buildUrl(api.defects.create.path, { inspectionId });
       const res = await fetch(url, {
         method: api.defects.create.method,
@@ -50,9 +50,9 @@ export function useCreateDefect() {
       if (!res.ok) throw new Error("Failed to create defect");
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.inspections.list.path] });
-      queryClient.invalidateQueries({ queryKey: ['/api/defects/summary'] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: [api.defects.summary.path] });
     },
   });
 }

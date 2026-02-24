@@ -6,12 +6,12 @@ import { useProject, useUpdateProject } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
-import { useInspections, useCreateInspection } from "@/hooks/use-inspections";
+import { useInspections, useCreateInspection, useCreateDefect } from "@/hooks/use-inspections";
 import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp
+  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +41,19 @@ const defectStatusLabels: Record<string, string> = {
   grober_mangel: "Grober Mangel",
 };
 
+const inspTypeLabels: Record<string, string> = {
+  erstpruefung: "Erstprüfung",
+  folgepruefung: "Folgeprüfung",
+};
+
+interface DefectEntry {
+  defectId: string;
+  dateFound: string;
+  description: string;
+  location: string;
+  status: string;
+}
+
 export default function ProjectDetails() {
   const [, params] = useRoute("/projects/:id");
   const projectId = Number(params?.id);
@@ -56,6 +69,7 @@ export default function ProjectDetails() {
   const createDocument = useCreateDocument();
   const createEvent = useCreateEvent();
   const createInspection = useCreateInspection();
+  const createDefect = useCreateDefect();
   const updateProject = useUpdateProject();
   const importBauakt = useImportBauakt();
   const uploadBauaktFiles = useUploadBauaktFiles();
@@ -67,6 +81,26 @@ export default function ProjectDetails() {
   const [bauaktSearch, setBauaktSearch] = useState("");
 
   const isAdmin = profile?.role === "admin";
+
+  const [defectEntries, setDefectEntries] = useState<DefectEntry[]>([]);
+
+  const addDefectEntry = () => {
+    setDefectEntries(prev => [...prev, {
+      defectId: "",
+      dateFound: "",
+      description: "",
+      location: "",
+      status: "leichter_mangel",
+    }]);
+  };
+
+  const updateDefectEntry = (index: number, field: keyof DefectEntry, value: string) => {
+    setDefectEntries(prev => prev.map((entry, i) => i === index ? { ...entry, [field]: value } : entry));
+  };
+
+  const removeDefectEntry = (index: number) => {
+    setDefectEntries(prev => prev.filter((_, i) => i !== index));
+  };
 
   const [docFile, setDocFile] = useState<File | null>(null);
   const { register: docReg, handleSubmit: handleDocSubmit, reset: resetDocForm } = useForm({
@@ -88,7 +122,7 @@ export default function ProjectDetails() {
   };
 
   const { register: eventReg, handleSubmit: handleEventSubmit } = useForm({
-    defaultValues: { title: "", description: "", type: "inspection" }
+    defaultValues: { title: "", description: "", type: "inspection", date: "" }
   });
 
   const onEventSubmit = (data: any) => {
@@ -102,25 +136,50 @@ export default function ProjectDetails() {
   };
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
-    defaultValues: { date: "", status: "OK", notes: "" }
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
   });
 
-  const onInspSubmit = (data: any) => {
-    createInspection.mutate({ 
-      projectId, 
-      data: { 
-        projectId,
-        engineerId: profile!.userId,
-        date: new Date(data.date), 
-        status: data.status, 
-        notes: data.notes || null 
-      } 
-    }, {
-      onSuccess: () => {
-        setInspDialogOpen(false);
-        resetInspForm();
+  const [inspSubmitting, setInspSubmitting] = useState(false);
+
+  const onInspSubmit = async (data: any) => {
+    setInspSubmitting(true);
+    try {
+      const inspection = await createInspection.mutateAsync({ 
+        projectId, 
+        data: { 
+          projectId,
+          engineerId: profile!.userId,
+          date: new Date(data.date), 
+          status: data.status,
+          type: data.type,
+          notes: data.notes || null 
+        } 
+      });
+      
+      const validDefects = defectEntries.filter(e => e.defectId && e.dateFound && e.description && e.location);
+      for (const entry of validDefects) {
+        await createDefect.mutateAsync({
+          inspectionId: inspection.id,
+          projectId,
+          data: {
+            inspectionId: inspection.id,
+            defectId: entry.defectId,
+            dateFound: new Date(entry.dateFound),
+            description: entry.description,
+            location: entry.location,
+            status: entry.status as "leichter_mangel" | "grober_mangel",
+          }
+        });
       }
-    });
+      
+      setInspDialogOpen(false);
+      resetInspForm();
+      setDefectEntries([]);
+    } catch (error) {
+      console.error("Failed to create inspection:", error);
+    } finally {
+      setInspSubmitting(false);
+    }
   };
 
   const { register: editReg, handleSubmit: handleEditSubmit, setValue: setEditValue, reset: resetEditForm } = useForm({
@@ -527,38 +586,113 @@ export default function ProjectDetails() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Prüfprotokoll</h3>
                 {isAdmin && (
-                  <Dialog open={inspDialogOpen} onOpenChange={setInspDialogOpen}>
+                  <Dialog open={inspDialogOpen} onOpenChange={(open) => { setInspDialogOpen(open); if (!open) { setDefectEntries([]); resetInspForm(); } }}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" data-testid="button-add-inspection">
                         <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-card border-border">
+                    <DialogContent className="bg-card border-border sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                       <DialogHeader><DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle></DialogHeader>
-                      <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-5 mt-2">
-                        <div className="space-y-2">
-                          <Label>Prüfdatum</Label>
-                          <Input type="date" {...inspReg("date")} required className="bg-background border-border" data-testid="input-inspection-date" />
+                      <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-6 mt-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Art der Prüfung</Label>
+                            <Select defaultValue="erstpruefung" onValueChange={(val) => setInspValue("type", val)}>
+                              <SelectTrigger className="bg-background border-border" data-testid="select-inspection-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="erstpruefung">Erstprüfung</SelectItem>
+                                <SelectItem value="folgepruefung">Folgeprüfung</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Prüfdatum</Label>
+                            <Input type="date" {...inspReg("date")} required className="bg-background border-border" data-testid="input-inspection-date" />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Status</Label>
-                          <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
-                            <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status">
-                              <SelectValue placeholder="Select status..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="OK">OK</SelectItem>
-                              <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
-                              <SelectItem value="urgent">Dringend</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
+                              <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="OK">OK</SelectItem>
+                                <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
+                                <SelectItem value="urgent">Dringend</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Anmerkungen</Label>
+                            <Input {...inspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="input-inspection-notes" />
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Anmerkungen</Label>
-                          <Textarea {...inspReg("notes")} placeholder="Befunde, Beobachtungen und Empfehlungen beschreiben..." className="bg-background border-border min-h-[100px]" data-testid="input-inspection-notes" />
+
+                        <div className="border-t border-border pt-5">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-display font-bold text-base">Mängel</h4>
+                            <Button type="button" variant="outline" size="sm" onClick={addDefectEntry} className="bg-card border-border hover:bg-white/5" data-testid="button-add-defect-entry">
+                              <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
+                            </Button>
+                          </div>
+
+                          {defectEntries.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">Keine Mängel hinzugefügt. Klicken Sie auf „Mangel hinzufügen", um Mängel zu erfassen.</p>
+                          )}
+
+                          <div className="space-y-4">
+                            {defectEntries.map((entry, index) => (
+                              <div key={index} className="bg-background border border-border rounded-xl p-4 space-y-3" data-testid={`defect-entry-${index}`}>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mangel {index + 1}</span>
+                                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeDefectEntry(index)} data-testid={`button-remove-defect-${index}`}>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Mangel-Nr.</Label>
+                                    <Input value={entry.defectId} onChange={(e) => updateDefectEntry(index, "defectId", e.target.value)} placeholder="z.B. M-001" required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-id-${index}`} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Datum der Feststellung</Label>
+                                    <Input type="date" value={entry.dateFound} onChange={(e) => updateDefectEntry(index, "dateFound", e.target.value)} required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-date-${index}`} />
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Beschreibung</Label>
+                                  <Textarea value={entry.description} onChange={(e) => updateDefectEntry(index, "description", e.target.value)} placeholder="Beschreibung des Mangels..." required className="bg-card border-border min-h-[60px] text-sm" data-testid={`input-defect-description-${index}`} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Ort</Label>
+                                    <Input value={entry.location} onChange={(e) => updateDefectEntry(index, "location", e.target.value)} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`input-defect-location-${index}`} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Status</Label>
+                                    <Select value={entry.status} onValueChange={(val) => updateDefectEntry(index, "status", val)}>
+                                      <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`select-defect-status-${index}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+                                        <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection">
-                          {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+
+                        <Button type="submit" className="w-full" disabled={inspSubmitting} data-testid="button-submit-inspection">
+                          {inspSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                           Prüfung erfassen
                         </Button>
                       </form>
@@ -587,7 +721,7 @@ export default function ProjectDetails() {
                                 {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                               </div>
                               <div>
-                                <p className="font-semibold text-foreground text-lg">Hauptprüfung — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
+                                <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
                                 <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'Keine Anmerkungen.'}</p>
                                 {ins.engineer && (
                                   <p className="text-xs text-muted-foreground mt-2 font-medium">Ingenieur: {ins.engineer.firstName} {ins.engineer.lastName}</p>

@@ -47,16 +47,19 @@ client/src/
 - projects (name, address, coordinates, status, nextInspectionDue, verwaltungId, eigentuemer)
 - documents (name, url, type, uploadedBy)
 - events (title, date, type, projectId)
-- inspections (date, status, notes, engineerId, projectId) - primary inspections
+- inspections (date, status, type, notes, engineerId, projectId) - type: erstpruefung/folgepruefung
 - defects (defectId, dateFound, description, location, status, parentDefectId, inspectionId) - defect findings per inspection, with follow-up support via parentDefectId
 - bauakt (dateiname, jahr, beschreibung, art, anmerkung, fileUrl, projectId) - digital building records imported from Excel
 
 ## Inspection/Defect Model
-- Each inspection is a "primary inspection" with a date, engineer, status, and notes
-- Defects are linked to an inspection and display: Defect ID, Date of Finding, Description, Location, Status
+- Each inspection has a type (erstpruefung/folgepruefung), date, engineer, status, and notes
+- "Prüfung hinzufügen" dialog allows creating inspections with inline defect entries
+- Defect fields: Mangel-Nr, Datum der Feststellung, Beschreibung, Ort, Status (leichter_mangel/grober_mangel)
 - Follow-up defects reference a parentDefectId to group them under the original finding
 - API: GET /api/projects/:projectId/inspections returns inspections with nested defects[]
-- API: POST/GET /api/inspections/:inspectionId/defects for managing defects
+- API: POST /api/projects/:projectId/inspections creates inspection
+- API: POST /api/inspections/:inspectionId/defects creates defect for an inspection
+- Defect summary: GET /api/defects/summary returns per-project Mangel status (kein/leichter/grober)
 
 ## User Preferences
 - Professional dark mode enterprise theme
@@ -71,6 +74,7 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-24: Redesigned "Prüfung hinzufügen" dialog with inspection type (Erstprüfung/Folgeprüfung), inline defect creation (Mangel-Nr, Datum, Beschreibung, Ort, Status), and Mangel status system (leichter/grober Mangel)
 - 2026-02-24: Redesigned role system: replaced admin/engineer/client with admin/hausverwaltung/eigentuemer/auftraggeber; admin-only management; added user creation dialog in Benutzerverwaltung
 - 2026-02-24: Added "Digitaler Bauakt" tab to project details - Excel import, file upload/hosting, searchable table with Dateiname/Jahr/Beschreibung/Art/Anmerkung columns
 - 2026-02-24: Added project edit function to Projektdetails page (admin only)
