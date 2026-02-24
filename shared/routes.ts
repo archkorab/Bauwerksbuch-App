@@ -106,7 +106,7 @@ export const api = {
     updateRole: {
       method: 'PUT' as const,
       path: '/api/users/:userId/role' as const,
-      input: z.object({ role: z.enum(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"]) }),
+      input: z.object({ role: z.enum(["admin", "hausverwaltung", "eigentuemer"]) }),
       responses: {
         200: profileSchema,
         401: errorSchemas.unauthorized,
@@ -121,7 +121,7 @@ export const api = {
         email: z.string().email(),
         firstName: z.string().min(1),
         lastName: z.string().min(1),
-        role: z.enum(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"]),
+        role: z.enum(["admin", "hausverwaltung", "eigentuemer"]),
         company: z.string().optional(),
         phone: z.string().optional(),
       }),

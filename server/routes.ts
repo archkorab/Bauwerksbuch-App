@@ -79,7 +79,7 @@ export async function registerRoutes(
       const profile = await storage.getProfile(userId);
       if (!profile) {
         const allProfiles = await storage.getAllProfiles();
-        const role = allProfiles.length === 0 ? "admin" : "auftraggeber";
+        const role = allProfiles.length === 0 ? "admin" : "eigentuemer";
         const newProfile = await storage.upsertProfile({ userId, role });
         return res.json(newProfile);
       }
@@ -122,8 +122,7 @@ export async function registerRoutes(
     try {
       const hausverwaltungen = await storage.getUsersByRole("hausverwaltung");
       const eigentuemer = await storage.getUsersByRole("eigentuemer");
-      const auftraggeber = await storage.getUsersByRole("auftraggeber");
-      res.json([...hausverwaltungen, ...eigentuemer, ...auftraggeber]);
+      res.json([...hausverwaltungen, ...eigentuemer]);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
     }
@@ -223,7 +222,7 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      const role = profile?.role || "auftraggeber";
+      const role = profile?.role || "eigentuemer";
 
       if (role === "admin") {
         const allProjects = await storage.getProjects();
@@ -245,7 +244,7 @@ export async function registerRoutes(
       }
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      const role = profile?.role || "auftraggeber";
+      const role = profile?.role || "eigentuemer";
       if (role !== "admin" && project.clientId !== userId) {
         return res.status(404).json({ message: "Project not found" });
       }

@@ -479,7 +479,7 @@ export default function ProjectDetails() {
             <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Auftraggeber</p>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
                 <p className="font-medium" data-testid="text-client-name">{project.client?.firstName} {project.client?.lastName}</p>
               </div>
               <div>

@@ -28,7 +28,7 @@ import { z } from "zod";
 const createProjectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
   address: z.string().min(1, "Adresse ist erforderlich"),
-  clientId: z.string().min(1, "Auftraggeber ist erforderlich"),
+  clientId: z.string().min(1, "Eigentümer ist erforderlich"),
   verwaltungId: z.string().optional(),
   eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
@@ -122,10 +122,10 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Auftraggeber zuweisen</Label>
+                  <Label>Eigentümer zuweisen</Label>
                   <Select onValueChange={(val) => setValue("clientId", val)}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-client">
-                      <SelectValue placeholder="Auftraggeber wählen..." />
+                      <SelectValue placeholder="Eigentümer wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {clients?.map(client => (
@@ -248,7 +248,7 @@ export default function Dashboard() {
                           {project.client.firstName?.[0]}{project.client.lastName?.[0]}
                         </div>
                         <div className="text-xs">
-                          <p className="text-muted-foreground font-medium uppercase tracking-wider">Auftraggeber</p>
+                          <p className="text-muted-foreground font-medium uppercase tracking-wider">Eigentümer</p>
                           <p className="text-foreground font-semibold">{project.client.firstName} {project.client.lastName}</p>
                         </div>
                       </div>

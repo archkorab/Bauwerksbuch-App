@@ -43,7 +43,7 @@ export default function UserManagement() {
   const [addUserOpen, setAddUserOpen] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: { firstName: "", lastName: "", email: "", role: "auftraggeber", company: "", phone: "" }
+    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "" }
   });
   const selectedRole = watch("role");
 
@@ -113,7 +113,6 @@ export default function UserManagement() {
     admin: "Administrator",
     hausverwaltung: "Hausverwaltung",
     eigentuemer: "Eigentümer",
-    auftraggeber: "Auftraggeber",
   };
 
   const getRoleBadgeClass = (role: string) => {
@@ -121,7 +120,6 @@ export default function UserManagement() {
       case "admin": return "bg-primary/10 text-primary border-primary/20";
       case "hausverwaltung": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
       case "eigentuemer": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-      case "auftraggeber": return "bg-violet-500/10 text-violet-500 border-violet-500/20";
       default: return "bg-muted text-muted-foreground border-border";
     }
   };
@@ -131,7 +129,6 @@ export default function UserManagement() {
       case "admin": return <Shield className="w-7 h-7 text-primary" />;
       case "hausverwaltung": return <Building className="w-7 h-7 text-amber-500" />;
       case "eigentuemer": return <Home className="w-7 h-7 text-emerald-500" />;
-      case "auftraggeber": return <Briefcase className="w-7 h-7 text-violet-500" />;
       default: return <Users className="w-7 h-7 text-muted-foreground" />;
     }
   };
@@ -180,7 +177,6 @@ export default function UserManagement() {
                       <SelectItem value="admin">Administrator</SelectItem>
                       <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
                       <SelectItem value="eigentuemer">Eigentümer</SelectItem>
-                      <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -203,7 +199,7 @@ export default function UserManagement() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        {(["admin", "hausverwaltung", "eigentuemer", "auftraggeber"] as const).map((role) => (
+        {(["admin", "hausverwaltung", "eigentuemer"] as const).map((role) => (
           <div key={role} className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${getRoleBadgeClass(role)}`}>
               {getRoleIcon(role)}
@@ -259,12 +255,12 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       {isCurrentUser ? (
-                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${getRoleBadgeClass(user.profile?.role || "auftraggeber")}`}>
-                          {roleLabels[user.profile?.role || "auftraggeber"] || user.profile?.role}
+                        <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${getRoleBadgeClass(user.profile?.role || "eigentuemer")}`}>
+                          {roleLabels[user.profile?.role || "eigentuemer"] || user.profile?.role}
                         </span>
                       ) : (
                         <Select
-                          defaultValue={user.profile?.role || "auftraggeber"}
+                          defaultValue={user.profile?.role || "eigentuemer"}
                           onValueChange={(val) => handleRoleChange(user.id, val)}
                           disabled={updateRole.isPending}
                         >
@@ -275,7 +271,6 @@ export default function UserManagement() {
                             <SelectItem value="admin">Administrator</SelectItem>
                             <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
                             <SelectItem value="eigentuemer">Eigentümer</SelectItem>
-                            <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
