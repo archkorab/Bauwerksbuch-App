@@ -8,6 +8,7 @@ import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
 import { useInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useUpdateDefect, useDeleteDefect, useDeleteInspection } from "@/hooks/use-inspections";
 import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
+import { useProjectImages, useUploadProjectImages, useDeleteProjectImage } from "@/hooks/use-project-images";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
@@ -95,6 +96,9 @@ export default function ProjectDetails() {
   const { data: clients } = useClients();
   const { data: defectSummary } = useDefectSummary();
   const { data: bauakte } = useBauakte(projectId);
+  const { data: projectImages } = useProjectImages(projectId);
+  const uploadProjectImages = useUploadProjectImages();
+  const deleteProjectImage = useDeleteProjectImage();
   const createDocument = useCreateDocument();
   const createEvent = useCreateEvent();
   const createInspection = useCreateInspection();
@@ -535,6 +539,7 @@ export default function ProjectDetails() {
           <Tabs defaultValue="documents" className="w-full">
             <TabsList className="bg-card border border-border p-1 rounded-xl mb-6">
               <TabsTrigger value="documents" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dokumente</TabsTrigger>
+              <TabsTrigger value="images" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-images">Bilder</TabsTrigger>
               <TabsTrigger value="bauakt" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-bauakt">Digitaler Bauakt</TabsTrigger>
               <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Prüfungen</TabsTrigger>
               <TabsTrigger value="events" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Zeitleiste</TabsTrigger>
@@ -609,6 +614,85 @@ export default function ProjectDetails() {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            {/* Bilder Tab */}
+            <TabsContent value="images" className="space-y-4" data-testid="tab-images">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-display font-bold text-xl">Projektbilder</h3>
+                {isAdmin && (
+                  <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-lg cursor-pointer hover:bg-muted/60 transition-colors" data-testid="button-upload-images">
+                    <ImagePlus className="w-4 h-4" />
+                    Bilder hochladen
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) {
+                          uploadProjectImages.mutate({ projectId, files });
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {uploadProjectImages.isPending && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 bg-card border border-border rounded-xl">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Bilder werden hochgeladen...
+                </div>
+              )}
+
+              {(!projectImages || projectImages.length === 0) ? (
+                <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+                  Keine Bilder vorhanden.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {projectImages.map((img: any) => (
+                    <div key={img.id} className="group relative bg-card border border-border rounded-xl overflow-hidden shadow-sm" data-testid={`project-image-${img.id}`}>
+                      <a href={img.url} target="_blank" rel="noopener noreferrer" className="block aspect-square">
+                        <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                      </a>
+                      <div className="p-2.5">
+                        <p className="text-xs font-medium text-foreground truncate" title={img.name}>{img.name}</p>
+                        {img.createdAt && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{format(new Date(img.createdAt), 'dd.MM.yyyy')}</p>
+                        )}
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a
+                          href={img.url}
+                          download={img.name}
+                          className="p-1.5 bg-card/90 backdrop-blur border border-border rounded-lg text-foreground hover:bg-muted transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`button-download-image-${img.id}`}
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </a>
+                        {isAdmin && (
+                          <button
+                            className="p-1.5 bg-card/90 backdrop-blur border border-border rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+                            onClick={() => {
+                              if (confirm("Bild wirklich löschen?")) {
+                                deleteProjectImage.mutate({ id: img.id, projectId });
+                              }
+                            }}
+                            data-testid={`button-delete-image-${img.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* Digitaler Bauakt Tab */}

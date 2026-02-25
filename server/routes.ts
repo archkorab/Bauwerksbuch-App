@@ -60,6 +60,39 @@ const documentUpload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
+const projectImagesBaseDir = path.join(process.cwd(), "uploads", "project-images");
+fs.mkdirSync(projectImagesBaseDir, { recursive: true });
+
+function getProjectImagesDir(projectId: number): string {
+  const dir = path.join(projectImagesBaseDir, String(projectId));
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const projectImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req: any, _file, cb) => {
+      const projectId = parseInt(req.params.projectId, 10);
+      cb(null, getProjectImagesDir(projectId));
+    },
+    filename: (_req, file, cb) => {
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      const timestamp = Date.now();
+      const ext = path.extname(originalName);
+      const base = path.basename(originalName, ext);
+      cb(null, `${base}_${timestamp}${ext}`);
+    },
+  }),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req: any, file: any, cb: any) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Nur Bilddateien sind erlaubt.'));
+    }
+  },
+});
+
 const defectImagesBaseDir = path.join(process.cwd(), "uploads", "defect-images");
 fs.mkdirSync(defectImagesBaseDir, { recursive: true });
 
@@ -674,6 +707,83 @@ export async function registerRoutes(
       res.json({ message: "Defect deleted" });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete defect" });
+    }
+  });
+
+  // --- Project Images ---
+  app.get('/api/projects/:projectId/images', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      if (!(await checkProjectAccess(userId, projectId))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const images = await storage.getProjectImages(projectId);
+      res.json(images);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch project images" });
+    }
+  });
+
+  app.post('/api/projects/:projectId/images', isAuthenticated, projectImageUpload.array('images', 20), async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (!profile || profile.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Bilder hochladen" });
+      }
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "Keine Dateien hochgeladen" });
+      }
+      const created = [];
+      for (const file of files) {
+        const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+        const url = `/api/project-image-files/${projectId}/${encodeURIComponent(file.filename)}`;
+        const img = await storage.createProjectImage({ projectId, name: originalName, url, uploadedBy: userId });
+        created.push(img);
+      }
+      res.status(201).json(created);
+    } catch (err) {
+      console.error("Project image upload error:", err);
+      res.status(500).json({ message: "Failed to upload project images" });
+    }
+  });
+
+  app.get('/api/project-image-files/:projectId/:filename', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId, 10);
+      const userId = req.user.claims.sub;
+      if (!(await checkProjectAccess(userId, projectId))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const filename = decodeURIComponent(req.params.filename);
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+      const filePath = path.join(getProjectImagesDir(projectId), filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      res.sendFile(filePath);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to serve project image" });
+    }
+  });
+
+  app.delete('/api/project-images/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (!profile || profile.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Bilder löschen" });
+      }
+      await storage.deleteProjectImage(id);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete project image" });
     }
   });
 

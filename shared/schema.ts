@@ -81,6 +81,15 @@ export const defects = pgTable("defects", {
   imageUrl: text("image_url"),
 });
 
+export const projectImages = pgTable("project_images", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  uploadedBy: text("uploaded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const bauakt = pgTable("bauakt", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id),
@@ -184,6 +193,7 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({ id: tru
 export const insertEventSchema = createInsertSchema(events).omit({ id: true });
 export const insertInspectionSchema = createInsertSchema(inspections).omit({ id: true });
 export const insertDefectSchema = createInsertSchema(defects).omit({ id: true });
+export const insertProjectImageSchema = createInsertSchema(projectImages).omit({ id: true, createdAt: true });
 export const insertBauaktSchema = createInsertSchema(bauakt).omit({ id: true });
 
 // --- Explicit API Contract Types ---
@@ -226,6 +236,10 @@ export type Defect = typeof defects.$inferSelect;
 export type InsertDefect = z.infer<typeof insertDefectSchema>;
 export type CreateDefectRequest = InsertDefect;
 export type UpdateDefectRequest = Partial<InsertDefect>;
+
+// Project Images
+export type ProjectImage = typeof projectImages.$inferSelect;
+export type InsertProjectImage = z.infer<typeof insertProjectImageSchema>;
 
 // Bauakt
 export type Bauakt = typeof bauakt.$inferSelect;

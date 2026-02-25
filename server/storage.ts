@@ -7,6 +7,7 @@ import {
   inspections,
   defects,
   bauakt,
+  projectImages,
   users,
   type Profile,
   type InsertProfile,
@@ -27,6 +28,8 @@ import {
   type Defect,
   type InsertDefect,
   type UpdateDefectRequest,
+  type ProjectImage,
+  type InsertProjectImage,
   type Bauakt,
   type InsertBauakt,
 } from "@shared/schema";
@@ -68,6 +71,10 @@ export interface IStorage {
   createDefect(data: InsertDefect): Promise<Defect>;
   updateDefect(id: number, data: UpdateDefectRequest): Promise<Defect>;
   deleteDefect(id: number): Promise<void>;
+
+  getProjectImages(projectId: number): Promise<ProjectImage[]>;
+  createProjectImage(data: InsertProjectImage): Promise<ProjectImage>;
+  deleteProjectImage(id: number): Promise<void>;
 
   getBauakte(projectId: number): Promise<Bauakt[]>;
   createBauakt(data: InsertBauakt): Promise<Bauakt>;
@@ -336,6 +343,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDefect(id: number): Promise<void> {
     await db.delete(defects).where(eq(defects.id, id));
+  }
+
+  async getProjectImages(projectId: number): Promise<ProjectImage[]> {
+    return db.select().from(projectImages).where(eq(projectImages.projectId, projectId)).orderBy(desc(projectImages.createdAt));
+  }
+
+  async createProjectImage(data: InsertProjectImage): Promise<ProjectImage> {
+    const [img] = await db.insert(projectImages).values(data).returning();
+    return img;
+  }
+
+  async deleteProjectImage(id: number): Promise<void> {
+    await db.delete(projectImages).where(eq(projectImages.id, id));
   }
 
   async getBauakte(projectId: number): Promise<Bauakt[]> {

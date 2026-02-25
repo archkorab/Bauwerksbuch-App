@@ -35,7 +35,7 @@ client/src/
 - Three roles: Administrator, Hausverwaltung, Eigentümer
 - Manual user creation via Benutzerverwaltung (admin only)
 - Project listings with search/filter
-- Project detail views with documents, events, inspections tabs
+- Project detail views with documents, images gallery, events, inspections tabs
 - Global calendar for inspections/deadlines
 - Inspections directory linking to per-project logbooks
 - Sample seed data for demo (Vienna construction projects)
@@ -75,6 +75,7 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-25: Added "Bilder" tab to project details — image gallery with upload (multi-file), download, delete; stored in uploads/project-images/
 - 2026-02-25: Added image upload for defect entries — upload during create/edit, displayed as thumbnails in defect tables (project details + global inspections), stored in uploads/defect-images/
 - 2026-02-25: Switched from dark mode to light mode matching bauwerksbuch-archkorab.at color theme (purple-blue primary, coral accent, light background, white cards)
 - 2026-02-24: Redesigned "Prüfung hinzufügen" dialog with inspection type (Erstprüfung/Folgeprüfung), inline defect creation (Mangel-Nr, Datum, Beschreibung, Ort, Status), and Mangel status system (leichter/grober Mangel)
