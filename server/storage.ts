@@ -130,11 +130,12 @@ export class DatabaseStorage implements IStorage {
     return result.map(r => ({ ...r.users, profile: r.profiles || undefined }));
   }
 
-  async createUser(data: { email: string; firstName: string; lastName: string }): Promise<any> {
+  async createUser(data: { email: string; firstName: string; lastName: string; password?: string }): Promise<any> {
     const [user] = await db.insert(users).values({
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
+      password: data.password || null,
     }).returning();
     return user;
   }

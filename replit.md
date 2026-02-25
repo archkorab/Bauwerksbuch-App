@@ -1,20 +1,20 @@
 # Bauwerksbuch-Archkorab Client Dashboard
 
 ## Overview
-A construction project management platform providing a centralized hub for clients to view and manage their construction projects. Built for Archkorab GmbH with enterprise-grade dark theme.
+A construction project management platform providing a centralized hub for clients to view and manage their construction projects. Built for Archkorab GmbH with light mode enterprise theme.
 
 ## Architecture
 - **Frontend**: React + Vite with Tailwind CSS, shadcn/ui components, wouter routing
-- **Backend**: Express.js with Replit Auth (OIDC), Drizzle ORM
+- **Backend**: Express.js with custom session-based auth (bcryptjs), Drizzle ORM
 - **Database**: PostgreSQL (Neon-backed via Replit)
-- **Auth**: Replit Auth integration (no custom login forms)
+- **Auth**: Custom email/password auth with bcrypt hashing, session-based (express-session + connect-pg-simple)
 
 ## Project Structure
 ```
 shared/
   schema.ts        - Drizzle schema + Zod types for all entities
   routes.ts        - API contract with Zod validation schemas
-  models/auth.ts   - Replit Auth user/session tables
+  models/auth.ts   - User/session tables (custom auth)
 server/
   index.ts         - Express entry point
   db.ts            - Database connection (drizzle + pg)
@@ -30,10 +30,10 @@ client/src/
 ```
 
 ## Key Features
-- Replit Auth login (no signup forms)
+- Custom email/password login + registration (bcryptjs hashing)
 - Role-based access: admin sees all + full management, other roles see only their assigned projects
 - Three roles: Administrator, Hausverwaltung, Eigentümer
-- Manual user creation via Benutzerverwaltung (admin only)
+- Manual user creation via Benutzerverwaltung (admin only, default password "changeme123")
 - Project listings with search/filter
 - Project detail views with documents, images gallery, events, inspections tabs
 - Global calendar for inspections/deadlines
@@ -41,8 +41,8 @@ client/src/
 - Sample seed data for demo (Vienna construction projects)
 
 ## Database Tables
-- users (from Replit Auth)
-- sessions (from Replit Auth)
+- users (custom auth with password hash)
+- sessions (express-session + connect-pg-simple)
 - profiles (role, phone, company)
 - projects (name, address, coordinates, status, nextInspectionDue, verwaltungId, eigentuemer)
 - documents (name, url, type, uploadedBy)
@@ -75,6 +75,7 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-25: Replaced Replit Auth with custom email/password auth — registration, login, bcrypt hashing, session-based; landing page with login/register form; admin user creation sets default password "changeme123"
 - 2026-02-25: Added "Bilder" tab to project details — image gallery with upload (multi-file), download, delete; stored in uploads/project-images/
 - 2026-02-25: Added image upload for defect entries — upload during create/edit, displayed as thumbnails in defect tables (project details + global inspections), stored in uploads/defect-images/
 - 2026-02-25: Switched from dark mode to light mode matching bauwerksbuch-archkorab.at color theme (purple-blue primary, coral accent, light background, white cards)

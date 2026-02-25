@@ -10,6 +10,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import XLSX from "xlsx";
+import bcrypt from "bcryptjs";
 
 const uploadsBaseDir = path.join(process.cwd(), "uploads", "bauakt");
 fs.mkdirSync(uploadsBaseDir, { recursive: true });
@@ -244,10 +245,12 @@ export async function registerRoutes(
       if (emailExists) {
         return res.status(400).json({ message: "Ein Benutzer mit dieser E-Mail existiert bereits." });
       }
+      const defaultPassword = await bcrypt.hash("changeme123", 12);
       const user = await storage.createUser({
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
+        password: defaultPassword,
       });
       await storage.upsertProfile({
         userId: user.id,
@@ -952,10 +955,11 @@ async function seedDatabase() {
     const demoClientId = "demo-client-001";
     const demoEngineerId = "demo-engineer-001";
 
+    const demoPassword = await bcrypt.hash("admin123", 12);
     await database.insert(usersTable).values([
-      { id: demoUserId, email: "admin@archkorab.at", firstName: "Thomas", lastName: "Archkorab" },
-      { id: demoClientId, email: "client@wienerhaus.at", firstName: "Maria", lastName: "Huber" },
-      { id: demoEngineerId, email: "engineer@archkorab.at", firstName: "Stefan", lastName: "Wagner" },
+      { id: demoUserId, email: "admin@archkorab.at", firstName: "Thomas", lastName: "Archkorab", password: demoPassword },
+      { id: demoClientId, email: "client@wienerhaus.at", firstName: "Maria", lastName: "Huber", password: demoPassword },
+      { id: demoEngineerId, email: "engineer@archkorab.at", firstName: "Stefan", lastName: "Wagner", password: demoPassword },
     ]).onConflictDoNothing();
 
     await database.insert(profilesTable).values([
