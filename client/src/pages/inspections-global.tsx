@@ -98,6 +98,7 @@ export default function InspectionsGlobal() {
                 <div
                   key={ins.id}
                   className="bg-card border border-border rounded-xl shadow-sm overflow-hidden hover:border-primary/30 transition-all cursor-pointer group"
+                  onClick={() => setDetailInspection(ins)}
                   data-testid={`inspection-row-${ins.id}`}
                 >
                   <div className="p-5 flex flex-col md:flex-row gap-4 items-start md:items-center">
