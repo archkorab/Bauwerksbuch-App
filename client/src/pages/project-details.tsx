@@ -2,7 +2,7 @@ import { useState, Fragment } from "react";
 import { useRoute } from "wouter";
 import { Layout } from "@/components/layout";
 import { MapPlaceholder } from "@/components/map-placeholder";
-import { useProject, useUpdateProject } from "@/hooks/use-projects";
+import { useProject, useUpdateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
 import { useEvents, useCreateEvent } from "@/hooks/use-events";
@@ -91,6 +91,7 @@ export default function ProjectDetails() {
   const { data: profile } = useProfile();
   
   const { data: clients } = useClients();
+  const { data: defectSummary } = useDefectSummary();
   const { data: bauakte } = useBauakte(projectId);
   const createDocument = useCreateDocument();
   const createEvent = useCreateEvent();
@@ -393,12 +394,19 @@ export default function ProjectDetails() {
           <div>
             <div className="flex items-center gap-4 mb-2">
               <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">{project.name}</h1>
-              <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-widest
-                ${project.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                  project.status === 'completed' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 
-                  'bg-muted text-muted-foreground border-border'}`}>
-                {statusLabels[project.status] || project.status}
-              </span>
+              {(() => {
+                const mangel = defectSummary?.find(s => s.projectId === projectId)?.mangelStatus || "kein_mangel";
+                const mangelLabels: Record<string, string> = { kein_mangel: "Kein Mangel", leichter_mangel: "Leichter Mangel", grober_mangel: "Grober Mangel" };
+                return (
+                  <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-widest
+                    ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' : 
+                      mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 
+                      'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
+                    data-testid="badge-mangel-status">
+                    {mangelLabels[mangel]}
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4" />
