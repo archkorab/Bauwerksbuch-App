@@ -10,7 +10,7 @@ export function StatusBadge({ status }: { status: string }) {
   } else if (status === "urgent") {
     colorClass = "bg-destructive/15 text-destructive border border-destructive/30";
   } else if (status === "completed") {
-    colorClass = "bg-blue-500/15 text-blue-400 border border-blue-500/30";
+    colorClass = "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30";
   }
 
   return (

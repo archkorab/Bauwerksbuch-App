@@ -5,9 +5,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden selection:bg-primary/30">
       
       {/* Left Panel: Hero & Branding */}
-      <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/20 via-background to-background">
+      <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-background to-background">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/30">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-indigo-700 flex items-center justify-center shadow-lg shadow-primary/30">
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>

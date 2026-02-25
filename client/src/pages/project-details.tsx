@@ -395,7 +395,7 @@ export default function ProjectDetails() {
               <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">{project.name}</h1>
               <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-widest
                 ${project.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                  project.status === 'completed' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+                  project.status === 'completed' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 
                   'bg-muted text-muted-foreground border-border'}`}>
                 {statusLabels[project.status] || project.status}
               </span>
@@ -691,7 +691,7 @@ export default function ProjectDetails() {
                               <td className="px-5 py-3 text-foreground max-w-xs">{entry.beschreibung || '—'}</td>
                               <td className="px-5 py-3">
                                 <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                  ${entry.art === 'Plan' ? 'text-blue-400 border-blue-400/30 bg-blue-400/10' : 
+                                  ${entry.art === 'Plan' ? 'text-indigo-400 border-indigo-400/30 bg-indigo-400/10' : 
                                     entry.art === 'Bescheid' ? 'text-amber-400 border-amber-400/30 bg-amber-400/10' :
                                     'text-muted-foreground border-border bg-muted/20'}`}>
                                   {entry.art || '—'}

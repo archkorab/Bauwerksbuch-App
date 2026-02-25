@@ -45,7 +45,7 @@ export function Layout({ children }: LayoutProps) {
       <aside className="w-72 flex-shrink-0 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col justify-between hidden md:flex z-20 shadow-xl shadow-black/50">
         <div className="p-6 flex flex-col h-full">
           <div className="flex items-center gap-3 px-2 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/25">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-700 flex items-center justify-center shadow-lg shadow-primary/25">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -106,7 +106,7 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-background to-background">
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/10 via-background to-background">
         <div className="flex-1 overflow-auto p-4 md:p-8 relative z-10">
           {children}
         </div>
