@@ -11,7 +11,7 @@ import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-b
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2
+  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -115,6 +115,7 @@ export default function ProjectDetails() {
 
   const [defectEntries, setDefectEntries] = useState<DefectEntry[]>([]);
   const [editInspDialogOpen, setEditInspDialogOpen] = useState(false);
+  const [expandedInspId, setExpandedInspId] = useState<number | null>(null);
   const [editingInspection, setEditingInspection] = useState<any>(null);
   const [editDefectEntries, setEditDefectEntries] = useState<(DefectEntry & { existingId?: number })[]>([]);
   const [editInspSubmitting, setEditInspSubmitting] = useState(false);
@@ -1054,11 +1055,15 @@ export default function ProjectDetails() {
                   inspections?.map(ins => {
                     const primaryDefects = ins.defects?.filter((d: any) => !d.parentDefectId) || [];
                     const followUps = ins.defects?.filter((d: any) => d.parentDefectId) || [];
+                    const isInsExpanded = expandedInspId === ins.id;
                     
                     return (
-                      <div key={ins.id} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden" data-testid={`inspection-card-${ins.id}`}>
-                        {/* Inspection Header */}
-                        <div className="p-5 border-b border-border">
+                      <div key={ins.id} className={`bg-card border rounded-2xl shadow-sm overflow-hidden transition-all ${isInsExpanded ? 'border-primary/40' : 'border-border'}`} data-testid={`inspection-card-${ins.id}`}>
+                        <div
+                          className="p-5 cursor-pointer"
+                          onClick={() => setExpandedInspId(prev => prev === ins.id ? null : ins.id)}
+                          data-testid={`inspection-toggle-${ins.id}`}
+                        >
                           <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                             <div className="flex items-start gap-4">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border
@@ -1068,7 +1073,7 @@ export default function ProjectDetails() {
                                 {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                               </div>
                               <div>
-                                <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'MMM d, yyyy')}</p>
+                                <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'dd.MM.yyyy')}</p>
                                 <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'Keine Anmerkungen.'}</p>
                                 {ins.engineer && (
                                   <p className="text-xs text-muted-foreground mt-2 font-medium">Ingenieur: {ins.engineer.firstName} {ins.engineer.lastName}</p>
@@ -1078,10 +1083,10 @@ export default function ProjectDetails() {
                             <div className="flex items-center gap-2 shrink-0">
                               {isAdmin && (
                                 <>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditInspection(ins)} data-testid={`button-edit-inspection-${ins.id}`}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); openEditInspection(ins); }} data-testid={`button-edit-inspection-${ins.id}`}>
                                     <Pencil className="w-4 h-4" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { if (confirm("Prüfung und alle zugehörigen Mängel wirklich löschen?")) deleteInspection.mutate({ id: ins.id, projectId }); }} data-testid={`button-delete-inspection-${ins.id}`}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm("Prüfung und alle zugehörigen Mängel wirklich löschen?")) deleteInspection.mutate({ id: ins.id, projectId }); }} data-testid={`button-delete-inspection-${ins.id}`}>
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </>
@@ -1092,12 +1097,16 @@ export default function ProjectDetails() {
                                   'text-amber-500 border-amber-500/30'}`}>
                                 {inspStatusLabels[ins.status] || ins.status}
                               </span>
+                              {isInsExpanded ? (
+                                <ChevronDown className="w-5 h-5 text-primary" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                              )}
                             </div>
                           </div>
                         </div>
 
-                        {/* Defects Table */}
-                        {ins.defects && ins.defects.length > 0 && (
+                        {isInsExpanded && ins.defects && ins.defects.length > 0 && (
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm" data-testid={`defects-table-${ins.id}`}>
                               <thead>
@@ -1189,8 +1198,8 @@ export default function ProjectDetails() {
                           </div>
                         )}
 
-                        {(!ins.defects || ins.defects.length === 0) && (
-                          <div className="px-5 py-4 text-sm text-muted-foreground">Keine Mängel für diese Prüfung erfasst.</div>
+                        {isInsExpanded && (!ins.defects || ins.defects.length === 0) && (
+                          <div className="border-t border-border px-5 py-4 text-sm text-muted-foreground">Keine Mängel für diese Prüfung erfasst.</div>
                         )}
                       </div>
                     );
