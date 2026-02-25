@@ -59,6 +59,7 @@ export interface IStorage {
   deleteEvent(id: number): Promise<void>;
 
   getInspections(projectId: number): Promise<InspectionResponse[]>;
+  getAllInspections(): Promise<(InspectionResponse & { projectName?: string; projectAddress?: string })[]>;
   createInspection(data: InsertInspection): Promise<Inspection>;
   updateInspection(id: number, data: UpdateInspectionRequest): Promise<Inspection>;
   deleteInspection(id: number): Promise<void>;
@@ -277,6 +278,28 @@ export class DatabaseStorage implements IStorage {
         ...r.inspections,
         engineer: r.users || undefined,
         defects: inspDefects,
+      });
+    }
+    return inspectionResults;
+  }
+
+  async getAllInspections(): Promise<(InspectionResponse & { projectName?: string; projectAddress?: string })[]> {
+    const result = await db
+      .select()
+      .from(inspections)
+      .leftJoin(users, eq(inspections.engineerId, users.id))
+      .leftJoin(projects, eq(inspections.projectId, projects.id))
+      .orderBy(desc(inspections.date));
+
+    const inspectionResults: (InspectionResponse & { projectName?: string; projectAddress?: string })[] = [];
+    for (const r of result) {
+      const inspDefects = await db.select().from(defects).where(eq(defects.inspectionId, r.inspections.id)).orderBy(desc(defects.dateFound));
+      inspectionResults.push({
+        ...r.inspections,
+        engineer: r.users || undefined,
+        defects: inspDefects,
+        projectName: r.projects?.name,
+        projectAddress: r.projects?.address,
       });
     }
     return inspectionResults;

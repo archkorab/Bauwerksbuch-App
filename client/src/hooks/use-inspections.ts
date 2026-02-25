@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl, type CreateInspectionRequest, type UpdateInspectionRequest, type CreateDefectRequest, type UpdateDefectRequest } from "@shared/routes";
 
+export function useAllInspections() {
+  return useQuery({
+    queryKey: [api.inspections.listAll.path],
+    queryFn: async () => {
+      const res = await fetch(api.inspections.listAll.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch inspections");
+      return res.json();
+    },
+  });
+}
+
 export function useInspections(projectId: number) {
   return useQuery({
     queryKey: [api.inspections.list.path, projectId],

@@ -288,6 +288,14 @@ export const api = {
         401: errorSchemas.unauthorized
       }
     },
+    listAll: {
+      method: 'GET' as const,
+      path: '/api/inspections' as const,
+      responses: {
+        200: z.array(inspectionWithEngineerSchema.and(z.object({ projectName: z.string().optional(), projectAddress: z.string().optional() }))),
+        401: errorSchemas.unauthorized
+      }
+    },
     create: {
       method: 'POST' as const,
       path: '/api/projects/:projectId/inspections' as const,

@@ -472,6 +472,15 @@ export async function registerRoutes(
   });
 
   // --- Inspections ---
+  app.get(api.inspections.listAll.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const allInsps = await storage.getAllInspections();
+      res.json(allInsps);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch inspections" });
+    }
+  });
+
   app.get(api.inspections.list.path, isAuthenticated, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
