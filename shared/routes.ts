@@ -132,6 +132,25 @@ export const api = {
         403: errorSchemas.unauthorized
       }
     },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/users/:userId' as const,
+      input: z.object({
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["admin", "hausverwaltung", "eigentuemer"]).optional(),
+        company: z.string().optional(),
+        phone: z.string().optional(),
+      }),
+      responses: {
+        200: userSchema.and(z.object({ profile: profileSchema.optional() })),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+        403: errorSchemas.unauthorized,
+        404: errorSchemas.notFound
+      }
+    },
     delete: {
       method: 'DELETE' as const,
       path: '/api/users/:userId' as const,

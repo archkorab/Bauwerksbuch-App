@@ -199,6 +199,31 @@ export async function registerRoutes(
     }
   });
 
+  app.put(api.users.update.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user.claims.sub;
+      const currentProfile = await storage.getProfile(currentUserId);
+      if (currentProfile?.role !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const targetUserId = req.params.userId;
+      const input = api.users.update.input.parse(req.body);
+      const { firstName, lastName, email, role, company, phone } = input;
+      const updated = await storage.updateUser(
+        targetUserId,
+        { firstName, lastName, email },
+        { role, company, phone }
+      );
+      if (!updated) return res.status(404).json({ message: "User not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   app.delete(api.users.delete.path, isAuthenticated, async (req: any, res) => {
     try {
       const currentUserId = req.user.claims.sub;

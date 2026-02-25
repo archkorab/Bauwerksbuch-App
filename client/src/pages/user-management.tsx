@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser } from "@/hooks/use-users";
+import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdateUser } from "@/hooks/use-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
-  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase
+  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,15 +37,47 @@ export default function UserManagement() {
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
   const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
   const { toast } = useToast();
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "" }
   });
   const selectedRole = watch("role");
+
+  const { register: editReg, handleSubmit: handleEditSubmit, reset: resetEdit, setValue: setEditValue, watch: watchEdit } = useForm({
+    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "" }
+  });
+  const editRole = watchEdit("role");
+
+  const openEditDialog = (user: any) => {
+    resetEdit({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      email: user.email || "",
+      role: user.profile?.role || "eigentuemer",
+      company: user.profile?.company || "",
+      phone: user.profile?.phone || "",
+    });
+    setEditTarget(user);
+  };
+
+  const onEditUser = (data: any) => {
+    if (!editTarget) return;
+    updateUser.mutate({ userId: editTarget.id, data }, {
+      onSuccess: () => {
+        toast({ title: "Benutzer aktualisiert", description: `${data.firstName} ${data.lastName} wurde aktualisiert.` });
+        setEditTarget(null);
+      },
+      onError: (err: any) => {
+        toast({ title: "Fehler", description: err.message, variant: "destructive" });
+      }
+    });
+  };
 
   if (profile?.role !== "admin") {
     return (
@@ -277,15 +309,26 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       {!isCurrentUser && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setDeleteTarget({ id: user.id, name: userName })}
-                          data-testid={`button-delete-user-${user.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            onClick={() => openEditDialog(user)}
+                            data-testid={`button-edit-user-${user.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setDeleteTarget({ id: user.id, name: userName })}
+                            data-testid={`button-delete-user-${user.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -323,6 +366,53 @@ export default function UserManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader><DialogTitle>Benutzer bearbeiten</DialogTitle></DialogHeader>
+          <form onSubmit={handleEditSubmit(onEditUser)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Vorname</Label>
+                <Input {...editReg("firstName")} required className="bg-background" data-testid="input-edit-user-firstname" />
+              </div>
+              <div className="space-y-2">
+                <Label>Nachname</Label>
+                <Input {...editReg("lastName")} required className="bg-background" data-testid="input-edit-user-lastname" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>E-Mail</Label>
+              <Input {...editReg("email")} type="email" required className="bg-background" data-testid="input-edit-user-email" />
+            </div>
+            <div className="space-y-2">
+              <Label>Rolle</Label>
+              <Select value={editRole} onValueChange={(val) => setEditValue("role", val)}>
+                <SelectTrigger className="bg-background border-border" data-testid="select-edit-user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
+                  <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Unternehmen (optional)</Label>
+              <Input {...editReg("company")} className="bg-background" data-testid="input-edit-user-company" />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefon (optional)</Label>
+              <Input {...editReg("phone")} className="bg-background" data-testid="input-edit-user-phone" />
+            </div>
+            <Button type="submit" className="w-full" disabled={updateUser.isPending} data-testid="button-submit-edit-user">
+              {updateUser.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
+              Änderungen speichern
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

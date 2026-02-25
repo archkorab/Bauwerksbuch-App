@@ -40,6 +40,7 @@ export interface IStorage {
   getUsersByRole(role: string): Promise<any[]>;
   getAllUsers(): Promise<any[]>;
   createUser(data: { email: string; firstName: string; lastName: string }): Promise<any>;
+  updateUser(userId: string, userData: { firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any>;
   getUserWithProfile(userId: string): Promise<any>;
   deleteUser(userId: string): Promise<void>;
 
@@ -128,6 +129,29 @@ export class DatabaseStorage implements IStorage {
       lastName: data.lastName,
     }).returning();
     return user;
+  }
+
+  async updateUser(userId: string, userData: { firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any> {
+    const userUpdates: any = {};
+    if (userData.firstName !== undefined) userUpdates.firstName = userData.firstName;
+    if (userData.lastName !== undefined) userUpdates.lastName = userData.lastName;
+    if (userData.email !== undefined) userUpdates.email = userData.email;
+    if (Object.keys(userUpdates).length > 0) {
+      await db.update(users).set(userUpdates).where(eq(users.id, userId));
+    }
+    const profileUpdates: any = {};
+    if (profileData.role !== undefined) profileUpdates.role = profileData.role;
+    if (profileData.company !== undefined) profileUpdates.company = profileData.company;
+    if (profileData.phone !== undefined) profileUpdates.phone = profileData.phone;
+    if (Object.keys(profileUpdates).length > 0) {
+      const existing = await this.getProfile(userId);
+      if (existing) {
+        await db.update(profiles).set(profileUpdates).where(eq(profiles.userId, userId));
+      } else {
+        await db.insert(profiles).values({ userId, ...profileUpdates });
+      }
+    }
+    return this.getUserWithProfile(userId);
   }
 
   async getUserWithProfile(userId: string): Promise<any> {
