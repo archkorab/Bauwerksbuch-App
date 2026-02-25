@@ -480,7 +480,7 @@ export default function ProjectDetails() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
-                <p className="font-medium" data-testid="text-client-name">{project.client?.firstName} {project.client?.lastName}</p>
+                <p className="font-medium" data-testid="text-client-name">{project.eigentuemer || '—'}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
