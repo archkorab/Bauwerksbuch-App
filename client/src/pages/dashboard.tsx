@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Loader2,
   LayoutGrid,
-  List
+  List,
+  Search
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ export default function Dashboard() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [search, setSearch] = useState("");
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
@@ -91,6 +93,12 @@ export default function Dashboard() {
 
   const leichterCount = defectSummary?.filter(s => s.mangelStatus === "leichter_mangel").length || 0;
   const groberCount = defectSummary?.filter(s => s.mangelStatus === "grober_mangel").length || 0;
+
+  const filteredProjects = projects?.filter(p => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
+  });
 
   return (
     <Layout>
@@ -203,8 +211,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* View Toggle */}
-      <div className="flex items-center justify-end mb-6 gap-1">
+      {/* Search & View Toggle */}
+      <div className="flex items-center justify-end mb-6 gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Projekt suchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card border-border"
+            data-testid="input-search-projects"
+          />
+        </div>
         <Button
           variant={viewMode === "grid" ? "default" : "outline"}
           size="sm"
@@ -226,15 +244,15 @@ export default function Dashboard() {
       </div>
 
       {/* Projects */}
-      {projects?.length === 0 ? (
+      {filteredProjects?.length === 0 ? (
         <div className="py-16 text-center border-2 border-dashed border-border rounded-2xl bg-card/30">
           <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-bold text-foreground mb-1">Keine Projekte gefunden</h3>
-          <p className="text-muted-foreground">Ihnen sind noch keine Projekte zugewiesen.</p>
+          <h3 className="text-lg font-bold text-foreground mb-1">{search ? "Keine Ergebnisse" : "Keine Projekte gefunden"}</h3>
+          <p className="text-muted-foreground">{search ? "Versuchen Sie einen anderen Suchbegriff." : "Ihnen sind noch keine Projekte zugewiesen."}</p>
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {projects?.map((project) => {
+          {filteredProjects?.map((project) => {
             const mangel = getMangelStatus(project.id);
             return (
               <Link key={project.id} href={`/projects/${project.id}`}>
@@ -297,7 +315,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {projects?.map((project) => {
+              {filteredProjects?.map((project) => {
                 const mangel = getMangelStatus(project.id);
                 return (
                   <tr key={project.id} className="hover:bg-muted/40 transition-colors cursor-pointer" onClick={() => window.location.href = `/projects/${project.id}`} data-testid={`row-project-${project.id}`}>
