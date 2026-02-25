@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Building2, Phone, Save, Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { User, Lock, Building2, Phone, Save, Loader2, Eye, EyeOff, CheckCircle, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@shared/routes";
 
@@ -23,6 +23,36 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const imageUploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/account/profile-image", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Upload fehlgeschlagen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Profilbild aktualisiert" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) imageUploadMutation.mutate(file);
+  };
 
   useEffect(() => {
     if (user) {
@@ -94,9 +124,36 @@ export default function ProfilePage() {
           <p className="text-muted-foreground text-sm mt-1">Persönliche Informationen und Kontoeinstellungen verwalten</p>
         </div>
 
-        <div className="flex items-center gap-4 mb-8 p-5 bg-card border border-border rounded-2xl shadow-sm">
-          <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-lg">
-            {(user?.firstName?.[0] || user?.email?.[0] || "?").toUpperCase()}
+        <div className="flex items-center gap-5 mb-8 p-5 bg-card border border-border rounded-2xl shadow-sm">
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-2xl overflow-hidden">
+              {user?.profileImageUrl ? (
+                <img src={user.profileImageUrl} alt="Profilbild" className="w-full h-full object-cover" data-testid="img-profile-avatar" />
+              ) : (
+                (user?.firstName?.[0] || user?.email?.[0] || "?").toUpperCase()
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={imageUploadMutation.isPending}
+              className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+              data-testid="button-upload-avatar"
+            >
+              {imageUploadMutation.isPending ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <Camera className="w-5 h-5 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+              data-testid="input-profile-image"
+            />
           </div>
           <div>
             <p className="font-semibold text-foreground" data-testid="text-profile-name">
@@ -106,6 +163,7 @@ export default function ProfilePage() {
             <span className="inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20" data-testid="text-profile-role">
               {roleLabels[profile?.role || ""] || profile?.role || "—"}
             </span>
+            <p className="text-xs text-muted-foreground mt-1">Bild ändern: Hover über das Profilbild</p>
           </div>
         </div>
 

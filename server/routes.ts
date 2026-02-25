@@ -128,6 +128,29 @@ const defectImageUpload = multer({
   },
 });
 
+const profileImagesDir = path.join(process.cwd(), "uploads", "profile-images");
+fs.mkdirSync(profileImagesDir, { recursive: true });
+
+const profileImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req: any, _file, cb) => {
+      cb(null, profileImagesDir);
+    },
+    filename: (req: any, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${(req as any).user?.claims?.sub || 'unknown'}_${Date.now()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req: any, file: any, cb: any) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Nur Bilddateien sind erlaubt.'));
+    }
+  },
+});
+
 const excelUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -208,6 +231,37 @@ export async function registerRoutes(
       console.error("Account update error:", err);
       res.status(500).json({ message: "Profil konnte nicht aktualisiert werden" });
     }
+  });
+
+  app.post("/api/account/profile-image", isAuthenticated, profileImageUpload.single("image"), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      if (!req.file) {
+        return res.status(400).json({ message: "Kein Bild hochgeladen" });
+      }
+      const imageUrl = `/uploads/profile-images/${req.file.filename}`;
+      const { db: database } = await import("./db");
+      const { users: usersTable } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      const oldUser = await authStorage.getUser(userId);
+      if (oldUser?.profileImageUrl) {
+        const oldPath = path.join(process.cwd(), oldUser.profileImageUrl);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+
+      await database.update(usersTable).set({ profileImageUrl: imageUrl }).where(eq(usersTable.id, userId));
+      res.json({ profileImageUrl: imageUrl });
+    } catch (err) {
+      console.error("Profile image upload error:", err);
+      res.status(500).json({ message: "Bild konnte nicht hochgeladen werden" });
+    }
+  });
+
+  app.get("/uploads/profile-images/:filename", (req, res) => {
+    const filePath = path.join(profileImagesDir, req.params.filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Bild nicht gefunden" });
+    res.sendFile(filePath);
   });
 
   // --- Users (admin only) ---
