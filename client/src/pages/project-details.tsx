@@ -499,7 +499,7 @@ export default function ProjectDetails() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 max-w-4xl">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
           <div className="space-y-4">
