@@ -78,6 +78,7 @@ export const defects = pgTable("defects", {
   frist: text("frist", { enum: ["1_woche", "2_wochen", "1_monat", "2_monate", "6_monate"] }),
   repairDue: timestamp("repair_due"),
   parentDefectId: integer("parent_defect_id"),
+  imageUrl: text("image_url"),
 });
 
 export const bauakt = pgTable("bauakt", {

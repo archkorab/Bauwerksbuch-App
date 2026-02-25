@@ -11,7 +11,7 @@ import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-b
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2
+  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,6 +57,8 @@ interface DefectEntry {
   status: string;
   frist: string;
   repairDue: string;
+  imageFile?: File | null;
+  imageUrl?: string;
 }
 
 const fristLabels: Record<string, string> = {
@@ -207,7 +209,7 @@ export default function ProjectDetails() {
       
       const validDefects = defectEntries.filter(e => e.defectId && e.dateFound && e.description && e.location);
       for (const entry of validDefects) {
-        await createDefect.mutateAsync({
+        const defect = await createDefect.mutateAsync({
           inspectionId: inspection.id,
           projectId,
           data: {
@@ -222,6 +224,11 @@ export default function ProjectDetails() {
             repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
           }
         });
+        if (entry.imageFile && defect?.id) {
+          const formData = new FormData();
+          formData.append('image', entry.imageFile);
+          await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+        }
       }
       
       setInspDialogOpen(false);
@@ -252,6 +259,7 @@ export default function ProjectDetails() {
       status: d.status,
       frist: d.frist || "",
       repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
+      imageUrl: d.imageUrl || "",
     }));
     setEditDefectEntries(existingDefects);
     setDeletedDefectIds([]);
@@ -300,8 +308,13 @@ export default function ProjectDetails() {
               repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
+          if (entry.imageFile) {
+            const formData = new FormData();
+            formData.append('image', entry.imageFile);
+            await fetch(`/api/defects/${entry.existingId}/image`, { method: 'POST', body: formData, credentials: 'include' });
+          }
         } else {
-          await createDefect.mutateAsync({
+          const defect = await createDefect.mutateAsync({
             inspectionId: editingInspection.id,
             projectId,
             data: {
@@ -316,6 +329,11 @@ export default function ProjectDetails() {
               repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
             }
           });
+          if (entry.imageFile && defect?.id) {
+            const formData = new FormData();
+            formData.append('image', entry.imageFile);
+            await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+          }
         }
       }
 
@@ -874,6 +892,35 @@ export default function ProjectDetails() {
                                     <Input type="date" value={entry.repairDue} readOnly className="bg-card border-border h-9 text-sm text-muted-foreground" data-testid={`input-defect-repair-due-${index}`} />
                                   </div>
                                 </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Foto</Label>
+                                  {entry.imageFile ? (
+                                    <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border">
+                                      <Image className="w-4 h-4 text-primary shrink-0" />
+                                      <span className="text-xs text-foreground truncate flex-1">{entry.imageFile.name}</span>
+                                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => {
+                                        const updated = [...defectEntries];
+                                        updated[index] = { ...updated[index], imageFile: null };
+                                        setDefectEntries(updated);
+                                      }} data-testid={`button-remove-defect-image-${index}`}>
+                                        <X className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <label className="flex items-center gap-2 p-2 bg-card border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/40 transition-colors" data-testid={`input-defect-image-${index}`}>
+                                      <ImagePlus className="w-4 h-4 text-muted-foreground" />
+                                      <span className="text-xs text-muted-foreground">Bild hochladen</span>
+                                      <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          const updated = [...defectEntries];
+                                          updated[index] = { ...updated[index], imageFile: file };
+                                          setDefectEntries(updated);
+                                        }
+                                      }} />
+                                    </label>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1035,6 +1082,45 @@ export default function ProjectDetails() {
                                 <Input type="date" value={entry.repairDue} readOnly className="bg-card border-border h-9 text-sm text-muted-foreground" data-testid={`edit-input-defect-repair-due-${index}`} />
                               </div>
                             </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Foto</Label>
+                              {entry.imageFile ? (
+                                <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border">
+                                  <Image className="w-4 h-4 text-primary shrink-0" />
+                                  <span className="text-xs text-foreground truncate flex-1">{entry.imageFile.name}</span>
+                                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => {
+                                    setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: null } : ent));
+                                  }} data-testid={`edit-button-remove-defect-image-${index}`}>
+                                    <X className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              ) : entry.imageUrl ? (
+                                <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border">
+                                  <img src={entry.imageUrl} alt="Mangel" className="w-12 h-12 object-cover rounded" />
+                                  <span className="text-xs text-foreground flex-1">Vorhandenes Bild</span>
+                                  <label className="text-xs text-primary cursor-pointer hover:underline">
+                                    Ersetzen
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: file } : ent));
+                                      }
+                                    }} />
+                                  </label>
+                                </div>
+                              ) : (
+                                <label className="flex items-center gap-2 p-2 bg-card border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/40 transition-colors" data-testid={`edit-input-defect-image-${index}`}>
+                                  <ImagePlus className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">Bild hochladen</span>
+                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: file } : ent));
+                                    }
+                                  }} />
+                                </label>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1119,6 +1205,7 @@ export default function ProjectDetails() {
                                   <th className="text-left px-5 py-3 font-semibold">Status</th>
                                   <th className="text-left px-5 py-3 font-semibold">Frist</th>
                                   <th className="text-left px-5 py-3 font-semibold">Reparatur bis</th>
+                                  <th className="text-left px-5 py-3 font-semibold">Foto</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border">
@@ -1156,6 +1243,15 @@ export default function ProjectDetails() {
                                         </td>
                                         <td className="px-5 py-3 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
                                         <td className="px-5 py-3 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
+                                        <td className="px-5 py-3">
+                                          {defect.imageUrl ? (
+                                            <a href={defect.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all" data-testid={`defect-image-${defect.defectId}`}>
+                                              <img src={defect.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
+                                            </a>
+                                          ) : (
+                                            <span className="text-muted-foreground">–</span>
+                                          )}
+                                        </td>
                                       </tr>
                                       {children.map((child: any) => (
                                         <tr key={child.id} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
@@ -1188,6 +1284,15 @@ export default function ProjectDetails() {
                                           </td>
                                           <td className="px-5 py-3 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
                                           <td className="px-5 py-3 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
+                                          <td className="px-5 py-3">
+                                            {child.imageUrl ? (
+                                              <a href={child.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all" data-testid={`defect-image-${child.defectId}`}>
+                                                <img src={child.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
+                                              </a>
+                                            ) : (
+                                              <span className="text-muted-foreground">–</span>
+                                            )}
+                                          </td>
                                         </tr>
                                       ))}
                                     </Fragment>

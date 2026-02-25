@@ -264,6 +264,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                   <th className="text-left px-4 py-2.5 font-semibold">Status</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Frist</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Reparatur bis</th>
+                  <th className="text-left px-4 py-2.5 font-semibold">Foto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -308,6 +309,15 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
         </td>
         <td className="px-4 py-2.5 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
         <td className="px-4 py-2.5 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
+        <td className="px-4 py-2.5">
+          {defect.imageUrl ? (
+            <a href={defect.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
+              <img src={defect.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
+            </a>
+          ) : (
+            <span className="text-muted-foreground">–</span>
+          )}
+        </td>
       </tr>
       {followUpDefects.map((child: any) => (
         <tr key={child.id} className="hover:bg-muted/40 transition-colors bg-muted/10" data-testid={`detail-defect-row-${child.defectId}`}>
@@ -331,6 +341,15 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
           </td>
           <td className="px-4 py-2.5 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
           <td className="px-4 py-2.5 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
+          <td className="px-4 py-2.5">
+            {child.imageUrl ? (
+              <a href={child.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
+                <img src={child.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
+              </a>
+            ) : (
+              <span className="text-muted-foreground">–</span>
+            )}
+          </td>
         </tr>
       ))}
     </>

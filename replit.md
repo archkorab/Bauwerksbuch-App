@@ -75,6 +75,7 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-25: Added image upload for defect entries — upload during create/edit, displayed as thumbnails in defect tables (project details + global inspections), stored in uploads/defect-images/
 - 2026-02-25: Switched from dark mode to light mode matching bauwerksbuch-archkorab.at color theme (purple-blue primary, coral accent, light background, white cards)
 - 2026-02-24: Redesigned "Prüfung hinzufügen" dialog with inspection type (Erstprüfung/Folgeprüfung), inline defect creation (Mangel-Nr, Datum, Beschreibung, Ort, Status), and Mangel status system (leichter/grober Mangel)
 - 2026-02-24: Redesigned role system: replaced admin/engineer/client with admin/hausverwaltung/eigentuemer; admin-only management; added user creation dialog in Benutzerverwaltung

@@ -60,6 +60,40 @@ const documentUpload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
+const defectImagesBaseDir = path.join(process.cwd(), "uploads", "defect-images");
+fs.mkdirSync(defectImagesBaseDir, { recursive: true });
+
+function getDefectImagesDir(defectId: number): string {
+  const dir = path.join(defectImagesBaseDir, String(defectId));
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const defectImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req: any, _file, cb) => {
+      const tmpDir = path.join(defectImagesBaseDir, "tmp");
+      fs.mkdirSync(tmpDir, { recursive: true });
+      cb(null, tmpDir);
+    },
+    filename: (_req, file, cb) => {
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      const timestamp = Date.now();
+      const ext = path.extname(originalName);
+      const base = path.basename(originalName, ext);
+      cb(null, `${base}_${timestamp}${ext}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req: any, file: any, cb: any) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Nur Bilddateien sind erlaubt.'));
+    }
+  },
+});
+
 const excelUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
@@ -640,6 +674,37 @@ export async function registerRoutes(
       res.json({ message: "Defect deleted" });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete defect" });
+    }
+  });
+
+  // --- Defect Image Upload ---
+  app.post('/api/defects/:defectId/image', isAuthenticated, defectImageUpload.single('image'), async (req: any, res) => {
+    try {
+      const defectId = parseInt(req.params.defectId, 10);
+      if (!req.file) return res.status(400).json({ message: "No image file provided" });
+      
+      const finalDir = getDefectImagesDir(defectId);
+      const finalPath = path.join(finalDir, req.file.filename);
+      fs.renameSync(req.file.path, finalPath);
+      
+      const imageUrl = `/api/defect-images/${defectId}/${encodeURIComponent(req.file.filename)}`;
+      await storage.updateDefect(defectId, { imageUrl });
+      
+      res.json({ imageUrl });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to upload defect image" });
+    }
+  });
+
+  app.get('/api/defect-images/:defectId/:filename', isAuthenticated, async (req: any, res) => {
+    try {
+      const defectId = parseInt(req.params.defectId, 10);
+      const filename = decodeURIComponent(req.params.filename);
+      const filePath = path.join(defectImagesBaseDir, String(defectId), filename);
+      if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Image not found" });
+      res.sendFile(filePath);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to serve defect image" });
     }
   });
 
