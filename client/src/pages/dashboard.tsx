@@ -94,7 +94,7 @@ export default function Dashboard() {
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Projektübersicht</h1>
-          <p className="text-muted-foreground">Übersicht aller aktiven Baustellen und Dokumentationen.</p>
+          <p className="text-muted-foreground">Übersicht aller Bauwerksbücher</p>
         </div>
         
         {isAdmin && (
