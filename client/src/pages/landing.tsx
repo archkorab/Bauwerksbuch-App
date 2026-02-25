@@ -17,7 +17,7 @@ export default function LandingPage() {
           </div>
           <h2 className="font-display text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-8 text-foreground">
             Der Standard im <br/>
-            <span className="text-gradient-primary">Bauwerkszyklus</span> <br/>
+            <span className="text-gradient-primary">Bauwerksbuch</span> <br/>
             Management.
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
