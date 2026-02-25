@@ -11,7 +11,9 @@ import {
   User as UserIcon,
   ChevronRight,
   UserCog,
-  Settings
+  Settings,
+  ArrowLeftRight,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,11 +23,10 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isImpersonating, stopImpersonation } = useAuth();
   const { data: profile } = useProfile();
 
   const role = profile?.role || "eigentuemer";
-  const isAdmin = role === "admin";
 
   const roleLabels: Record<string, string> = {
     admin: "Administrator",
@@ -37,7 +38,7 @@ export function Layout({ children }: LayoutProps) {
     { name: "Übersicht", id: "dashboard", href: "/projects", icon: LayoutDashboard },
     { name: "Kalender", id: "calendar", href: "/calendar", icon: CalendarDays },
     { name: "Prüfprotokoll", id: "inspections", href: "/inspections", icon: ClipboardCheck },
-    ...(role === "admin" ? [{ name: "Benutzerverwaltung", id: "user-management", href: "/admin/users", icon: UserCog }] : []),
+    ...(role === "admin" && !isImpersonating ? [{ name: "Benutzerverwaltung", id: "user-management", href: "/admin/users", icon: UserCog }] : []),
   ];
 
   return (
@@ -74,7 +75,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="mt-auto pt-6 border-t border-border">
             <Link href="/profile" className="block" data-testid="link-nav-profile">
               <div className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-muted/70 transition-colors group">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border overflow-hidden">
                   {user?.profileImageUrl ? (
                     <img src={user.profileImageUrl} alt="Benutzer" className="w-full h-full rounded-full object-cover" />
                   ) : (
@@ -105,6 +106,28 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background">
+        {isImpersonating && (
+          <div className="bg-amber-500 text-white px-4 py-2.5 flex items-center justify-between z-30 shadow-md" data-testid="banner-impersonation">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <ArrowLeftRight className="w-4 h-4" />
+              <span>
+                Sie sehen die Ansicht von <strong>{user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email}</strong> als {roleLabels[role] || role}
+              </span>
+              <span className="text-amber-100 text-xs ml-1">(Angemeldet als {(user as any)?.adminName || 'Admin'})</span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-amber-600 gap-1.5 h-7 text-xs font-semibold"
+              onClick={() => stopImpersonation.mutate()}
+              disabled={stopImpersonation.isPending}
+              data-testid="button-stop-impersonation"
+            >
+              <X className="w-3.5 h-3.5" />
+              Zurück zu meinem Konto
+            </Button>
+          </div>
+        )}
         <div className="flex-1 overflow-auto p-4 md:p-8 relative z-10">
           {children}
         </div>

@@ -77,6 +77,7 @@ export async function setupAuth(app: Express) {
       }
 
       (req.session as any).userId = user.id;
+      delete (req.session as any).impersonatingFrom;
       const { password: _, ...safeUser } = user;
       res.json(safeUser);
     } catch (error) {
@@ -108,5 +109,6 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   (req as any).user = { claims: { sub: user.id } };
+  (req as any).impersonatingFrom = (req.session as any).impersonatingFrom || null;
   next();
 };

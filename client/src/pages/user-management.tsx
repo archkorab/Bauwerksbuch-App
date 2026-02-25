@@ -4,7 +4,7 @@ import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdate
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
-  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil, Lock, Eye, EyeOff
+  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil, Lock, Eye, EyeOff, LogIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +29,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
 
 export default function UserManagement() {
   const { data: allUsers, isLoading } = useAllUsers();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, impersonate } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: profile } = useProfile();
   const updateRole = useUpdateUserRole();
   const deleteUser = useDeleteUser();
@@ -332,6 +334,19 @@ export default function UserManagement() {
                     <td className="px-6 py-4 text-right">
                       {!isCurrentUser && (
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                            title="Als Benutzer anmelden"
+                            onClick={() => impersonate.mutate(user.id, {
+                              onSuccess: () => setLocation("/projects"),
+                            })}
+                            disabled={impersonate.isPending}
+                            data-testid={`button-impersonate-${user.id}`}
+                          >
+                            <LogIn className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

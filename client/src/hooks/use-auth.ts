@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
-type SafeUser = Omit<User, "password">;
+type SafeUser = Omit<User, "password"> & {
+  impersonating?: boolean;
+  adminName?: string;
+};
 
 async function fetchUser(): Promise<SafeUser | null> {
   const response = await fetch("/api/auth/user", {
@@ -75,13 +78,50 @@ export function useAuth() {
     },
   });
 
+  const impersonateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(`/api/admin/impersonate/${userId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Impersonation fehlgeschlagen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
+
+  const stopImpersonationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/stop-impersonation", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Fehler beim Beenden");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
+
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    isImpersonating: !!user?.impersonating,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
     login: loginMutation,
     register: registerMutation,
+    impersonate: impersonateMutation,
+    stopImpersonation: stopImpersonationMutation,
   };
 }
