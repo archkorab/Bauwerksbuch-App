@@ -510,7 +510,7 @@ export default function ProjectDetails() {
           </div>
 
           <div className="h-64 rounded-2xl overflow-hidden shadow-sm">
-            <MapPlaceholder />
+            <MapPlaceholder address={project.address} latitude={project.latitude} longitude={project.longitude} />
           </div>
         </div>
 
