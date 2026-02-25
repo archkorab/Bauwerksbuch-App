@@ -1,5 +1,5 @@
 import { useState, Fragment } from "react";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { MapPlaceholder } from "@/components/map-placeholder";
 import { useProject, useUpdateProject, useDefectSummary } from "@/hooks/use-projects";
@@ -385,7 +385,7 @@ export default function ProjectDetails() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mb-4">
           <Building className="w-4 h-4" />
-          <span>Projekte</span>
+          <Link href="/projects" className="hover:text-primary transition-colors cursor-pointer" data-testid="link-breadcrumb-projects">Projekte</Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-foreground">{project.name}</span>
         </div>
