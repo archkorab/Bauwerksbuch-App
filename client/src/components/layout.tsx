@@ -2,8 +2,8 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
+import logoPath from "@assets/logo_1772006994795.png";
 import { 
-  Building2, 
   CalendarDays, 
   ClipboardCheck, 
   LayoutDashboard, 
@@ -44,14 +44,8 @@ export function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <aside className="w-72 flex-shrink-0 border-r border-border bg-card flex flex-col justify-between hidden md:flex z-20 shadow-sm">
         <div className="p-6 flex flex-col h-full">
-          <div className="flex items-center gap-3 px-2 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-md shadow-primary/20">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-lg leading-tight tracking-tight text-foreground">Archkorab</h1>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Bauwerksbuch</p>
-            </div>
+          <div className="px-2 mb-10">
+            <img src={logoPath} alt="Bauwerksbuch - Arch Dipl. Ing. Vera Korab ZT GmbH" className="w-full max-w-[200px] h-auto" />
           </div>
 
           <nav className="flex-1 space-y-2">
