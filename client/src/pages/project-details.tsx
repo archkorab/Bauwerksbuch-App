@@ -499,42 +499,39 @@ export default function ProjectDetails() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-1 space-y-8">
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-            <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
-                <p className="font-medium" data-testid="text-client-name">{project.eigentuemer || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
-                <p className="font-medium" data-testid="text-verwaltung">
-                  {project.verwaltung 
-                    ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? ` (${project.verwaltung.profile.company})` : ''}`
-                    : '—'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>
-                <p className="font-medium">{format(new Date(project.createdAt!), 'MMMM d, yyyy')}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
-                <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Nicht geplant'}</p>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
+              <p className="font-medium" data-testid="text-client-name">{project.eigentuemer || '—'}</p>
             </div>
-          </div>
-
-          <div className="h-64 rounded-2xl overflow-hidden shadow-sm">
-            <MapPlaceholder address={project.address} latitude={project.latitude} longitude={project.longitude} />
+            <div>
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
+              <p className="font-medium" data-testid="text-verwaltung">
+                {project.verwaltung 
+                  ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? ` (${project.verwaltung.profile.company})` : ''}`
+                  : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>
+              <p className="font-medium">{format(new Date(project.createdAt!), 'MMMM d, yyyy')}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
+              <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Nicht geplant'}</p>
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Tabs */}
-        <div className="lg:col-span-2">
+        <div className="h-full min-h-[280px] rounded-2xl overflow-hidden shadow-sm">
+          <MapPlaceholder address={project.address} latitude={project.latitude} longitude={project.longitude} />
+        </div>
+      </div>
+
+      <div>
           <Tabs defaultValue="documents" className="w-full">
             <TabsList className="bg-card border border-border p-1 rounded-xl mb-6">
               <TabsTrigger value="documents" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Dokumente</TabsTrigger>
@@ -1362,7 +1359,6 @@ export default function ProjectDetails() {
               </div>
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </Layout>
   );
