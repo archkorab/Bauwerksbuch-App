@@ -10,7 +10,8 @@ import {
   LogOut, 
   User as UserIcon,
   ChevronRight,
-  UserCog
+  UserCog,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -71,21 +72,24 @@ export function Layout({ children }: LayoutProps) {
           </nav>
 
           <div className="mt-auto pt-6 border-t border-border">
-            <div className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
-                {user?.profileImageUrl ? (
-                  <img src={user.profileImageUrl} alt="Benutzer" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <UserIcon className="w-5 h-5 text-muted-foreground" />
-                )}
+            <Link href="/profile" className="block" data-testid="link-nav-profile">
+              <div className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-muted/70 transition-colors group">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
+                  {user?.profileImageUrl ? (
+                    <img src={user.profileImageUrl} alt="Benutzer" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'Benutzer'}
+                  </p>
+                  <p className="text-xs text-primary font-medium uppercase tracking-wider">{roleLabels[role] || role}</p>
+                </div>
+                <Settings className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'Benutzer'}
-                </p>
-                <p className="text-xs text-primary font-medium uppercase tracking-wider">{roleLabels[role] || role}</p>
-              </div>
-            </div>
+            </Link>
             <Button 
               data-testid="button-logout"
               variant="ghost" 

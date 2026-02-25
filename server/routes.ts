@@ -171,6 +171,45 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/account/update", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { firstName, lastName, phone, company, currentPassword, newPassword } = req.body;
+
+      await storage.updateUser(userId, { firstName, lastName }, { phone, company });
+
+      if (newPassword) {
+        if (!currentPassword) {
+          return res.status(400).json({ message: "Aktuelles Passwort ist erforderlich" });
+        }
+        const user = await authStorage.getUser(userId);
+        if (!user?.password) {
+          return res.status(400).json({ message: "Kein Passwort gesetzt" });
+        }
+        const valid = await bcrypt.compare(currentPassword, user.password);
+        if (!valid) {
+          return res.status(400).json({ message: "Aktuelles Passwort ist falsch" });
+        }
+        if (newPassword.length < 6) {
+          return res.status(400).json({ message: "Neues Passwort muss mindestens 6 Zeichen lang sein" });
+        }
+        const hashed = await bcrypt.hash(newPassword, 12);
+        const { db: database } = await import("./db");
+        const { users: usersTable } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await database.update(usersTable).set({ password: hashed }).where(eq(usersTable.id, userId));
+      }
+
+      const updatedUser = await authStorage.getUser(userId);
+      const profile = await storage.getProfile(userId);
+      const { password: _, ...safeUser } = updatedUser!;
+      res.json({ ...safeUser, profile });
+    } catch (err) {
+      console.error("Account update error:", err);
+      res.status(500).json({ message: "Profil konnte nicht aktualisiert werden" });
+    }
+  });
+
   // --- Users (admin only) ---
   app.get(api.users.listAll.path, isAuthenticated, async (req: any, res) => {
     try {
