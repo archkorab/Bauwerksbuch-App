@@ -338,12 +338,13 @@ export async function registerRoutes(
       if (emailExists) {
         return res.status(400).json({ message: "Ein Benutzer mit dieser E-Mail existiert bereits." });
       }
-      const defaultPassword = await bcrypt.hash("changeme123", 12);
+      const passwordToHash = input.password || "changeme123";
+      const hashedPassword = await bcrypt.hash(passwordToHash, 12);
       const user = await storage.createUser({
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
-        password: defaultPassword,
+        password: hashedPassword,
       });
       await storage.upsertProfile({
         userId: user.id,
@@ -371,13 +372,22 @@ export async function registerRoutes(
       }
       const targetUserId = req.params.userId;
       const input = api.users.update.input.parse(req.body);
-      const { firstName, lastName, email, role, company, phone } = input;
+      const { firstName, lastName, email, role, company, phone, newPassword } = input;
       const updated = await storage.updateUser(
         targetUserId,
         { firstName, lastName, email },
         { role, company, phone }
       );
       if (!updated) return res.status(404).json({ message: "User not found" });
+
+      if (newPassword) {
+        const hashed = await bcrypt.hash(newPassword, 12);
+        const { db: database } = await import("./db");
+        const { users: usersTable } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        await database.update(usersTable).set({ password: hashed }).where(eq(usersTable.id, targetUserId));
+      }
+
       res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {

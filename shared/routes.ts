@@ -124,6 +124,7 @@ export const api = {
         role: z.enum(["admin", "hausverwaltung", "eigentuemer"]),
         company: z.string().optional(),
         phone: z.string().optional(),
+        password: z.string().min(6).optional(),
       }),
       responses: {
         201: userSchema.and(z.object({ profile: profileSchema.optional() })),
@@ -142,6 +143,7 @@ export const api = {
         role: z.enum(["admin", "hausverwaltung", "eigentuemer"]).optional(),
         company: z.string().optional(),
         phone: z.string().optional(),
+        newPassword: z.string().min(6).optional(),
       }),
       responses: {
         200: userSchema.and(z.object({ profile: profileSchema.optional() })),

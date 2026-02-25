@@ -4,7 +4,7 @@ import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdate
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
-  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil
+  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil, Lock, Eye, EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,14 +43,16 @@ export default function UserManagement() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [addUserOpen, setAddUserOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [showCreatePw, setShowCreatePw] = useState(false);
+  const [showEditPw, setShowEditPw] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "" }
+    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", password: "" }
   });
   const selectedRole = watch("role");
 
   const { register: editReg, handleSubmit: handleEditSubmit, reset: resetEdit, setValue: setEditValue, watch: watchEdit } = useForm({
-    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "" }
+    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", newPassword: "" }
   });
   const editRole = watchEdit("role");
 
@@ -62,13 +64,17 @@ export default function UserManagement() {
       role: user.profile?.role || "eigentuemer",
       company: user.profile?.company || "",
       phone: user.profile?.phone || "",
+      newPassword: "",
     });
+    setShowEditPw(false);
     setEditTarget(user);
   };
 
   const onEditUser = (data: any) => {
     if (!editTarget) return;
-    updateUser.mutate({ userId: editTarget.id, data }, {
+    const payload = { ...data };
+    if (!payload.newPassword) delete payload.newPassword;
+    updateUser.mutate({ userId: editTarget.id, data: payload }, {
       onSuccess: () => {
         toast({ title: "Benutzer aktualisiert", description: `${data.firstName} ${data.lastName} wurde aktualisiert.` });
         setEditTarget(null);
@@ -219,6 +225,22 @@ export default function UserManagement() {
                 <div className="space-y-2">
                   <Label>Telefon (optional)</Label>
                   <Input {...register("phone")} className="bg-background" data-testid="input-user-phone" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Passwort (optional)</Label>
+                  <div className="relative">
+                    <Input
+                      {...register("password")}
+                      type={showCreatePw ? "text" : "password"}
+                      placeholder="Standard: changeme123"
+                      className="bg-background pr-10"
+                      data-testid="input-user-password"
+                    />
+                    <button type="button" onClick={() => setShowCreatePw(!showCreatePw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showCreatePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Leer lassen für Standardpasswort „changeme123"</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">
                   {createUser.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
@@ -405,6 +427,23 @@ export default function UserManagement() {
             <div className="space-y-2">
               <Label>Telefon (optional)</Label>
               <Input {...editReg("phone")} className="bg-background" data-testid="input-edit-user-phone" />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Neues Passwort (optional)</Label>
+              <div className="relative">
+                <Input
+                  {...editReg("newPassword")}
+                  type={showEditPw ? "text" : "password"}
+                  placeholder="Leer lassen, um Passwort nicht zu ändern"
+                  className="bg-background pr-10"
+                  minLength={6}
+                  data-testid="input-edit-user-password"
+                />
+                <button type="button" onClick={() => setShowEditPw(!showEditPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showEditPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">Min. 6 Zeichen. Leer lassen, um das aktuelle Passwort beizubehalten.</p>
             </div>
             <Button type="submit" className="w-full" disabled={updateUser.isPending} data-testid="button-submit-edit-user">
               {updateUser.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
