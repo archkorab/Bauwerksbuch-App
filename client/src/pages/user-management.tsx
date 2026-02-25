@@ -187,12 +187,12 @@ export default function UserManagement() {
               <form onSubmit={handleSubmit(onAddUser)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Vorname</Label>
-                    <Input {...register("firstName")} required className="bg-background" data-testid="input-user-firstname" />
+                    <Label>Vorname {!watch("company") && <span className="text-destructive">*</span>}</Label>
+                    <Input {...register("firstName")} required={!watch("company")} className="bg-background" data-testid="input-user-firstname" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Nachname</Label>
-                    <Input {...register("lastName")} required className="bg-background" data-testid="input-user-lastname" />
+                    <Label>Nachname {!watch("company") && <span className="text-destructive">*</span>}</Label>
+                    <Input {...register("lastName")} required={!watch("company")} className="bg-background" data-testid="input-user-lastname" />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -373,12 +373,12 @@ export default function UserManagement() {
           <form onSubmit={handleEditSubmit(onEditUser)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Vorname</Label>
-                <Input {...editReg("firstName")} required className="bg-background" data-testid="input-edit-user-firstname" />
+                <Label>Vorname {!watchEdit("company") && <span className="text-destructive">*</span>}</Label>
+                <Input {...editReg("firstName")} required={!watchEdit("company")} className="bg-background" data-testid="input-edit-user-firstname" />
               </div>
               <div className="space-y-2">
-                <Label>Nachname</Label>
-                <Input {...editReg("lastName")} required className="bg-background" data-testid="input-edit-user-lastname" />
+                <Label>Nachname {!watchEdit("company") && <span className="text-destructive">*</span>}</Label>
+                <Input {...editReg("lastName")} required={!watchEdit("company")} className="bg-background" data-testid="input-edit-user-lastname" />
               </div>
             </div>
             <div className="space-y-2">
