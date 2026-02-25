@@ -7,11 +7,17 @@ export default function LandingPage() {
       
       {/* Left Panel: Hero & Branding */}
       <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50">
-        <div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-1/4 -left-1/4 w-[600px] h-[600px] rounded-full bg-primary/[0.04] blur-3xl"></div>
+          <div className="absolute -bottom-1/4 -right-1/4 w-[500px] h-[500px] rounded-full bg-accent/[0.05] blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/[0.02] blur-3xl"></div>
+          <svg className="absolute inset-0 w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5"/></pattern></defs><rect width="100%" height="100%" fill="url(#grid)"/></svg>
+        </div>
+        <div className="relative z-10">
           <img src={logoPath} alt="Archkorab Bauwerksbuch" className="max-w-[220px] h-auto" data-testid="img-landing-logo" />
         </div>
 
-        <div className="max-w-2xl my-20">
+        <div className="max-w-2xl my-20 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-8">
             <ShieldCheck className="w-4 h-4" /> Enterprise-Qualität
           </div>
@@ -40,7 +46,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground font-medium">
+        <div className="text-xs text-muted-foreground font-medium relative z-10">
           © {new Date().getFullYear()} Archkorab Bauwerksbuch. Alle Rechte vorbehalten.
         </div>
       </div>
