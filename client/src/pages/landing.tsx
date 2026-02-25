@@ -21,7 +21,7 @@ export default function LandingPage() {
             Management.
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-            Eine zentrale Plattform für Eigentümer und Ingenieure zur Einsicht in Projektzeitpläne, zum Zugriff auf wichtige Dokumente und zur nahtlosen Verwaltung der Compliance.
+            Eine zentrale Plattform für Hausverwaltungen, Eigentümer und Sachverständige zur Einsicht in Projektzeitpläne, zum Zugriff auf wichtige Dokumente und zur nahtlosen Verwaltung der Compliance.
           </p>
 
           <div className="mt-12 flex flex-col sm:flex-row gap-6">
