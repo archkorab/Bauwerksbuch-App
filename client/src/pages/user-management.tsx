@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdateUser } from "@/hooks/use-users";
+import { useProjects } from "@/hooks/use-projects";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
@@ -33,6 +34,7 @@ import { useLocation } from "wouter";
 
 export default function UserManagement() {
   const { data: allUsers, isLoading } = useAllUsers();
+  const { data: allProjects } = useProjects();
   const { user: currentUser, impersonate } = useAuth();
   const [, setLocation] = useLocation();
   const { data: profile } = useProfile();
@@ -164,6 +166,11 @@ export default function UserManagement() {
     }
   };
 
+  const getProjectCount = (userId: string) => {
+    if (!allProjects) return 0;
+    return allProjects.filter(p => p.clientId === userId || p.verwaltungId === userId).length;
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "admin": return <Shield className="w-7 h-7 text-primary" />;
@@ -279,6 +286,7 @@ export default function UserManagement() {
                 <th className="text-left px-6 py-3 font-semibold">Benutzer</th>
                 <th className="text-left px-6 py-3 font-semibold">E-Mail</th>
                 <th className="text-left px-6 py-3 font-semibold">Unternehmen</th>
+                <th className="text-center px-6 py-3 font-semibold">Projekte</th>
                 <th className="text-left px-6 py-3 font-semibold">Rolle</th>
                 <th className="text-right px-6 py-3 font-semibold">Aktionen</th>
               </tr>
@@ -308,6 +316,11 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4 text-foreground">
                       {user.profile?.company || "—"}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-xs font-bold bg-muted border border-border text-foreground" data-testid={`text-project-count-${user.id}`}>
+                        {getProjectCount(user.id)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       {isCurrentUser ? (
