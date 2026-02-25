@@ -395,7 +395,7 @@ export default function ProjectDetails() {
               <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">{project.name}</h1>
               <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-widest
                 ${project.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                  project.status === 'completed' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 
+                  project.status === 'completed' ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20' : 
                   'bg-muted text-muted-foreground border-border'}`}>
                 {statusLabels[project.status] || project.status}
               </span>
@@ -406,7 +406,7 @@ export default function ProjectDetails() {
             </div>
           </div>
           {isAdmin && (
-            <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-white/5" data-testid="button-edit-project">
+            <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
               <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
             </Button>
           )}
@@ -523,7 +523,7 @@ export default function ProjectDetails() {
                 {isAdmin && (
                   <Dialog open={docDialogOpen} onOpenChange={setDocDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">
+                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60">
                         <Upload className="w-4 h-4 mr-2" /> Hochladen
                       </Button>
                     </DialogTrigger>
@@ -559,7 +559,7 @@ export default function ProjectDetails() {
                 ) : (
                   <div className="divide-y divide-border">
                     {documents?.map(doc => (
-                      <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors" data-testid={`doc-row-${doc.id}`}>
+                      <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors" data-testid={`doc-row-${doc.id}`}>
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                             <FileText className="w-5 h-5" />
@@ -595,7 +595,7 @@ export default function ProjectDetails() {
                   {profile?.role === "admin" && (
                     <>
                       <label htmlFor="bauakt-file-upload" className="cursor-pointer">
-                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" asChild>
+                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60" asChild>
                           <span><FileUp className="w-4 h-4 mr-2" /> Dateien hochladen</span>
                         </Button>
                         <input
@@ -613,7 +613,7 @@ export default function ProjectDetails() {
                         />
                       </label>
                       <label htmlFor="bauakt-excel-import" className="cursor-pointer">
-                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" asChild>
+                        <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60" asChild>
                           <span><Upload className="w-4 h-4 mr-2" /> Excel importieren</span>
                         </Button>
                         <input
@@ -685,14 +685,14 @@ export default function ProjectDetails() {
                             );
                           })
                           .map((entry: any) => (
-                            <tr key={entry.id} className="hover:bg-white/[0.02] transition-colors" data-testid={`bauakt-row-${entry.id}`}>
+                            <tr key={entry.id} className="hover:bg-muted/40 transition-colors" data-testid={`bauakt-row-${entry.id}`}>
                               <td className="px-5 py-3 font-medium text-foreground">{entry.dateiname}</td>
                               <td className="px-5 py-3 text-foreground">{entry.jahr || '—'}</td>
                               <td className="px-5 py-3 text-foreground max-w-xs">{entry.beschreibung || '—'}</td>
                               <td className="px-5 py-3">
                                 <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                  ${entry.art === 'Plan' ? 'text-indigo-400 border-indigo-400/30 bg-indigo-400/10' : 
-                                    entry.art === 'Bescheid' ? 'text-amber-400 border-amber-400/30 bg-amber-400/10' :
+                                  ${entry.art === 'Plan' ? 'text-indigo-600 border-indigo-500/30 bg-indigo-500/10' : 
+                                    entry.art === 'Bescheid' ? 'text-amber-600 border-amber-500/30 bg-amber-500/10' :
                                     'text-muted-foreground border-border bg-muted/20'}`}>
                                   {entry.art || '—'}
                                 </span>
@@ -730,7 +730,7 @@ export default function ProjectDetails() {
                 {isAdmin && (
                   <Dialog open={inspDialogOpen} onOpenChange={(open) => { setInspDialogOpen(open); if (!open) { setDefectEntries([]); resetInspForm(); } }}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5" data-testid="button-add-inspection">
+                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60" data-testid="button-add-inspection">
                         <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
                       </Button>
                     </DialogTrigger>
@@ -778,7 +778,7 @@ export default function ProjectDetails() {
                         <div className="border-t border-border pt-5">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="font-display font-bold text-base">Mängel</h4>
-                            <Button type="button" variant="outline" size="sm" onClick={addDefectEntry} className="bg-card border-border hover:bg-white/5" data-testid="button-add-defect-entry">
+                            <Button type="button" variant="outline" size="sm" onClick={addDefectEntry} className="bg-card border-border hover:bg-muted/60" data-testid="button-add-defect-entry">
                               <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
                             </Button>
                           </div>
@@ -924,7 +924,7 @@ export default function ProjectDetails() {
                     <div className="border-t border-border pt-5">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-display font-bold text-base">Mängel</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", bauteil: [], dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-white/5" data-testid="edit-button-add-defect-entry">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", bauteil: [], dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-muted/60" data-testid="edit-button-add-defect-entry">
                           <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
                         </Button>
                       </div>
@@ -1109,7 +1109,7 @@ export default function ProjectDetails() {
                                   const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
                                   return (
                                     <Fragment key={defect.id}>
-                                      <tr key={defect.id} className="hover:bg-white/[0.02] transition-colors" data-testid={`defect-row-${defect.defectId}`}>
+                                      <tr key={defect.id} className="hover:bg-muted/40 transition-colors" data-testid={`defect-row-${defect.defectId}`}>
                                         <td className="px-5 py-3">
                                           <div className="flex items-center gap-2">
                                             <Hash className="w-3.5 h-3.5 text-primary" />
@@ -1141,7 +1141,7 @@ export default function ProjectDetails() {
                                         <td className="px-5 py-3 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
                                       </tr>
                                       {children.map((child: any) => (
-                                        <tr key={child.id} className="bg-muted/10 hover:bg-white/[0.02] transition-colors" data-testid={`defect-row-${child.defectId}`}>
+                                        <tr key={child.id} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
                                           <td className="px-5 py-3">
                                             <div className="flex items-center gap-2 pl-4">
                                               <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1198,7 +1198,7 @@ export default function ProjectDetails() {
                 {isAdmin && (
                   <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-white/5">
+                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60">
                         <Plus className="w-4 h-4 mr-2" /> Termin hinzufügen
                       </Button>
                     </DialogTrigger>

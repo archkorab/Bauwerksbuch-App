@@ -232,7 +232,7 @@ export default function UserManagement() {
                 const isCurrentUser = user.id === currentUser?.id;
                 const userName = user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email || user.id;
                 return (
-                  <tr key={user.id} className="hover:bg-white/[0.02] transition-colors" data-testid={`user-row-${user.id}`}>
+                  <tr key={user.id} className="hover:bg-muted/40 transition-colors" data-testid={`user-row-${user.id}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-primary border border-border">

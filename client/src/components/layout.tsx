@@ -42,10 +42,10 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden selection:bg-primary/20">
       {/* Sidebar */}
-      <aside className="w-72 flex-shrink-0 border-r border-border bg-card/50 backdrop-blur-xl flex flex-col justify-between hidden md:flex z-20 shadow-xl shadow-black/50">
+      <aside className="w-72 flex-shrink-0 border-r border-border bg-card flex flex-col justify-between hidden md:flex z-20 shadow-sm">
         <div className="p-6 flex flex-col h-full">
           <div className="flex items-center gap-3 px-2 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-700 flex items-center justify-center shadow-lg shadow-primary/25">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-md shadow-primary/20">
               <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -64,7 +64,7 @@ export function Layout({ children }: LayoutProps) {
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer
                       ${isActive 
                         ? "bg-primary/10 text-primary border border-primary/20 shadow-inner" 
-                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground border border-transparent"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground border border-transparent"
                       }`}
                   >
                     <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
@@ -77,7 +77,7 @@ export function Layout({ children }: LayoutProps) {
           </nav>
 
           <div className="mt-auto pt-6 border-t border-border">
-            <div className="bg-background/50 border border-border rounded-xl p-4 flex items-center gap-3">
+            <div className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center border border-border">
                 {user?.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt="Benutzer" className="w-full h-full rounded-full object-cover" />
@@ -106,7 +106,7 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/10 via-background to-background">
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background">
         <div className="flex-1 overflow-auto p-4 md:p-8 relative z-10">
           {children}
         </div>

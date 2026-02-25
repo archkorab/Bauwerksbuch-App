@@ -2,12 +2,12 @@ import { ShieldCheck, Building2, TrendingUp, ChevronRight } from "lucide-react";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden selection:bg-primary/30">
+    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden selection:bg-primary/20">
       
       {/* Left Panel: Hero & Branding */}
-      <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-900/20 via-background to-background">
+      <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-indigo-700 flex items-center justify-center shadow-lg shadow-primary/30">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-md shadow-primary/20">
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -20,7 +20,7 @@ export default function LandingPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-8">
             <ShieldCheck className="w-4 h-4" /> Enterprise-Qualität
           </div>
-          <h2 className="font-display text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-8">
+          <h2 className="font-display text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight mb-8 text-foreground">
             Der Standard im <br/>
             <span className="text-gradient-primary">Bauwerkszyklus</span> <br/>
             Management.
@@ -31,13 +31,13 @@ export default function LandingPage() {
 
           <div className="mt-12 flex flex-col sm:flex-row gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shadow-sm">
                 <TrendingUp className="w-5 h-5 text-primary" />
               </div>
               <span className="text-sm font-medium text-foreground">Echtzeit-Verfolgung</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center shadow-sm">
                 <Building2 className="w-5 h-5 text-primary" />
               </div>
               <span className="text-sm font-medium text-foreground">Mehrprojektansichten</span>
@@ -51,8 +51,8 @@ export default function LandingPage() {
       </div>
 
       {/* Right Panel: Login Action */}
-      <div className="w-full md:w-[450px] lg:w-[500px] bg-card/30 flex flex-col justify-center items-center p-8 relative">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-luminosity pointer-events-none"></div>
+      <div className="w-full md:w-[450px] lg:w-[500px] bg-muted/30 flex flex-col justify-center items-center p-8 relative">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.04] pointer-events-none"></div>
         
         <div className="w-full max-w-sm glass-panel rounded-3xl p-10 flex flex-col relative z-10">
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-8 border border-primary/20">
@@ -67,7 +67,7 @@ export default function LandingPage() {
           <button 
             data-testid="button-login"
             onClick={() => window.location.href = '/api/login'}
-            className="w-full py-4 px-6 rounded-xl font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
+            className="w-full py-4 px-6 rounded-xl font-semibold bg-accent text-accent-foreground shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-2 group"
           >
             Zur Plattform
             <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

@@ -62,10 +62,11 @@ client/src/
 - Defect summary: GET /api/defects/summary returns per-project Mangel status (kein/leichter/grober)
 
 ## User Preferences
-- Professional dark mode enterprise theme
+- Light mode theme matching bauwerksbuch-archkorab.at
 - Outfit + Plus Jakarta Sans fonts
-- Blue primary accent color
-- Minimal, clean design
+- Purple-blue primary (#6262a0), coral accent (#d1645d)
+- Light background (#fafaff), clean white cards
+- Minimal, professional design
 
 ## Project Model - Verwaltung & Eigentümer
 - verwaltungId: FK to users table (client type) - the building management company
@@ -74,6 +75,7 @@ client/src/
 - Verwaltung displays user name + company from profile
 
 ## Recent Changes
+- 2026-02-25: Switched from dark mode to light mode matching bauwerksbuch-archkorab.at color theme (purple-blue primary, coral accent, light background, white cards)
 - 2026-02-24: Redesigned "Prüfung hinzufügen" dialog with inspection type (Erstprüfung/Folgeprüfung), inline defect creation (Mangel-Nr, Datum, Beschreibung, Ort, Status), and Mangel status system (leichter/grober Mangel)
 - 2026-02-24: Redesigned role system: replaced admin/engineer/client with admin/hausverwaltung/eigentuemer; admin-only management; added user creation dialog in Benutzerverwaltung
 - 2026-02-24: Added "Digitaler Bauakt" tab to project details - Excel import, file upload/hosting, searchable table with Dateiname/Jahr/Beschreibung/Art/Anmerkung columns

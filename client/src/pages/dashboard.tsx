@@ -173,7 +173,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
           <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-            <FolderGit2 className="w-7 h-7 text-indigo-400" />
+            <FolderGit2 className="w-7 h-7 text-indigo-600" />
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-total-label">Projekte gesamt</p>
