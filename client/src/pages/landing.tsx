@@ -1,4 +1,5 @@
 import { ShieldCheck, Building2, TrendingUp, ChevronRight } from "lucide-react";
+import logoPath from "@assets/logo_1772006994795.png";
 
 export default function LandingPage() {
   return (
@@ -6,14 +7,8 @@ export default function LandingPage() {
       
       {/* Left Panel: Hero & Branding */}
       <div className="flex-1 flex flex-col justify-between p-8 md:p-16 lg:p-24 relative z-10 border-r border-border/50">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-md shadow-primary/20">
-            <Building2 className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="font-display font-bold text-2xl tracking-tight text-foreground">Archkorab</h1>
-            <p className="text-xs text-primary font-bold uppercase tracking-[0.2em]">Bauwerksbuch</p>
-          </div>
+        <div>
+          <img src={logoPath} alt="Archkorab Bauwerksbuch" className="max-w-[220px] h-auto" data-testid="img-landing-logo" />
         </div>
 
         <div className="max-w-2xl my-20">
