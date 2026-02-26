@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { MapPlaceholder } from "@/components/map-placeholder";
@@ -1290,11 +1290,10 @@ export default function ProjectDetails() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border">
-                                {primaryDefects.map((defect: any) => {
+                                {primaryDefects.flatMap((defect: any) => {
                                   const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                                  return (
-                                    <Fragment key={defect.id}>
-                                      <tr key={defect.id} className="hover:bg-muted/40 transition-colors" data-testid={`defect-row-${defect.defectId}`}>
+                                  return [
+                                    <tr key={`defect-${defect.id}`} className="hover:bg-muted/40 transition-colors" data-testid={`defect-row-${defect.defectId}`}>
                                         <td className="px-5 py-3">
                                           <div className="flex items-center gap-2">
                                             <Hash className="w-3.5 h-3.5 text-primary" />
@@ -1333,9 +1332,9 @@ export default function ProjectDetails() {
                                             <span className="text-muted-foreground">–</span>
                                           )}
                                         </td>
-                                      </tr>
-                                      {children.map((child: any) => (
-                                        <tr key={child.id} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
+                                      </tr>,
+                                    ...children.map((child: any) => (
+                                        <tr key={`child-${child.id}`} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
                                           <td className="px-5 py-3">
                                             <div className="flex items-center gap-2 pl-4">
                                               <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -1375,9 +1374,8 @@ export default function ProjectDetails() {
                                             )}
                                           </td>
                                         </tr>
-                                      ))}
-                                    </Fragment>
-                                  );
+                                      ))
+                                  ];
                                 })}
                               </tbody>
                             </table>
