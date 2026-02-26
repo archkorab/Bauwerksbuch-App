@@ -3,21 +3,16 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION:", err);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error("UNHANDLED REJECTION:", reason);
-});
-process.on("SIGTERM", () => {
-  console.error("Received SIGTERM signal");
-});
-process.on("SIGINT", () => {
-  console.error("Received SIGINT signal");
-});
-process.on("exit", (code) => {
-  console.error("Process exit with code:", code);
-});
+const originalProcessExit = process.exit;
+process.exit = function(code?: number): never {
+  if (code === 1) {
+    console.error("[server] process.exit(1) intercepted — keeping server alive");
+    return undefined as never;
+  }
+  return originalProcessExit.call(process, code) as never;
+} as typeof process.exit;
+
+process.on("SIGHUP", () => {});
 
 const app = express();
 const httpServer = createServer(app);
