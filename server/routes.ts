@@ -342,8 +342,8 @@ export async function registerRoutes(
       const hashedPassword = await bcrypt.hash(passwordToHash, 12);
       const user = await storage.createUser({
         email: input.email,
-        firstName: input.firstName,
-        lastName: input.lastName,
+        firstName: input.firstName || "",
+        lastName: input.lastName || "",
         password: hashedPassword,
       });
       await storage.upsertProfile({
