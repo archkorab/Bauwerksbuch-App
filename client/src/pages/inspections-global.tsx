@@ -18,7 +18,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 
-const BAUTEIL_OPTIONS = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
+interface BauteilOption {
+  label: string;
+  level: number;
+}
+
+const BAUTEIL_OPTIONS: BauteilOption[] = [
+  { label: "Dach", level: 0 },
+  { label: "2.1 Konstruktion", level: 1 },
+  { label: "2.2 Eindeckung/Schneefangeinrichtung", level: 1 },
+  { label: "2.3 Saum-, Hängerinnen", level: 1 },
+  { label: "2.4 Kamin und Lüftungsköpfe", level: 1 },
+  { label: "Fassade/Gesimse", level: 0 },
+  { label: "Decken", level: 0 },
+  { label: "Treppen", level: 0 },
+  { label: "Wände", level: 0 },
+];
 
 interface BauteilMangel {
   defectId: string;
@@ -32,6 +47,7 @@ interface BauteilMangel {
 
 interface BauteilPruefung {
   bauteil: string;
+  level: number;
   artDesMangels: string;
   geprueft: boolean;
   mangel: boolean;
@@ -93,11 +109,11 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
 
   return (
     <>
-      <tr className="border-b border-border hover:bg-muted/20 transition-colors" data-testid={`bauteil-row-${index}`}>
+      <tr className={`border-b border-border hover:bg-muted/20 transition-colors ${bp.level > 0 ? "bg-muted/5" : ""}`} data-testid={`bauteil-row-${index}`}>
         <td className="px-3 py-2.5">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" style={{ paddingLeft: bp.level > 0 ? `${bp.level * 20}px` : undefined }}>
             {isDefault ? (
-              <span className="font-medium text-foreground">{bp.bauteil}</span>
+              <span className={bp.level > 0 ? "text-sm text-muted-foreground" : "font-medium text-foreground"}>{bp.bauteil}</span>
             ) : (
               <Input
                 value={bp.bauteil}
@@ -292,7 +308,7 @@ export default function InspectionsGlobal() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
@@ -304,7 +320,7 @@ export default function InspectionsGlobal() {
   };
 
   const addCustomBauteil = () => {
-    setBauteilPruefungen(prev => [...prev, { bauteil: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
+    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
   };
 
   const addMangelToBauteil = (bauteilIndex: number) => {
@@ -346,7 +362,7 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
 
   const [inspSubmitting, setInspSubmitting] = useState(false);
@@ -520,7 +536,7 @@ export default function InspectionsGlobal() {
                     </thead>
                     <tbody>
                       {bauteilPruefungen.map((bp, index) => {
-                        const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index];
+                        const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
                         return (
                           <BauteilRow
                             key={index}
