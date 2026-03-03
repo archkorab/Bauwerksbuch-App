@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
 import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection } from "@/hooks/use-inspections";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
@@ -360,6 +361,7 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
 }
 
 export default function InspectionsGlobal() {
+  const queryClient = useQueryClient();
   const { data: allInspections, isLoading: insLoading } = useAllInspections();
   const { data: projects, isLoading: projLoading } = useProjects();
   const { data: profile } = useProfile();
@@ -583,6 +585,22 @@ export default function InspectionsGlobal() {
           notes: fullNotes || null,
         }
       });
+
+      for (const bp of editBauteilPruefungen) {
+        for (const m of bp.maengel) {
+          if (!m.imageFile) continue;
+          const defects = editingInspection.defects || [];
+          const matchingDefect = defects.find((d: any) => d.defectId === m.defectId);
+          if (matchingDefect?.id) {
+            const formData = new FormData();
+            formData.append('image', m.imageFile);
+            await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+          }
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/inspections"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${editingInspection.projectId}/inspections`] });
       setEditDialogOpen(false);
       setEditingInspection(null);
     } catch (error) {
@@ -651,6 +669,9 @@ export default function InspectionsGlobal() {
         }
       }
 
+      queryClient.invalidateQueries({ queryKey: ["/api/inspections"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/inspections`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
       setInspDialogOpen(false);
       resetDialog();
     } finally {
