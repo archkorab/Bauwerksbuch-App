@@ -43,6 +43,7 @@ export function useCreateInspection() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: [api.inspections.listAll.path] });
     },
   });
 }
