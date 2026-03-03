@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { UserCog, HardDrive, Database, FileArchive, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -17,6 +18,7 @@ function formatBytes(bytes: number): string {
 export default function SettingsPage() {
   const { data: profile } = useProfile();
   const isAdmin = profile?.role === "admin";
+  const [storageDialogOpen, setStorageDialogOpen] = useState(false);
 
   const { data: storageUsage, isLoading: storageLoading } = useQuery<{
     uploads: { usedBytes: number };
@@ -42,7 +44,7 @@ export default function SettingsPage() {
         {isAdmin && (
           <Link href="/admin/users" className="block" data-testid="link-settings-user-management">
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
-              <div className="flex items-center gap-4 mb-3">
+              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                   <UserCog className="w-6 h-6 text-primary" />
                 </div>
@@ -55,23 +57,46 @@ export default function SettingsPage() {
           </Link>
         )}
 
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm" data-testid="card-storage-usage">
-          <div className="flex items-center gap-4 mb-5">
+        <div
+          className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group"
+          onClick={() => setStorageDialogOpen(true)}
+          data-testid="card-storage-usage"
+        >
+          <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <HardDrive className="w-6 h-6 text-primary" />
             </div>
-            <div>
-              <h3 className="font-display font-bold text-lg text-foreground">Speicherplatz</h3>
-              <p className="text-sm text-muted-foreground">Übersicht der Speichernutzung</p>
+            <div className="flex-1">
+              <h3 className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">Speicherplatz</h3>
+              <p className="text-sm text-muted-foreground">
+                {storageLoading
+                  ? "Wird geladen..."
+                  : storageUsage
+                    ? `${formatBytes(storageUsage.totalUsedBytes)} / ${formatBytes(storageUsage.totalAvailableBytes)} belegt`
+                    : "Übersicht der Speichernutzung"}
+              </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <Dialog open={storageDialogOpen} onOpenChange={setStorageDialogOpen}>
+        <DialogContent className="sm:max-w-[480px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <HardDrive className="w-5 h-5 text-primary" />
+              </div>
+              Speicherplatz
+            </DialogTitle>
+          </DialogHeader>
 
           {storageLoading ? (
-            <div className="flex items-center justify-center py-6">
+            <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : storageUsage ? (
-            <div className="space-y-4">
+            <div className="space-y-5 mt-2">
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">Belegt</span>
@@ -105,10 +130,10 @@ export default function SettingsPage() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Speicherinformationen nicht verfügbar</p>
+            <p className="text-sm text-muted-foreground py-4">Speicherinformationen nicht verfügbar</p>
           )}
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
