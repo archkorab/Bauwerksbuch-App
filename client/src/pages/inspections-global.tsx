@@ -29,7 +29,7 @@ interface BauteilOption {
 const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Dach", level: 0 },
   { label: "Konstruktion", level: 1, ref: "2.1", defaultGegenstand: "Zustand" },
-  { label: "Eindeckung/Schneefangeinrichtung", level: 1, ref: "2.2", defaultGegenstand: "lose Teile, Fehlstellen" },
+  { label: "Eindeckung, Schneefangeinrichtung", level: 1, ref: "2.2", defaultGegenstand: "lose Teile, Fehlstellen" },
   { label: "Saum-, Hängerinnen", level: 1, ref: "2.3", defaultGegenstand: "lose Teile, Fehlstellen" },
   { label: "Kamin-, Lüftungsköpfe", level: 1, ref: "2.4", defaultGegenstand: "Standsicherheit" },
   { label: "Fassade/Gesimse", level: 0 },
