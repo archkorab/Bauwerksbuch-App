@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
-import { useAllInspections, useCreateInspection, useCreateDefect } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection } from "@/hooks/use-inspections";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -321,8 +321,12 @@ export default function InspectionsGlobal() {
   const { data: profile } = useProfile();
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
+  const updateInspection = useUpdateInspection();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingInspection, setEditingInspection] = useState<any>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
     BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
@@ -379,6 +383,47 @@ export default function InspectionsGlobal() {
   const resetDialog = () => {
     resetInspForm();
     setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+  };
+
+  const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp } = useForm({
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
+  });
+  const editInspType = watchEditInsp("type");
+  const editInspStatus = watchEditInsp("status");
+
+  const openEditInspection = (ins: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingInspection(ins);
+    resetEditInspForm({
+      date: ins.date ? format(new Date(ins.date), 'yyyy-MM-dd') : "",
+      status: ins.status || "OK",
+      type: ins.type || "erstpruefung",
+      notes: ins.notes || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const onEditInspSubmit = async (data: any) => {
+    if (!editingInspection) return;
+    setEditSubmitting(true);
+    try {
+      await updateInspection.mutateAsync({
+        id: editingInspection.id,
+        projectId: editingInspection.projectId,
+        data: {
+          date: new Date(data.date),
+          status: data.status,
+          type: data.type,
+          notes: data.notes || null,
+        }
+      });
+      setEditDialogOpen(false);
+      setEditingInspection(null);
+    } catch (error) {
+      console.error("Failed to update inspection:", error);
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const [inspSubmitting, setInspSubmitting] = useState(false);
@@ -691,6 +736,17 @@ export default function InspectionsGlobal() {
                           'text-amber-600 border-amber-500/30'}`}>
                         {inspStatusLabels[ins.status] || ins.status}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={(e) => openEditInspection(ins, e)}
+                        title="Prüfung bearbeiten"
+                        data-testid={`button-edit-inspection-${ins.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       {isExpanded ? (
                         <ChevronDown className="w-5 h-5 text-primary" />
                       ) : (
@@ -708,6 +764,61 @@ export default function InspectionsGlobal() {
           </div>
         )}
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) setEditingInspection(null); }}>
+        <DialogContent className="bg-card border-border sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Prüfung bearbeiten</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditInspSubmit(onEditInspSubmit)} className="space-y-5 mt-2">
+            {editingInspection && (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Building className="w-4 h-4" />
+                {editingInspection.projectName || `Projekt #${editingInspection.projectId}`}
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Art der Prüfung</Label>
+                <Select value={editInspType} onValueChange={(val) => setEditInspValue("type", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-inspection-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="erstpruefung">Erstprüfung</SelectItem>
+                    <SelectItem value="folgepruefung">Folgeprüfung</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Datum</Label>
+                <Input type="date" {...editInspReg("date")} className="bg-background border-border" data-testid="input-edit-inspection-date" />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editInspStatus} onValueChange={(val) => setEditInspValue("status", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-inspection-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="OK">OK</SelectItem>
+                    <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
+                    <SelectItem value="urgent">Dringend</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Anmerkungen</Label>
+              <Input {...editInspReg("notes")} placeholder="Anmerkungen zur Prüfung..." className="bg-background border-border" data-testid="input-edit-inspection-notes" />
+            </div>
+            <Button type="submit" className="w-full" disabled={editSubmitting} data-testid="button-submit-edit-inspection">
+              {editSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Änderungen speichern
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
