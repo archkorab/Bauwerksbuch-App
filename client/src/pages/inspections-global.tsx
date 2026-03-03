@@ -112,7 +112,7 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
   return (
     <>
       <tr className={`border-b border-border hover:bg-muted/20 transition-colors ${bp.level > 0 ? "bg-muted/5" : ""}`} data-testid={`bauteil-row-${index}`}>
-        <td className="px-3 py-2.5 w-[90px]">
+        <td className="px-2 py-2.5 w-[45px]">
           {bp.refNr ? (
             <span className="text-xs font-mono text-muted-foreground">{bp.refNr}</span>
           ) : null}
