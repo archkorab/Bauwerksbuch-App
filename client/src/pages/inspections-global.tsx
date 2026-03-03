@@ -439,25 +439,44 @@ export default function InspectionsGlobal() {
     }));
   };
 
-  const parseBauteilNotes = (notes: string): BauteilPruefung[] => {
+  const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
     const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
-    if (!notes) return base;
-    const bauteilPart = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[1] : null;
-    if (!bauteilPart) return base;
-    const entries = bauteilPart.split("; ");
-    for (const entry of entries) {
-      const match = entry.match(/^\[(.+?)\]/);
-      if (!match) continue;
-      const name = match[1];
-      const bp = base.find(b => b.bauteil === name);
-      if (!bp) continue;
-      if (entry.includes("geprüft")) bp.geprueft = true;
-      if (entry.includes("Mangel:")) {
-        bp.mangel = true;
-        const mangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
-        if (mangelMatch) bp.artDesMangels = mangelMatch[1].trim();
+    const notes = ins.notes || "";
+    if (notes.includes("| Bauteilprüfung: ")) {
+      const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+      const entries = bauteilPart.split("; ");
+      for (const entry of entries) {
+        const match = entry.match(/^\[(.+?)\]/);
+        if (!match) continue;
+        const name = match[1];
+        const bp = base.find(b => b.bauteil === name);
+        if (!bp) continue;
+        if (entry.includes("geprüft")) bp.geprueft = true;
+        if (entry.includes("Mangel:")) {
+          bp.mangel = true;
+          const mangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+          if (mangelMatch) bp.artDesMangels = mangelMatch[1].trim();
+        }
+        if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
       }
-      if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
+    }
+    const defects = ins.defects || [];
+    for (const d of defects) {
+      const bauteilNames: string[] = d.bauteil || [];
+      const targetName = bauteilNames[0];
+      if (!targetName) continue;
+      const bp = base.find(b => b.bauteil === targetName);
+      if (!bp) continue;
+      bp.mangel = true;
+      bp.maengel.push({
+        defectId: d.defectId || "",
+        description: d.description || "",
+        location: d.location || "",
+        status: d.status || "leichter_mangel",
+        dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
+        frist: d.frist || "",
+        repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
+      });
     }
     return base;
   };
@@ -472,7 +491,7 @@ export default function InspectionsGlobal() {
       type: ins.type || "erstpruefung",
       notes: userNotes,
     });
-    setEditBauteilPruefungen(parseBauteilNotes(ins.notes));
+    setEditBauteilPruefungen(buildEditBauteilState(ins));
     setEditDialogOpen(true);
   };
 
