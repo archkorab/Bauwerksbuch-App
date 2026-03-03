@@ -327,6 +327,9 @@ export default function InspectionsGlobal() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingInspection, setEditingInspection] = useState<any>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>(
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+  );
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
     BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
@@ -391,15 +394,85 @@ export default function InspectionsGlobal() {
   const editInspType = watchEditInsp("type");
   const editInspStatus = watchEditInsp("status");
 
+  const updateEditBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, i) => i === index ? { ...bp, [field]: value } : bp));
+  };
+
+  const addEditCustomBauteil = () => {
+    setEditBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
+  };
+
+  const removeEditBauteilPruefung = (index: number) => {
+    setEditBauteilPruefungen(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addEditMangelToBauteil = (bauteilIndex: number) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, i) => i === bauteilIndex
+      ? { ...bp, mangel: true, maengel: [...bp.maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "", repairDue: "" }] }
+      : bp
+    ));
+  };
+
+  const updateEditMangel = (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => {
+        if (mi !== mangelIndex) return m;
+        const newM = { ...m, [field]: value };
+        if (field === "dateFound" || field === "frist") {
+          newM.repairDue = calcRepairDue(
+            field === "dateFound" ? value : m.dateFound,
+            field === "frist" ? value : m.frist
+          );
+        }
+        return newM;
+      });
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeEditMangel = (bauteilIndex: number, mangelIndex: number) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const newMaengel = bp.maengel.filter((_, mi) => mi !== mangelIndex);
+      return { ...bp, maengel: newMaengel, mangel: newMaengel.length > 0 };
+    }));
+  };
+
+  const parseBauteilNotes = (notes: string): BauteilPruefung[] => {
+    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
+    if (!notes) return base;
+    const bauteilPart = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[1] : null;
+    if (!bauteilPart) return base;
+    const entries = bauteilPart.split("; ");
+    for (const entry of entries) {
+      const match = entry.match(/^\[(.+?)\]/);
+      if (!match) continue;
+      const name = match[1];
+      const bp = base.find(b => b.bauteil === name);
+      if (!bp) continue;
+      if (entry.includes("geprüft")) bp.geprueft = true;
+      if (entry.includes("Mangel:")) {
+        bp.mangel = true;
+        const mangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+        if (mangelMatch) bp.artDesMangels = mangelMatch[1].trim();
+      }
+      if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
+    }
+    return base;
+  };
+
   const openEditInspection = (ins: any, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingInspection(ins);
+    const userNotes = ins.notes?.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : (ins.notes || "");
     resetEditInspForm({
       date: ins.date ? format(new Date(ins.date), 'yyyy-MM-dd') : "",
       status: ins.status || "OK",
       type: ins.type || "erstpruefung",
-      notes: ins.notes || "",
+      notes: userNotes,
     });
+    setEditBauteilPruefungen(parseBauteilNotes(ins.notes));
     setEditDialogOpen(true);
   };
 
@@ -407,6 +480,19 @@ export default function InspectionsGlobal() {
     if (!editingInspection) return;
     setEditSubmitting(true);
     try {
+      const bauteilNotes = editBauteilPruefungen
+        .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
+        .map(bp => {
+          const parts = [`[${bp.bauteil}]`];
+          if (bp.geprueft) parts.push("geprüft");
+          if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
+          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          return parts.join(" - ");
+        })
+        .join("; ");
+
+      const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
+
       await updateInspection.mutateAsync({
         id: editingInspection.id,
         projectId: editingInspection.projectId,
@@ -414,7 +500,7 @@ export default function InspectionsGlobal() {
           date: new Date(data.date),
           status: data.status,
           type: data.type,
-          notes: data.notes || null,
+          notes: fullNotes || null,
         }
       });
       setEditDialogOpen(false);
@@ -766,7 +852,7 @@ export default function InspectionsGlobal() {
       </div>
 
       <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) setEditingInspection(null); }}>
-        <DialogContent className="bg-card border-border sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Prüfung bearbeiten</DialogTitle>
           </DialogHeader>
@@ -812,6 +898,52 @@ export default function InspectionsGlobal() {
               <Label>Anmerkungen</Label>
               <Input {...editInspReg("notes")} placeholder="Anmerkungen zur Prüfung..." className="bg-background border-border" data-testid="input-edit-inspection-notes" />
             </div>
+
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
+                <Button type="button" variant="outline" size="sm" onClick={addEditCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-add-bauteil">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                      <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Nr.</th>
+                      <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
+                      <th className="text-left px-3 py-2.5 font-semibold">Gegenstand</th>
+                      <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
+                      <th className="text-center px-3 py-2.5 font-semibold">Mangel</th>
+                      <th className="text-center px-3 py-2.5 font-semibold whitespace-nowrap">Vertiefte Prüfung</th>
+                      <th className="px-2 py-2.5 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editBauteilPruefungen.map((bp, index) => {
+                      const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
+                      const isHeader = isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1;
+                      return (
+                        <BauteilRow
+                          key={index}
+                          bp={bp}
+                          index={index}
+                          isDefault={isDefault}
+                          isHeader={isHeader}
+                          onUpdate={updateEditBauteilPruefung}
+                          onRemove={removeEditBauteilPruefung}
+                          onAddMangel={addEditMangelToBauteil}
+                          onUpdateMangel={updateEditMangel}
+                          onRemoveMangel={removeEditMangel}
+                        />
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <Button type="submit" className="w-full" disabled={editSubmitting} data-testid="button-submit-edit-inspection">
               {editSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Änderungen speichern
