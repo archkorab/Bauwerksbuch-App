@@ -22,14 +22,15 @@ interface BauteilOption {
   label: string;
   level: number;
   ref?: string;
+  defaultGegenstand?: string;
 }
 
 const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Dach", level: 0 },
-  { label: "Konstruktion", level: 1, ref: "2.1" },
-  { label: "Eindeckung/Schneefangeinrichtung", level: 1, ref: "2.2" },
-  { label: "Saum-, Hängerinnen", level: 1, ref: "2.3" },
-  { label: "Kamin und Lüftungsköpfe", level: 1, ref: "2.4" },
+  { label: "Konstruktion", level: 1, ref: "2.1", defaultGegenstand: "Zustand" },
+  { label: "Eindeckung/Schneefangeinrichtung", level: 1, ref: "2.2", defaultGegenstand: "lose Teile, Fehlstellen" },
+  { label: "Saum-, Hängerinnen", level: 1, ref: "2.3", defaultGegenstand: "lose Teile, Fehlstellen" },
+  { label: "Kamin-, Lüftungsköpfe", level: 1, ref: "2.4", defaultGegenstand: "Standsicherheit" },
   { label: "Fassade/Gesimse", level: 0 },
   { label: "Decken", level: 0 },
   { label: "Treppen", level: 0 },
@@ -314,7 +315,7 @@ export default function InspectionsGlobal() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
@@ -368,7 +369,7 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
 
   const [inspSubmitting, setInspSubmitting] = useState(false);
