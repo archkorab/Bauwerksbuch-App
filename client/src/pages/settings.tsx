@@ -3,9 +3,8 @@ import { Layout } from "@/components/layout";
 import { useProfile } from "@/hooks/use-profile";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { UserCog, HardDrive, Database, FileArchive, Loader2 } from "lucide-react";
+import { UserCog, HardDrive, Database, FileArchive, Loader2, ChevronDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -18,7 +17,7 @@ function formatBytes(bytes: number): string {
 export default function SettingsPage() {
   const { data: profile } = useProfile();
   const isAdmin = profile?.role === "admin";
-  const [storageDialogOpen, setStorageDialogOpen] = useState(false);
+  const [storageExpanded, setStorageExpanded] = useState(false);
 
   const { data: storageUsage, isLoading: storageLoading } = useQuery<{
     uploads: { usedBytes: number };
@@ -59,7 +58,7 @@ export default function SettingsPage() {
 
         <div
           className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group"
-          onClick={() => setStorageDialogOpen(true)}
+          onClick={() => setStorageExpanded(!storageExpanded)}
           data-testid="card-storage-usage"
         >
           <div className="flex items-center gap-4">
@@ -76,64 +75,57 @@ export default function SettingsPage() {
                     : "Übersicht der Speichernutzung"}
               </p>
             </div>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${storageExpanded ? "rotate-180" : ""}`} />
+          </div>
+
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${storageExpanded ? "max-h-60 opacity-100 mt-5" : "max-h-0 opacity-0 mt-0"}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {storageLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : storageUsage ? (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Belegt</span>
+                    <span className="font-semibold text-foreground" data-testid="text-storage-used">
+                      {formatBytes(storageUsage.totalUsedBytes)} / {formatBytes(storageUsage.totalAvailableBytes)}
+                    </span>
+                  </div>
+                  <Progress value={usagePercent} className="h-3" data-testid="progress-storage" />
+                  <p className="text-xs text-muted-foreground mt-1">{usagePercent.toFixed(1)}% belegt</p>
+                </div>
+
+                <div className="border-t border-border pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileArchive className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Dateien & Uploads</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground" data-testid="text-storage-uploads">
+                      {formatBytes(storageUsage.uploads.usedBytes)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Datenbank</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground" data-testid="text-storage-database">
+                      {formatBytes(storageUsage.database.usedBytes)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Speicherinformationen nicht verfügbar</p>
+            )}
           </div>
         </div>
       </div>
-
-      <Dialog open={storageDialogOpen} onOpenChange={setStorageDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <HardDrive className="w-5 h-5 text-primary" />
-              </div>
-              Speicherplatz
-            </DialogTitle>
-          </DialogHeader>
-
-          {storageLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : storageUsage ? (
-            <div className="space-y-5 mt-2">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Belegt</span>
-                  <span className="font-semibold text-foreground" data-testid="text-storage-used">
-                    {formatBytes(storageUsage.totalUsedBytes)} / {formatBytes(storageUsage.totalAvailableBytes)}
-                  </span>
-                </div>
-                <Progress value={usagePercent} className="h-3" data-testid="progress-storage" />
-                <p className="text-xs text-muted-foreground mt-1">{usagePercent.toFixed(1)}% belegt</p>
-              </div>
-
-              <div className="border-t border-border pt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileArchive className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Dateien & Uploads</span>
-                  </div>
-                  <span className="text-sm font-medium text-foreground" data-testid="text-storage-uploads">
-                    {formatBytes(storageUsage.uploads.usedBytes)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Datenbank</span>
-                  </div>
-                  <span className="text-sm font-medium text-foreground" data-testid="text-storage-database">
-                    {formatBytes(storageUsage.database.usedBytes)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground py-4">Speicherinformationen nicht verfügbar</p>
-          )}
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }
