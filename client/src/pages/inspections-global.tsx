@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { useAllInspections } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection } from "@/hooks/use-inspections";
 import { useProjects } from "@/hooks/use-projects";
+import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
 
 const inspTypeLabels: Record<string, string> = {
   erstpruefung: "Erstprüfung",
@@ -32,7 +39,32 @@ const fristLabels: Record<string, string> = {
 export default function InspectionsGlobal() {
   const { data: allInspections, isLoading: insLoading } = useAllInspections();
   const { data: projects, isLoading: projLoading } = useProjects();
+  const { data: profile } = useProfile();
+  const createInspection = useCreateInspection();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [inspDialogOpen, setInspDialogOpen] = useState(false);
+
+  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
+    defaultValues: { projectId: "", date: "", status: "OK", type: "erstpruefung", notes: "" }
+  });
+
+  const onInspSubmit = async (data: any) => {
+    if (!data.projectId || !profile) return;
+    const projectId = parseInt(data.projectId, 10);
+    await createInspection.mutateAsync({
+      projectId,
+      data: {
+        projectId,
+        engineerId: profile.userId,
+        date: new Date(data.date),
+        status: data.status,
+        type: data.type,
+        notes: data.notes || null,
+      }
+    });
+    setInspDialogOpen(false);
+    resetInspForm();
+  };
 
   const isLoading = insLoading || projLoading;
 
@@ -52,9 +84,82 @@ export default function InspectionsGlobal() {
 
   return (
     <Layout>
-      <div className="mb-10">
-        <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Prüfungsverzeichnis</h1>
-        <p className="text-muted-foreground">Alle Prüfungen im Überblick. Klicken Sie auf eine Prüfung, um Details einzusehen.</p>
+      <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Prüfungsverzeichnis</h1>
+          <p className="text-muted-foreground">Alle Prüfungen im Überblick. Klicken Sie auf eine Prüfung, um Details einzusehen.</p>
+        </div>
+
+        <Dialog open={inspDialogOpen} onOpenChange={(open) => { setInspDialogOpen(open); if (!open) resetInspForm(); }}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-inspection-global">
+              <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-card border-border sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-5 mt-2">
+              <div className="space-y-2">
+                <Label>Projekt</Label>
+                <Select onValueChange={(val) => setInspValue("projectId", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-inspection-project">
+                    <SelectValue placeholder="Projekt wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Art der Prüfung</Label>
+                  <Select defaultValue="erstpruefung" onValueChange={(val) => setInspValue("type", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-inspection-type-global">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="erstpruefung">Erstprüfung</SelectItem>
+                      <SelectItem value="folgepruefung">Folgeprüfung</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Prüfdatum</Label>
+                  <Input type="date" {...inspReg("date")} required className="bg-background border-border" data-testid="input-inspection-date-global" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status-global">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OK">OK</SelectItem>
+                      <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
+                      <SelectItem value="urgent">Dringend</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Anmerkungen</Label>
+                  <Input {...inspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="input-inspection-notes-global" />
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection-global">
+                {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Prüfung erstellen
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {projectsNeedingInspection.length > 0 && (
