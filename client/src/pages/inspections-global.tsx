@@ -21,14 +21,15 @@ import { useForm } from "react-hook-form";
 interface BauteilOption {
   label: string;
   level: number;
+  ref?: string;
 }
 
 const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Dach", level: 0 },
-  { label: "2.1 Konstruktion", level: 1 },
-  { label: "2.2 Eindeckung/Schneefangeinrichtung", level: 1 },
-  { label: "2.3 Saum-, Hängerinnen", level: 1 },
-  { label: "2.4 Kamin und Lüftungsköpfe", level: 1 },
+  { label: "Konstruktion", level: 1, ref: "2.1" },
+  { label: "Eindeckung/Schneefangeinrichtung", level: 1, ref: "2.2" },
+  { label: "Saum-, Hängerinnen", level: 1, ref: "2.3" },
+  { label: "Kamin und Lüftungsköpfe", level: 1, ref: "2.4" },
   { label: "Fassade/Gesimse", level: 0 },
   { label: "Decken", level: 0 },
   { label: "Treppen", level: 0 },
@@ -48,6 +49,7 @@ interface BauteilMangel {
 interface BauteilPruefung {
   bauteil: string;
   level: number;
+  refNr: string;
   artDesMangels: string;
   geprueft: boolean;
   mangel: boolean;
@@ -110,8 +112,13 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
   return (
     <>
       <tr className={`border-b border-border hover:bg-muted/20 transition-colors ${bp.level > 0 ? "bg-muted/5" : ""}`} data-testid={`bauteil-row-${index}`}>
+        <td className="px-3 py-2.5 w-[90px]">
+          {bp.refNr ? (
+            <span className="text-xs font-mono text-muted-foreground">{bp.refNr}</span>
+          ) : null}
+        </td>
         <td className="px-3 py-2.5">
-          <div className="flex items-center gap-1.5" style={{ paddingLeft: bp.level > 0 ? `${bp.level * 20}px` : undefined }}>
+          <div className="flex items-center gap-1.5" style={{ paddingLeft: bp.level > 0 ? `${bp.level * 8}px` : undefined }}>
             {isDefault ? (
               <span className={bp.level > 0 ? "text-sm text-muted-foreground" : "font-medium text-foreground"}>{bp.bauteil}</span>
             ) : (
@@ -196,7 +203,7 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
       </tr>
       {hasMaengel && expanded && bp.maengel.map((m, mi) => (
         <tr key={`mangel-${index}-${mi}`} className="border-b border-border bg-muted/10" data-testid={`mangel-row-${index}-${mi}`}>
-          <td colSpan={6} className="px-3 py-3">
+          <td colSpan={7} className="px-3 py-3">
             <div className="ml-4 border-l-2 border-primary/30 pl-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -308,7 +315,7 @@ export default function InspectionsGlobal() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
@@ -320,7 +327,7 @@ export default function InspectionsGlobal() {
   };
 
   const addCustomBauteil = () => {
-    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
+    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
   };
 
   const addMangelToBauteil = (bauteilIndex: number) => {
@@ -362,7 +369,7 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
 
   const [inspSubmitting, setInspSubmitting] = useState(false);
@@ -526,6 +533,7 @@ export default function InspectionsGlobal() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                        <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Referenz Nr.</th>
                         <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
                         <th className="text-left px-3 py-2.5 font-semibold">Art des Mangels</th>
                         <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
