@@ -5,7 +5,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -15,7 +15,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
+
+const BAUTEIL_OPTIONS = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
+
+interface BauteilPruefung {
+  bauteil: string;
+  artDesMangels: string;
+  geprueft: boolean;
+  mangel: boolean;
+  vertieftePruefung: boolean;
+}
 
 const inspTypeLabels: Record<string, string> = {
   erstpruefung: "Erstprüfung",
@@ -43,14 +54,48 @@ export default function InspectionsGlobal() {
   const createInspection = useCreateInspection();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
+  const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false }))
+  );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
     defaultValues: { projectId: "", date: "", status: "OK", type: "erstpruefung", notes: "" }
   });
 
+  const updateBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
+    setBauteilPruefungen(prev => prev.map((bp, i) => i === index ? { ...bp, [field]: value } : bp));
+  };
+
+  const addCustomBauteil = () => {
+    setBauteilPruefungen(prev => [...prev, { bauteil: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false }]);
+  };
+
+  const removeBauteilPruefung = (index: number) => {
+    setBauteilPruefungen(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const resetDialog = () => {
+    resetInspForm();
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false })));
+  };
+
   const onInspSubmit = async (data: any) => {
     if (!data.projectId || !profile) return;
     const projectId = parseInt(data.projectId, 10);
+
+    const bauteilNotes = bauteilPruefungen
+      .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
+      .map(bp => {
+        const parts = [`[${bp.bauteil}]`];
+        if (bp.geprueft) parts.push("geprüft");
+        if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
+        if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+        return parts.join(" - ");
+      })
+      .join("; ");
+
+    const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
+
     await createInspection.mutateAsync({
       projectId,
       data: {
@@ -59,11 +104,11 @@ export default function InspectionsGlobal() {
         date: new Date(data.date),
         status: data.status,
         type: data.type,
-        notes: data.notes || null,
+        notes: fullNotes || null,
       }
     });
     setInspDialogOpen(false);
-    resetInspForm();
+    resetDialog();
   };
 
   const isLoading = insLoading || projLoading;
@@ -90,13 +135,13 @@ export default function InspectionsGlobal() {
           <p className="text-muted-foreground">Alle Prüfungen im Überblick. Klicken Sie auf eine Prüfung, um Details einzusehen.</p>
         </div>
 
-        <Dialog open={inspDialogOpen} onOpenChange={(open) => { setInspDialogOpen(open); if (!open) resetInspForm(); }}>
+        <Dialog open={inspDialogOpen} onOpenChange={(open) => { setInspDialogOpen(open); if (!open) resetDialog(); }}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-inspection-global">
               <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border sm:max-w-[500px]">
+          <DialogContent className="bg-card border-border sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle>
             </DialogHeader>
@@ -153,6 +198,97 @@ export default function InspectionsGlobal() {
                   <Input {...inspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="input-inspection-notes-global" />
                 </div>
               </div>
+
+              <div className="border-t border-border pt-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
+                  <Button type="button" variant="outline" size="sm" onClick={addCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="button-add-bauteil">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                  </Button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                        <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
+                        <th className="text-left px-3 py-2.5 font-semibold">Art des Mangels</th>
+                        <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
+                        <th className="text-center px-3 py-2.5 font-semibold">Mangel</th>
+                        <th className="text-center px-3 py-2.5 font-semibold whitespace-nowrap">Vertiefte Prüfung</th>
+                        <th className="px-2 py-2.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {bauteilPruefungen.map((bp, index) => {
+                        const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index];
+                        return (
+                          <tr key={index} className="hover:bg-muted/20 transition-colors" data-testid={`bauteil-row-${index}`}>
+                            <td className="px-3 py-2.5">
+                              {isDefault ? (
+                                <span className="font-medium text-foreground">{bp.bauteil}</span>
+                              ) : (
+                                <Input
+                                  value={bp.bauteil}
+                                  onChange={(e) => updateBauteilPruefung(index, "bauteil", e.target.value)}
+                                  placeholder="Bauteil..."
+                                  className="h-8 text-sm bg-background border-border"
+                                  data-testid={`input-bauteil-name-${index}`}
+                                />
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <Input
+                                value={bp.artDesMangels}
+                                onChange={(e) => updateBauteilPruefung(index, "artDesMangels", e.target.value)}
+                                placeholder="z.B. Riss, Feuchtigkeit..."
+                                className="h-8 text-sm bg-background border-border"
+                                disabled={!bp.mangel}
+                                data-testid={`input-art-mangel-${index}`}
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={bp.geprueft}
+                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "geprueft", !!checked)}
+                                  data-testid={`checkbox-geprueft-${index}`}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={bp.mangel}
+                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "mangel", !!checked)}
+                                  data-testid={`checkbox-mangel-${index}`}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={bp.vertieftePruefung}
+                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "vertieftePruefung", !!checked)}
+                                  data-testid={`checkbox-vertiefte-${index}`}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-2 py-2.5">
+                              {!isDefault && (
+                                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeBauteilPruefung(index)} data-testid={`button-remove-bauteil-${index}`}>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection-global">
                 {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Prüfung erstellen
