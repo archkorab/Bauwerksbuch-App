@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -62,10 +63,11 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateProjectForm>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
-    defaultValues: { status: "active" }
+    defaultValues: { status: "active", address: "", name: "" }
   });
+  const addressValue = watch("address");
 
   const onSubmit = (data: CreateProjectForm) => {
     createProject.mutate(data, {
@@ -124,7 +126,13 @@ export default function Dashboard() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="address">Adresse</Label>
-                  <Input id="address" {...register("address", { onChange: (e) => setValue("name", e.target.value) })} className="bg-background border-border focus:ring-primary/20" />
+                  <AddressAutocomplete
+                    id="address"
+                    value={addressValue}
+                    onChange={(val) => { setValue("address", val); setValue("name", val); }}
+                    className="bg-background border-border focus:ring-primary/20"
+                    data-testid="input-address"
+                  />
                   {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
                 </div>
 

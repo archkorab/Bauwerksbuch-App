@@ -163,6 +163,27 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // --- Google Places Autocomplete Proxy ---
+  app.get("/api/places/autocomplete", isAuthenticated, async (req: any, res) => {
+    try {
+      const input = req.query.input as string;
+      if (!input || input.length < 2) {
+        return res.json({ predictions: [] });
+      }
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Google Maps API key not configured" });
+      }
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=address&components=country:at&language=de&key=${apiKey}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      res.json({ predictions: data.predictions || [] });
+    } catch (error) {
+      console.error("Places autocomplete error:", error);
+      res.status(500).json({ error: "Failed to fetch address suggestions" });
+    }
+  });
+
   // --- Profiles ---
   app.get(api.profiles.get.path, isAuthenticated, async (req: any, res) => {
     try {

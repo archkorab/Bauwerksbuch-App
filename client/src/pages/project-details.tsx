@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -352,7 +353,7 @@ export default function ProjectDetails() {
     }
   };
 
-  const { register: editReg, handleSubmit: handleEditSubmit, setValue: setEditValue, reset: resetEditForm } = useForm({
+  const { register: editReg, handleSubmit: handleEditSubmit, setValue: setEditValue, watch: watchEdit, reset: resetEditForm } = useForm({
     defaultValues: {
       name: "",
       address: "",
@@ -453,7 +454,14 @@ export default function ProjectDetails() {
               <input type="hidden" {...editReg("name")} />
               <div className="space-y-2">
                 <Label htmlFor="edit-address">Adresse</Label>
-                <Input id="edit-address" {...editReg("address", { onChange: (e: any) => setEditValue("name", e.target.value) })} required className="bg-background border-border" data-testid="input-edit-address" />
+                <AddressAutocomplete
+                  id="edit-address"
+                  value={watchEdit("address")}
+                  onChange={(val) => { setEditValue("address", val); setEditValue("name", val); }}
+                  required
+                  className="bg-background border-border"
+                  data-testid="input-edit-address"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
