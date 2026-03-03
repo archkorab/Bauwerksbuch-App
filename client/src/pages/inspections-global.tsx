@@ -5,7 +5,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -45,6 +45,8 @@ interface BauteilMangel {
   dateFound: string;
   frist: string;
   repairDue: string;
+  imageFile?: File | null;
+  imageUrl?: string;
 }
 
 interface BauteilPruefung {
@@ -99,10 +101,11 @@ interface BauteilRowProps {
   onRemove: (index: number) => void;
   onAddMangel: (index: number) => void;
   onUpdateMangel: (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => void;
+  onUpdateMangelFile: (bauteilIndex: number, mangelIndex: number, file: File | null) => void;
   onRemoveMangel: (bauteilIndex: number, mangelIndex: number) => void;
 }
 
-function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onRemoveMangel }: BauteilRowProps) {
+function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onUpdateMangelFile, onRemoveMangel }: BauteilRowProps) {
   const [expanded, setExpanded] = useState(bp.maengel.length > 0);
   const hasMaengel = bp.maengel.length > 0;
   const prevLenRef = useRef(bp.maengel.length);
@@ -306,6 +309,47 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                     />
                   </div>
                 )}
+                <div className="col-span-2">
+                  <Label className="text-xs">Foto</Label>
+                  <div className="flex items-center gap-3 mt-1">
+                    {(m.imageFile || m.imageUrl) ? (
+                      <div className="relative group">
+                        <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
+                          <img
+                            src={m.imageFile ? URL.createObjectURL(m.imageFile) : m.imageUrl}
+                            alt="Mangel"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onUpdateMangelFile(index, mi, null)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          data-testid={`button-remove-mangel-image-${index}-${mi}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-colors text-xs"
+                        data-testid={`button-add-mangel-image-${index}-${mi}`}
+                      >
+                        <ImagePlus className="w-4 h-4" />
+                        Foto hinzufügen
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            if (file) onUpdateMangelFile(index, mi, file);
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </td>
@@ -379,6 +423,14 @@ export default function InspectionsGlobal() {
     }));
   };
 
+  const updateMangelFile = (bauteilIndex: number, mangelIndex: number, file: File | null) => {
+    setBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFile: file, imageUrl: file ? undefined : m.imageUrl } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
   const removeBauteilPruefung = (index: number) => {
     setBauteilPruefungen(prev => prev.filter((_, i) => i !== index));
   };
@@ -439,6 +491,14 @@ export default function InspectionsGlobal() {
     }));
   };
 
+  const updateEditMangelFile = (bauteilIndex: number, mangelIndex: number, file: File | null) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFile: file, imageUrl: file ? undefined : m.imageUrl } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
   const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
     const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
     const notes = ins.notes || "";
@@ -476,6 +536,7 @@ export default function InspectionsGlobal() {
         dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
         frist: d.frist || "",
         repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
+        imageUrl: d.imageUrl || "",
       });
     }
     return base;
@@ -567,7 +628,7 @@ export default function InspectionsGlobal() {
       for (const bp of bauteilPruefungen) {
         for (const m of bp.maengel) {
           if (!m.defectId || !m.description || !m.location || !m.dateFound) continue;
-          await createDefect.mutateAsync({
+          const defect = await createDefect.mutateAsync({
             inspectionId: inspection.id,
             projectId,
             data: {
@@ -582,6 +643,11 @@ export default function InspectionsGlobal() {
               repairDue: m.repairDue ? new Date(m.repairDue) : null,
             }
           });
+          if (m.imageFile && defect?.id) {
+            const formData = new FormData();
+            formData.append('image', m.imageFile);
+            await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+          }
         }
       }
 
@@ -716,6 +782,7 @@ export default function InspectionsGlobal() {
                             onRemove={removeBauteilPruefung}
                             onAddMangel={addMangelToBauteil}
                             onUpdateMangel={updateMangel}
+                            onUpdateMangelFile={updateMangelFile}
                             onRemoveMangel={removeMangel}
                           />
                         );
@@ -954,6 +1021,7 @@ export default function InspectionsGlobal() {
                           onRemove={removeEditBauteilPruefung}
                           onAddMangel={addEditMangelToBauteil}
                           onUpdateMangel={updateEditMangel}
+                          onUpdateMangelFile={updateEditMangelFile}
                           onRemoveMangel={removeEditMangel}
                         />
                       );
