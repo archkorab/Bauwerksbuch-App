@@ -94,6 +94,7 @@ interface BauteilRowProps {
   bp: BauteilPruefung;
   index: number;
   isDefault: boolean;
+  isHeader: boolean;
   onUpdate: (index: number, field: keyof BauteilPruefung, value: any) => void;
   onRemove: (index: number) => void;
   onAddMangel: (index: number) => void;
@@ -101,7 +102,7 @@ interface BauteilRowProps {
   onRemoveMangel: (bauteilIndex: number, mangelIndex: number) => void;
 }
 
-function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onUpdateMangel, onRemoveMangel }: BauteilRowProps) {
+function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onRemoveMangel }: BauteilRowProps) {
   const [expanded, setExpanded] = useState(bp.maengel.length > 0);
   const hasMaengel = bp.maengel.length > 0;
   const prevLenRef = useRef(bp.maengel.length);
@@ -144,62 +145,70 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
             )}
           </div>
         </td>
-        <td className="px-3 py-2.5">
-          <Input
-            value={bp.artDesMangels}
-            onChange={(e) => onUpdate(index, "artDesMangels", e.target.value)}
-            placeholder="Gegenstand..."
-            className="h-8 text-sm bg-background border-border"
-            data-testid={`input-art-mangel-${index}`}
-          />
-        </td>
-        <td className="px-3 py-2.5 text-center">
-          <div className="flex justify-center">
-            <Checkbox
-              checked={bp.geprueft}
-              onCheckedChange={(checked) => onUpdate(index, "geprueft", !!checked)}
-              data-testid={`checkbox-geprueft-${index}`}
-            />
-          </div>
-        </td>
-        <td className="px-3 py-2.5 text-center">
-          <div className="flex justify-center">
-            <Checkbox
-              checked={bp.mangel}
-              onCheckedChange={(checked) => onUpdate(index, "mangel", !!checked)}
-              data-testid={`checkbox-mangel-${index}`}
-            />
-          </div>
-        </td>
-        <td className="px-3 py-2.5 text-center">
-          <div className="flex justify-center">
-            <Checkbox
-              checked={bp.vertieftePruefung}
-              onCheckedChange={(checked) => onUpdate(index, "vertieftePruefung", !!checked)}
-              data-testid={`checkbox-vertiefte-${index}`}
-            />
-          </div>
-        </td>
-        <td className="px-2 py-2.5">
-          <div className="flex items-center gap-0.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-primary"
-              onClick={() => onAddMangel(index)}
-              title="Mangel hinzufügen"
-              data-testid={`button-add-mangel-${index}`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </Button>
-            {!isDefault && (
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(index)} data-testid={`button-remove-bauteil-${index}`}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            )}
-          </div>
-        </td>
+        {isHeader ? (
+          <>
+            <td colSpan={5} className="px-3 py-2.5"></td>
+          </>
+        ) : (
+          <>
+            <td className="px-3 py-2.5">
+              <Input
+                value={bp.artDesMangels}
+                onChange={(e) => onUpdate(index, "artDesMangels", e.target.value)}
+                placeholder="Gegenstand..."
+                className="h-8 text-sm bg-background border-border"
+                data-testid={`input-art-mangel-${index}`}
+              />
+            </td>
+            <td className="px-3 py-2.5 text-center">
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={bp.geprueft}
+                  onCheckedChange={(checked) => onUpdate(index, "geprueft", !!checked)}
+                  data-testid={`checkbox-geprueft-${index}`}
+                />
+              </div>
+            </td>
+            <td className="px-3 py-2.5 text-center">
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={bp.mangel}
+                  onCheckedChange={(checked) => onUpdate(index, "mangel", !!checked)}
+                  data-testid={`checkbox-mangel-${index}`}
+                />
+              </div>
+            </td>
+            <td className="px-3 py-2.5 text-center">
+              <div className="flex justify-center">
+                <Checkbox
+                  checked={bp.vertieftePruefung}
+                  onCheckedChange={(checked) => onUpdate(index, "vertieftePruefung", !!checked)}
+                  data-testid={`checkbox-vertiefte-${index}`}
+                />
+              </div>
+            </td>
+            <td className="px-2 py-2.5">
+              <div className="flex items-center gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  onClick={() => onAddMangel(index)}
+                  title="Mangel hinzufügen"
+                  data-testid={`button-add-mangel-${index}`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+                {!isDefault && (
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(index)} data-testid={`button-remove-bauteil-${index}`}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            </td>
+          </>
+        )}
       </tr>
       {hasMaengel && expanded && bp.maengel.map((m, mi) => (
         <tr key={`mangel-${index}-${mi}`} className="border-b border-border bg-muted/10" data-testid={`mangel-row-${index}-${mi}`}>
@@ -545,12 +554,14 @@ export default function InspectionsGlobal() {
                     <tbody>
                       {bauteilPruefungen.map((bp, index) => {
                         const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
+                        const isHeader = isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1;
                         return (
                           <BauteilRow
                             key={index}
                             bp={bp}
                             index={index}
                             isDefault={isDefault}
+                            isHeader={isHeader}
                             onUpdate={updateBauteilPruefung}
                             onRemove={removeBauteilPruefung}
                             onAddMangel={addMangelToBauteil}
