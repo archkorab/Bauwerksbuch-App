@@ -456,7 +456,7 @@ export default function InspectionsGlobal() {
               <Plus className="w-4 h-4 mr-2" /> Prüfung hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-card border-border sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-card border-border sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle>
             </DialogHeader>
