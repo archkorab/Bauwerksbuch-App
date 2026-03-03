@@ -1199,7 +1199,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
           if (entries.length === 0) return null;
           const headerNames = new Set<string>();
           for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
-            if (BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
+            if (BAUTEIL_OPTIONS[i].level === 0 && BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
           }
           const entryMap = new Map(entries.map(e => [e.name, e]));
           const displayEntries: typeof entries = [];
