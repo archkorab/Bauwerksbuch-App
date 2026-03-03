@@ -1178,13 +1178,14 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             if (!nameMatch) return null;
             const name = nameMatch[1];
             const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
+            const gegenstandMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
             return {
               name,
               ref: opt?.ref || "",
               level: opt?.level ?? 0,
               geprueft: entry.includes("geprüft"),
               mangel: entry.includes("Mangel:"),
-              gegenstand: entry.match(/Mangel: (.+?)(?:\s*-|$)/)?.[1]?.trim() || "",
+              gegenstand: gegenstandMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
               vertieftePruefung: entry.includes("vertiefte Prüfung"),
             };
           }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
@@ -1236,13 +1237,13 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                           <td className={`px-3 py-2 ${isHeader ? "font-bold text-foreground" : ""} ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
                           <td className="px-3 py-2 text-muted-foreground">{isHeader ? "" : e.gegenstand}</td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.geprueft ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                            {!isHeader && (e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.mangel ? <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                            {!isHeader && (e.mangel ? <span className="text-amber-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.vertieftePruefung ? <Eye className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                            {!isHeader && (e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
                           </td>
                         </tr>
                       );
