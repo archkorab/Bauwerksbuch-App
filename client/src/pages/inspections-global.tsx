@@ -516,11 +516,15 @@ export default function InspectionsGlobal() {
         const name = match[1];
         const bp = base.find(b => b.bauteil === name);
         if (!bp) continue;
+        const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+        if (gegenstandMatch) bp.artDesMangels = gegenstandMatch[1].trim();
         if (entry.includes("geprüft")) bp.geprueft = true;
-        if (entry.includes("Mangel:")) {
+        if (entry.includes("Mangel")) {
           bp.mangel = true;
-          const mangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
-          if (mangelMatch) bp.artDesMangels = mangelMatch[1].trim();
+          if (!gegenstandMatch) {
+            const legacyMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+            if (legacyMatch) bp.artDesMangels = legacyMatch[1].trim();
+          }
         }
         if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
       }
@@ -569,8 +573,9 @@ export default function InspectionsGlobal() {
         .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
         .map(bp => {
           const parts = [`[${bp.bauteil}]`];
+          if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
-          if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
+          if (bp.mangel) parts.push("Mangel");
           if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
@@ -625,8 +630,9 @@ export default function InspectionsGlobal() {
         .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
         .map(bp => {
           const parts = [`[${bp.bauteil}]`];
+          if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
-          if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
+          if (bp.mangel) parts.push("Mangel");
           if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
@@ -1178,14 +1184,15 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             if (!nameMatch) return null;
             const name = nameMatch[1];
             const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
-            const gegenstandMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+            const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+            const legacyMangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
             return {
               name,
               ref: opt?.ref || "",
               level: opt?.level ?? 0,
               geprueft: entry.includes("geprüft"),
-              mangel: entry.includes("Mangel:"),
-              gegenstand: gegenstandMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
+              mangel: entry.includes("Mangel"),
+              gegenstand: gegenstandMatch?.[1]?.trim() || legacyMangelMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
               vertieftePruefung: entry.includes("vertiefte Prüfung"),
             };
           }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
