@@ -449,14 +449,11 @@ export default function ProjectDetails() {
             <DialogHeader>
               <DialogTitle className="font-display text-xl">Projekt bearbeiten</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-5 mt-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Projektname</Label>
-                <Input id="edit-name" {...editReg("name")} required className="bg-background border-border" data-testid="input-edit-name" />
-              </div>
+            <form onSubmit={handleEditSubmit((data) => onEditSubmit({ ...data, name: data.address }))} className="space-y-5 mt-2">
+              <input type="hidden" {...editReg("name")} />
               <div className="space-y-2">
                 <Label htmlFor="edit-address">Adresse</Label>
-                <Input id="edit-address" {...editReg("address")} required className="bg-background border-border" data-testid="input-edit-address" />
+                <Input id="edit-address" {...editReg("address", { onChange: (e: any) => setEditValue("name", e.target.value) })} required className="bg-background border-border" data-testid="input-edit-address" />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>

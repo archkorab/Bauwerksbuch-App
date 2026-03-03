@@ -29,7 +29,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const createProjectSchema = z.object({
-  name: z.string().min(1, "Name ist erforderlich"),
+  name: z.string().default(""),
   address: z.string().min(1, "Adresse ist erforderlich"),
   clientId: z.string().min(1, "Eigentümer ist erforderlich"),
   verwaltungId: z.string().optional(),
@@ -119,16 +119,12 @@ export default function Dashboard() {
               <DialogHeader>
                 <DialogTitle className="font-display text-xl">Neues Projekt erstellen</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Projektname</Label>
-                  <Input id="name" {...register("name")} className="bg-background border-border focus:ring-primary/20" />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-                </div>
+              <form onSubmit={handleSubmit((data) => onSubmit({ ...data, name: data.address }))} className="space-y-6 mt-4">
+                <input type="hidden" {...register("name")} />
                 
                 <div className="space-y-2">
                   <Label htmlFor="address">Adresse</Label>
-                  <Input id="address" {...register("address")} className="bg-background border-border focus:ring-primary/20" />
+                  <Input id="address" {...register("address", { onChange: (e) => setValue("name", e.target.value) })} className="bg-background border-border focus:ring-primary/20" />
                   {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
                 </div>
 
