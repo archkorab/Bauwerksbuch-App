@@ -1112,12 +1112,100 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             )}
           </div>
         </div>
-        {inspection.notes && (
-          <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Anmerkungen</h4>
-            <p className="text-sm text-foreground">{inspection.notes}</p>
-          </div>
-        )}
+        {(() => {
+          const notes = inspection.notes || "";
+          const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
+          return userNotes ? (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Anmerkungen</h4>
+              <p className="text-sm text-foreground">{userNotes}</p>
+            </div>
+          ) : null;
+        })()}
+        {(() => {
+          const notes = inspection.notes || "";
+          if (!notes.includes("| Bauteilprüfung: ")) return null;
+          const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+          const entries = bauteilPart.split("; ").map(entry => {
+            const nameMatch = entry.match(/^\[(.+?)\]/);
+            if (!nameMatch) return null;
+            const name = nameMatch[1];
+            const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
+            return {
+              name,
+              ref: opt?.ref || "",
+              level: opt?.level ?? 0,
+              geprueft: entry.includes("geprüft"),
+              mangel: entry.includes("Mangel:"),
+              gegenstand: entry.match(/Mangel: (.+?)(?:\s*-|$)/)?.[1]?.trim() || "",
+              vertieftePruefung: entry.includes("vertiefte Prüfung"),
+            };
+          }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
+          if (entries.length === 0) return null;
+          const headerNames = new Set<string>();
+          for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
+            if (BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
+          }
+          const displayEntries: typeof entries = [];
+          for (const e of entries) {
+            if (headerNames.has(e.name)) {
+              if (!displayEntries.some(d => d.name === e.name)) {
+                displayEntries.push({ ...e, geprueft: false, mangel: false, vertieftePruefung: false, gegenstand: "" });
+              }
+            }
+            const opt = BAUTEIL_OPTIONS.find(b => b.label === e.name);
+            if (opt?.level === 1) {
+              const parentIdx = BAUTEIL_OPTIONS.indexOf(opt);
+              const parentOpt = BAUTEIL_OPTIONS.slice(0, parentIdx).reverse().find(b => b.level === 0);
+              if (parentOpt && !displayEntries.some(d => d.name === parentOpt.label)) {
+                displayEntries.push({ name: parentOpt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
+              }
+            }
+            if (!displayEntries.some(d => d.name === e.name)) {
+              displayEntries.push(e);
+            }
+          }
+          return (
+            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Bauteil Prüfung</h4>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm" data-testid={`detail-bauteil-table-${inspection.id}`}>
+                  <thead>
+                    <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                      <th className="text-left px-3 py-2 font-semibold w-10">Nr.</th>
+                      <th className="text-left px-3 py-2 font-semibold">Bauteil</th>
+                      <th className="text-left px-3 py-2 font-semibold">Gegenstand</th>
+                      <th className="text-center px-3 py-2 font-semibold w-20">Geprüft</th>
+                      <th className="text-center px-3 py-2 font-semibold w-20">Mangel</th>
+                      <th className="text-center px-3 py-2 font-semibold w-28">Vert. Prüfung</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {displayEntries.map((e, i) => {
+                      const isHeader = headerNames.has(e.name);
+                      return (
+                        <tr key={i} className={isHeader ? "bg-muted/20" : "hover:bg-muted/10"}>
+                          <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
+                          <td className={`px-3 py-2 ${isHeader ? "font-bold text-foreground" : ""} ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{isHeader ? "" : e.gegenstand}</td>
+                          <td className="px-3 py-2 text-center">
+                            {!isHeader && (e.geprueft ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {!isHeader && (e.mangel ? <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {!isHeader && (e.vertieftePruefung ? <Eye className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-muted-foreground">–</span>)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div>
