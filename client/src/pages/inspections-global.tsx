@@ -573,7 +573,7 @@ export default function InspectionsGlobal() {
         })
         .join("; ");
 
-      const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
+      const fullNotes = bauteilNotes ? `${data.notes || ""} | Bauteilprüfung: ${bauteilNotes}`.trim() : (data.notes || "");
 
       await updateInspection.mutateAsync({
         id: editingInspection.id,
@@ -629,7 +629,7 @@ export default function InspectionsGlobal() {
         })
         .join("; ");
 
-      const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
+      const fullNotes = bauteilNotes ? `${data.notes || ""} | Bauteilprüfung: ${bauteilNotes}`.trim() : (data.notes || "");
 
       const inspection = await createInspection.mutateAsync({
         projectId,
@@ -1112,19 +1112,20 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             )}
           </div>
         </div>
-        {(() => {
-          const notes = inspection.notes || "";
-          const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
-          return userNotes ? (
-            <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Anmerkungen</h4>
-              <p className="text-sm text-foreground">{userNotes}</p>
-            </div>
-          ) : null;
-        })()}
-        {(() => {
-          const notes = inspection.notes || "";
-          if (!notes.includes("| Bauteilprüfung: ")) return null;
+      </div>
+      {(() => {
+        const notes = inspection.notes || "";
+        const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
+        return userNotes ? (
+          <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Anmerkungen</h4>
+            <p className="text-sm text-foreground">{userNotes}</p>
+          </div>
+        ) : null;
+      })()}
+      {(() => {
+        const notes = inspection.notes || "";
+        if (!notes.includes("| Bauteilprüfung: ")) return null;
           const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
           const entries = bauteilPart.split("; ").map(entry => {
             const nameMatch = entry.match(/^\[(.+?)\]/);
@@ -1205,8 +1206,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
               </div>
             </div>
           );
-        })()}
-      </div>
+      })()}
 
       <div>
         <h4 className="font-display font-bold text-base mb-3">
