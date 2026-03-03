@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
-import { useAllInspections, useCreateInspection } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection, useCreateDefect } from "@/hooks/use-inspections";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
@@ -20,12 +20,36 @@ import { useForm } from "react-hook-form";
 
 const BAUTEIL_OPTIONS = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
 
+interface BauteilMangel {
+  defectId: string;
+  description: string;
+  location: string;
+  status: string;
+  dateFound: string;
+  frist: string;
+  repairDue: string;
+}
+
 interface BauteilPruefung {
   bauteil: string;
   artDesMangels: string;
   geprueft: boolean;
   mangel: boolean;
   vertieftePruefung: boolean;
+  maengel: BauteilMangel[];
+}
+
+function calcRepairDue(dateFound: string, frist: string): string {
+  if (!dateFound || !frist) return "";
+  const d = new Date(dateFound);
+  switch (frist) {
+    case "1_woche": d.setDate(d.getDate() + 7); break;
+    case "2_wochen": d.setDate(d.getDate() + 14); break;
+    case "1_monat": d.setMonth(d.getMonth() + 1); break;
+    case "2_monate": d.setMonth(d.getMonth() + 2); break;
+    case "6_monate": d.setMonth(d.getMonth() + 6); break;
+  }
+  return d.toISOString().split("T")[0];
 }
 
 const inspTypeLabels: Record<string, string> = {
@@ -47,15 +71,228 @@ const fristLabels: Record<string, string> = {
   "6_monate": "6 Monate",
 };
 
+interface BauteilRowProps {
+  bp: BauteilPruefung;
+  index: number;
+  isDefault: boolean;
+  onUpdate: (index: number, field: keyof BauteilPruefung, value: any) => void;
+  onRemove: (index: number) => void;
+  onAddMangel: (index: number) => void;
+  onUpdateMangel: (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => void;
+  onRemoveMangel: (bauteilIndex: number, mangelIndex: number) => void;
+}
+
+function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onUpdateMangel, onRemoveMangel }: BauteilRowProps) {
+  const [expanded, setExpanded] = useState(bp.maengel.length > 0);
+  const hasMaengel = bp.maengel.length > 0;
+  const prevLenRef = useRef(bp.maengel.length);
+  useEffect(() => {
+    if (bp.maengel.length > prevLenRef.current) setExpanded(true);
+    prevLenRef.current = bp.maengel.length;
+  }, [bp.maengel.length]);
+
+  return (
+    <>
+      <tr className="border-b border-border hover:bg-muted/20 transition-colors" data-testid={`bauteil-row-${index}`}>
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            {isDefault ? (
+              <span className="font-medium text-foreground">{bp.bauteil}</span>
+            ) : (
+              <Input
+                value={bp.bauteil}
+                onChange={(e) => onUpdate(index, "bauteil", e.target.value)}
+                placeholder="Bauteil..."
+                className="h-8 text-sm bg-background border-border"
+                data-testid={`input-bauteil-name-${index}`}
+              />
+            )}
+            {hasMaengel && (
+              <button
+                type="button"
+                onClick={() => setExpanded(!expanded)}
+                className="text-muted-foreground hover:text-foreground p-0.5"
+                data-testid={`button-toggle-maengel-${index}`}
+              >
+                {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                <span className="text-xs ml-0.5">({bp.maengel.length})</span>
+              </button>
+            )}
+          </div>
+        </td>
+        <td className="px-3 py-2.5">
+          <Input
+            value={bp.artDesMangels}
+            onChange={(e) => onUpdate(index, "artDesMangels", e.target.value)}
+            placeholder="z.B. Riss, Feuchtigkeit..."
+            className="h-8 text-sm bg-background border-border"
+            disabled={!bp.mangel}
+            data-testid={`input-art-mangel-${index}`}
+          />
+        </td>
+        <td className="px-3 py-2.5 text-center">
+          <div className="flex justify-center">
+            <Checkbox
+              checked={bp.geprueft}
+              onCheckedChange={(checked) => onUpdate(index, "geprueft", !!checked)}
+              data-testid={`checkbox-geprueft-${index}`}
+            />
+          </div>
+        </td>
+        <td className="px-3 py-2.5 text-center">
+          <div className="flex justify-center">
+            <Checkbox
+              checked={bp.mangel}
+              onCheckedChange={(checked) => onUpdate(index, "mangel", !!checked)}
+              data-testid={`checkbox-mangel-${index}`}
+            />
+          </div>
+        </td>
+        <td className="px-3 py-2.5 text-center">
+          <div className="flex justify-center">
+            <Checkbox
+              checked={bp.vertieftePruefung}
+              onCheckedChange={(checked) => onUpdate(index, "vertieftePruefung", !!checked)}
+              data-testid={`checkbox-vertiefte-${index}`}
+            />
+          </div>
+        </td>
+        <td className="px-2 py-2.5">
+          <div className="flex items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              onClick={() => onAddMangel(index)}
+              title="Mangel hinzufügen"
+              data-testid={`button-add-mangel-${index}`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+            {!isDefault && (
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onRemove(index)} data-testid={`button-remove-bauteil-${index}`}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        </td>
+      </tr>
+      {hasMaengel && expanded && bp.maengel.map((m, mi) => (
+        <tr key={`mangel-${index}-${mi}`} className="border-b border-border bg-muted/10" data-testid={`mangel-row-${index}-${mi}`}>
+          <td colSpan={6} className="px-3 py-3">
+            <div className="ml-4 border-l-2 border-primary/30 pl-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Mangel {mi + 1} — {bp.bauteil || "Bauteil"}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                  onClick={() => onRemoveMangel(index, mi)}
+                  data-testid={`button-remove-mangel-${index}-${mi}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Mangel-ID *</Label>
+                  <Input
+                    value={m.defectId}
+                    onChange={(e) => onUpdateMangel(index, mi, "defectId", e.target.value)}
+                    placeholder="z.B. M-001"
+                    className="h-8 text-sm mt-1"
+                    data-testid={`input-mangel-id-${index}-${mi}`}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Datum *</Label>
+                  <Input
+                    type="date"
+                    value={m.dateFound}
+                    onChange={(e) => onUpdateMangel(index, mi, "dateFound", e.target.value)}
+                    className="h-8 text-sm mt-1"
+                    data-testid={`input-mangel-date-${index}-${mi}`}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-xs">Beschreibung *</Label>
+                  <Input
+                    value={m.description}
+                    onChange={(e) => onUpdateMangel(index, mi, "description", e.target.value)}
+                    placeholder="Beschreibung des Mangels..."
+                    className="h-8 text-sm mt-1"
+                    data-testid={`input-mangel-desc-${index}-${mi}`}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Ort *</Label>
+                  <Input
+                    value={m.location}
+                    onChange={(e) => onUpdateMangel(index, mi, "location", e.target.value)}
+                    placeholder="z.B. 2. OG links"
+                    className="h-8 text-sm mt-1"
+                    data-testid={`input-mangel-location-${index}-${mi}`}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Status</Label>
+                  <Select value={m.status} onValueChange={(v) => onUpdateMangel(index, mi, "status", v)}>
+                    <SelectTrigger className="h-8 text-sm mt-1" data-testid={`select-mangel-status-${index}-${mi}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+                      <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Frist</Label>
+                  <Select value={m.frist} onValueChange={(v) => onUpdateMangel(index, mi, "frist", v)}>
+                    <SelectTrigger className="h-8 text-sm mt-1" data-testid={`select-mangel-frist-${index}-${mi}`}>
+                      <SelectValue placeholder="Keine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(fristLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {m.repairDue && (
+                  <div>
+                    <Label className="text-xs">Reparatur bis</Label>
+                    <Input
+                      value={m.repairDue}
+                      disabled
+                      className="h-8 text-sm mt-1 bg-muted"
+                      data-testid={`input-mangel-repairdue-${index}-${mi}`}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function InspectionsGlobal() {
   const { data: allInspections, isLoading: insLoading } = useAllInspections();
   const { data: projects, isLoading: projLoading } = useProjects();
   const { data: profile } = useProfile();
   const createInspection = useCreateInspection();
+  const createDefect = useCreateDefect();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
@@ -67,7 +304,40 @@ export default function InspectionsGlobal() {
   };
 
   const addCustomBauteil = () => {
-    setBauteilPruefungen(prev => [...prev, { bauteil: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false }]);
+    setBauteilPruefungen(prev => [...prev, { bauteil: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
+  };
+
+  const addMangelToBauteil = (bauteilIndex: number) => {
+    setBauteilPruefungen(prev => prev.map((bp, i) => i === bauteilIndex
+      ? { ...bp, mangel: true, maengel: [...bp.maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "", repairDue: "" }] }
+      : bp
+    ));
+  };
+
+  const updateMangel = (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => {
+    setBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => {
+        if (mi !== mangelIndex) return m;
+        const newM = { ...m, [field]: value };
+        if (field === "dateFound" || field === "frist") {
+          newM.repairDue = calcRepairDue(
+            field === "dateFound" ? value : m.dateFound,
+            field === "frist" ? value : m.frist
+          );
+        }
+        return newM;
+      });
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeMangel = (bauteilIndex: number, mangelIndex: number) => {
+    setBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const newMaengel = bp.maengel.filter((_, mi) => mi !== mangelIndex);
+      return { ...bp, maengel: newMaengel, mangel: newMaengel.length > 0 };
+    }));
   };
 
   const removeBauteilPruefung = (index: number) => {
@@ -76,39 +346,68 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
+
+  const [inspSubmitting, setInspSubmitting] = useState(false);
 
   const onInspSubmit = async (data: any) => {
     if (!data.projectId || !profile) return;
-    const projectId = parseInt(data.projectId, 10);
+    setInspSubmitting(true);
+    try {
+      const projectId = parseInt(data.projectId, 10);
 
-    const bauteilNotes = bauteilPruefungen
-      .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
-      .map(bp => {
-        const parts = [`[${bp.bauteil}]`];
-        if (bp.geprueft) parts.push("geprüft");
-        if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
-        if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
-        return parts.join(" - ");
-      })
-      .join("; ");
+      const bauteilNotes = bauteilPruefungen
+        .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
+        .map(bp => {
+          const parts = [`[${bp.bauteil}]`];
+          if (bp.geprueft) parts.push("geprüft");
+          if (bp.mangel) parts.push(`Mangel: ${bp.artDesMangels || "ja"}`);
+          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          return parts.join(" - ");
+        })
+        .join("; ");
 
-    const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
+      const fullNotes = [data.notes, bauteilNotes].filter(Boolean).join(" | Bauteilprüfung: ");
 
-    await createInspection.mutateAsync({
-      projectId,
-      data: {
+      const inspection = await createInspection.mutateAsync({
         projectId,
-        engineerId: profile.userId,
-        date: new Date(data.date),
-        status: data.status,
-        type: data.type,
-        notes: fullNotes || null,
+        data: {
+          projectId,
+          engineerId: profile.userId,
+          date: new Date(data.date),
+          status: data.status,
+          type: data.type,
+          notes: fullNotes || null,
+        }
+      });
+
+      for (const bp of bauteilPruefungen) {
+        for (const m of bp.maengel) {
+          if (!m.defectId || !m.description || !m.location || !m.dateFound) continue;
+          await createDefect.mutateAsync({
+            inspectionId: inspection.id,
+            projectId,
+            data: {
+              inspectionId: inspection.id,
+              defectId: m.defectId,
+              bauteil: [bp.bauteil],
+              dateFound: new Date(m.dateFound),
+              description: m.description,
+              location: m.location,
+              status: m.status as "leichter_mangel" | "grober_mangel",
+              frist: (m.frist || null) as any,
+              repairDue: m.repairDue ? new Date(m.repairDue) : null,
+            }
+          });
+        }
       }
-    });
-    setInspDialogOpen(false);
-    resetDialog();
+
+      setInspDialogOpen(false);
+      resetDialog();
+    } finally {
+      setInspSubmitting(false);
+    }
   };
 
   const isLoading = insLoading || projLoading;
@@ -219,69 +518,21 @@ export default function InspectionsGlobal() {
                         <th className="px-2 py-2.5 w-8"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody>
                       {bauteilPruefungen.map((bp, index) => {
                         const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index];
                         return (
-                          <tr key={index} className="hover:bg-muted/20 transition-colors" data-testid={`bauteil-row-${index}`}>
-                            <td className="px-3 py-2.5">
-                              {isDefault ? (
-                                <span className="font-medium text-foreground">{bp.bauteil}</span>
-                              ) : (
-                                <Input
-                                  value={bp.bauteil}
-                                  onChange={(e) => updateBauteilPruefung(index, "bauteil", e.target.value)}
-                                  placeholder="Bauteil..."
-                                  className="h-8 text-sm bg-background border-border"
-                                  data-testid={`input-bauteil-name-${index}`}
-                                />
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <Input
-                                value={bp.artDesMangels}
-                                onChange={(e) => updateBauteilPruefung(index, "artDesMangels", e.target.value)}
-                                placeholder="z.B. Riss, Feuchtigkeit..."
-                                className="h-8 text-sm bg-background border-border"
-                                disabled={!bp.mangel}
-                                data-testid={`input-art-mangel-${index}`}
-                              />
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={bp.geprueft}
-                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "geprueft", !!checked)}
-                                  data-testid={`checkbox-geprueft-${index}`}
-                                />
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={bp.mangel}
-                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "mangel", !!checked)}
-                                  data-testid={`checkbox-mangel-${index}`}
-                                />
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              <div className="flex justify-center">
-                                <Checkbox
-                                  checked={bp.vertieftePruefung}
-                                  onCheckedChange={(checked) => updateBauteilPruefung(index, "vertieftePruefung", !!checked)}
-                                  data-testid={`checkbox-vertiefte-${index}`}
-                                />
-                              </div>
-                            </td>
-                            <td className="px-2 py-2.5">
-                              {!isDefault && (
-                                <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeBauteilPruefung(index)} data-testid={`button-remove-bauteil-${index}`}>
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
+                          <BauteilRow
+                            key={index}
+                            bp={bp}
+                            index={index}
+                            isDefault={isDefault}
+                            onUpdate={updateBauteilPruefung}
+                            onRemove={removeBauteilPruefung}
+                            onAddMangel={addMangelToBauteil}
+                            onUpdateMangel={updateMangel}
+                            onRemoveMangel={removeMangel}
+                          />
                         );
                       })}
                     </tbody>
@@ -289,8 +540,8 @@ export default function InspectionsGlobal() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={createInspection.isPending} data-testid="button-submit-inspection-global">
-                {createInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              <Button type="submit" className="w-full" disabled={inspSubmitting} data-testid="button-submit-inspection-global">
+                {inspSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Prüfung erstellen
               </Button>
             </form>
