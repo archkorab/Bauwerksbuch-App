@@ -533,7 +533,7 @@ export default function InspectionsGlobal() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                        <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Referenz Nr.</th>
+                        <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Nr.</th>
                         <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
                         <th className="text-left px-3 py-2.5 font-semibold">Art des Mangels</th>
                         <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
