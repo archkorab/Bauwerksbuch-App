@@ -147,9 +147,8 @@ function BauteilRow({ bp, index, isDefault, onUpdate, onRemove, onAddMangel, onU
           <Input
             value={bp.artDesMangels}
             onChange={(e) => onUpdate(index, "artDesMangels", e.target.value)}
-            placeholder="z.B. Riss, Feuchtigkeit..."
+            placeholder="Gegenstand..."
             className="h-8 text-sm bg-background border-border"
-            disabled={!bp.mangel}
             data-testid={`input-art-mangel-${index}`}
           />
         </td>
@@ -535,7 +534,7 @@ export default function InspectionsGlobal() {
                       <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
                         <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Nr.</th>
                         <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
-                        <th className="text-left px-3 py-2.5 font-semibold">Art des Mangels</th>
+                        <th className="text-left px-3 py-2.5 font-semibold">Gegenstand</th>
                         <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
                         <th className="text-center px-3 py-2.5 font-semibold">Mangel</th>
                         <th className="text-center px-3 py-2.5 font-semibold whitespace-nowrap">Vertiefte Prüfung</th>
