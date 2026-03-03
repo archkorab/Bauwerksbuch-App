@@ -1171,10 +1171,8 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
       })()}
       {(() => {
         const notes = inspection.notes || "";
-        const hasSeparator = notes.includes("| Bauteilprüfung: ");
-        const hasLegacyBauteil = !hasSeparator && /\[.+?\]\s*-\s*(geprüft|Mangel|vertiefte)/.test(notes);
-        if (!hasSeparator && !hasLegacyBauteil) return null;
-          const bauteilPart = hasSeparator ? notes.split("| Bauteilprüfung: ")[1] : notes;
+        if (!notes.includes("| Bauteilprüfung: ")) return null;
+          const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
           const entries = bauteilPart.split("; ").map(entry => {
             const nameMatch = entry.match(/^\[(.+?)\]/);
             if (!nameMatch) return null;
@@ -1197,19 +1195,22 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             if (BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
           }
           const displayEntries: typeof entries = [];
-          const entryMap = new Map(entries.map(e => [e.name, e]));
-          for (const opt of BAUTEIL_OPTIONS) {
-            const isHeader = headerNames.has(opt.label);
-            if (isHeader) {
-              const optIdx = BAUTEIL_OPTIONS.indexOf(opt);
-              const nextHeaderIdx = BAUTEIL_OPTIONS.findIndex((o, idx) => idx > optIdx && o.level === 0);
-              const childEnd = nextHeaderIdx === -1 ? BAUTEIL_OPTIONS.length : nextHeaderIdx;
-              const hasChildren = BAUTEIL_OPTIONS.slice(optIdx + 1, childEnd).some(o => o.level === 1 && entryMap.has(o.label));
-              if (hasChildren || entryMap.has(opt.label)) {
-                displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
+          for (const e of entries) {
+            if (headerNames.has(e.name)) {
+              if (!displayEntries.some(d => d.name === e.name)) {
+                displayEntries.push({ ...e, geprueft: false, mangel: false, vertieftePruefung: false, gegenstand: "" });
               }
-            } else if (entryMap.has(opt.label)) {
-              displayEntries.push(entryMap.get(opt.label)!);
+            }
+            const opt = BAUTEIL_OPTIONS.find(b => b.label === e.name);
+            if (opt?.level === 1) {
+              const parentIdx = BAUTEIL_OPTIONS.indexOf(opt);
+              const parentOpt = BAUTEIL_OPTIONS.slice(0, parentIdx).reverse().find(b => b.level === 0);
+              if (parentOpt && !displayEntries.some(d => d.name === parentOpt.label)) {
+                displayEntries.push({ name: parentOpt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
+              }
+            }
+            if (!displayEntries.some(d => d.name === e.name)) {
+              displayEntries.push(e);
             }
           }
           return (
