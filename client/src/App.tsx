@@ -10,6 +10,7 @@ import ProjectDetails from "./pages/project-details";
 import CalendarPage from "./pages/calendar";
 import InspectionsGlobal from "./pages/inspections-global";
 import UserManagement from "./pages/user-management";
+import SettingsPage from "./pages/settings";
 import ProfilePage from "./pages/profile";
 import { useAuth } from "./hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -44,6 +45,7 @@ function RootRouter() {
       <Route path="/projects/:id" component={ProjectDetails} />
       <Route path="/calendar" component={CalendarPage} />
       <Route path="/inspections" component={InspectionsGlobal} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/profile" component={ProfilePage} />
       <Route component={NotFound} />

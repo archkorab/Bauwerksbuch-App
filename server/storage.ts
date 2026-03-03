@@ -33,7 +33,7 @@ import {
   type Bauakt,
   type InsertBauakt,
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   getProfile(userId: string): Promise<Profile | undefined>;
@@ -80,6 +80,7 @@ export interface IStorage {
   createBauakt(data: InsertBauakt): Promise<Bauakt>;
   createBauaktBatch(data: InsertBauakt[]): Promise<Bauakt[]>;
   deleteBauakteByProject(projectId: number): Promise<void>;
+  getDatabaseSize(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -382,6 +383,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBauakteByProject(projectId: number): Promise<void> {
     await db.delete(bauakt).where(eq(bauakt.projectId, projectId));
+  }
+
+  async getDatabaseSize(): Promise<number> {
+    const result = await db.execute(sql`SELECT pg_database_size(current_database()) as size`);
+    return Number((result as any).rows?.[0]?.size || 0);
   }
 }
 

@@ -163,6 +163,39 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // --- Storage Usage ---
+  app.get("/api/storage/usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      let usedBytes = 0;
+      const calcSize = (dir: string) => {
+        if (!fs.existsSync(dir)) return;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            calcSize(fullPath);
+          } else {
+            usedBytes += fs.statSync(fullPath).size;
+          }
+        }
+      };
+      calcSize(uploadsDir);
+
+      const dbResult = await storage.getDatabaseSize();
+
+      res.json({
+        uploads: { usedBytes },
+        database: { usedBytes: dbResult },
+        totalUsedBytes: usedBytes + dbResult,
+        totalAvailableBytes: 10 * 1024 * 1024 * 1024,
+      });
+    } catch (error) {
+      console.error("Storage usage error:", error);
+      res.status(500).json({ error: "Failed to get storage usage" });
+    }
+  });
+
   // --- Google Places Autocomplete Proxy ---
   app.get("/api/places/autocomplete", isAuthenticated, async (req: any, res) => {
     try {

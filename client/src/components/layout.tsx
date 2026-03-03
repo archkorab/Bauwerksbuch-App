@@ -38,7 +38,7 @@ export function Layout({ children }: LayoutProps) {
     { name: "Übersicht", id: "dashboard", href: "/projects", icon: LayoutDashboard },
     { name: "Kalender", id: "calendar", href: "/calendar", icon: CalendarDays },
     { name: "Prüfprotokoll", id: "inspections", href: "/inspections", icon: ClipboardCheck },
-    ...(role === "admin" && !isImpersonating ? [{ name: "Benutzerverwaltung", id: "user-management", href: "/admin/users", icon: UserCog }] : []),
+    ...(role === "admin" && !isImpersonating ? [{ name: "Einstellungen", id: "settings", href: "/settings", icon: Settings }] : []),
   ];
 
   return (
@@ -53,7 +53,7 @@ export function Layout({ children }: LayoutProps) {
           <nav className="flex-1 space-y-2">
             <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">Plattform</div>
             {navItems.map((item) => {
-              const isActive = location === item.href || (location === "/" && item.href === "/projects");
+              const isActive = location === item.href || (location === "/" && item.href === "/projects") || (item.href === "/settings" && location === "/admin/users");
               return (
                 <Link key={item.id} href={item.href} className="block" data-testid={`link-nav-${item.id}`}>
                   <div
