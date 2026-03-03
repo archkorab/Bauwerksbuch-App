@@ -76,6 +76,7 @@ export default function Dashboard() {
   };
 
   const isAdmin = profile?.role === "admin";
+  const canCreateProject = isAdmin || profile?.role === "hausverwaltung" || profile?.role === "eigentuemer";
 
   const getMangelStatus = (projectId: number) => {
     if (!defectSummary) return "kein_mangel";
@@ -110,7 +111,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground">Übersicht aller Bauwerksbücher</p>
         </div>
         
-        {isAdmin && (
+        {canCreateProject && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-project">

@@ -477,8 +477,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
-      if (profile?.role !== "admin") {
-        return res.status(403).json({ message: "Nur Administratoren können Projekte erstellen" });
+      if (!profile || !["admin", "hausverwaltung", "eigentuemer"].includes(profile.role)) {
+        return res.status(403).json({ message: "Keine Berechtigung zum Erstellen von Projekten" });
       }
       const input = api.projects.create.input.parse(req.body);
       const project = await storage.createProject(input);
