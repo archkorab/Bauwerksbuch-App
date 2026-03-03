@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
-import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection } from "@/hooks/use-inspections";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
@@ -368,6 +368,9 @@ export default function InspectionsGlobal() {
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
   const updateInspection = useUpdateInspection();
+  const deleteInspection = useDeleteInspection();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -940,6 +943,17 @@ export default function InspectionsGlobal() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(ins.id); setDeleteConfirmProjectId(ins.projectId); }}
+                        title="Prüfung löschen"
+                        data-testid={`button-delete-inspection-${ins.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                       {isExpanded ? (
                         <ChevronDown className="w-5 h-5 text-primary" />
                       ) : (
@@ -1057,6 +1071,38 @@ export default function InspectionsGlobal() {
               Änderungen speichern
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) { setDeleteConfirmId(null); setDeleteConfirmProjectId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Prüfung löschen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Möchten Sie diese Prüfung wirklich löschen? Alle zugehörigen Mängel werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => { setDeleteConfirmId(null); setDeleteConfirmProjectId(null); }} data-testid="button-cancel-delete">
+              Abbrechen
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteInspection.isPending}
+              onClick={async () => {
+                if (deleteConfirmId && deleteConfirmProjectId !== null) {
+                  await deleteInspection.mutateAsync({ id: deleteConfirmId, projectId: deleteConfirmProjectId });
+                  if (expandedId === deleteConfirmId) setExpandedId(null);
+                  setDeleteConfirmId(null);
+                  setDeleteConfirmProjectId(null);
+                }
+              }}
+              data-testid="button-confirm-delete"
+            >
+              {deleteInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Löschen
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>
