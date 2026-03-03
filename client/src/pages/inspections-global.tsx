@@ -1194,23 +1194,16 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
           for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
             if (BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
           }
+          const entryMap = new Map(entries.map(e => [e.name, e]));
           const displayEntries: typeof entries = [];
-          for (const e of entries) {
-            if (headerNames.has(e.name)) {
-              if (!displayEntries.some(d => d.name === e.name)) {
-                displayEntries.push({ ...e, geprueft: false, mangel: false, vertieftePruefung: false, gegenstand: "" });
+          for (const opt of BAUTEIL_OPTIONS) {
+            if (headerNames.has(opt.label)) {
+              const hasChildInEntries = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label) && BAUTEIL_OPTIONS.indexOf(o) > BAUTEIL_OPTIONS.indexOf(opt) && (BAUTEIL_OPTIONS.indexOf(o) === BAUTEIL_OPTIONS.indexOf(opt) + 1 || BAUTEIL_OPTIONS.slice(BAUTEIL_OPTIONS.indexOf(opt) + 1, BAUTEIL_OPTIONS.indexOf(o)).every(s => s.level === 1)));
+              if (hasChildInEntries || entryMap.has(opt.label)) {
+                displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
               }
-            }
-            const opt = BAUTEIL_OPTIONS.find(b => b.label === e.name);
-            if (opt?.level === 1) {
-              const parentIdx = BAUTEIL_OPTIONS.indexOf(opt);
-              const parentOpt = BAUTEIL_OPTIONS.slice(0, parentIdx).reverse().find(b => b.level === 0);
-              if (parentOpt && !displayEntries.some(d => d.name === parentOpt.label)) {
-                displayEntries.push({ name: parentOpt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
-              }
-            }
-            if (!displayEntries.some(d => d.name === e.name)) {
-              displayEntries.push(e);
+            } else if (entryMap.has(opt.label)) {
+              displayEntries.push(entryMap.get(opt.label)!);
             }
           }
           return (
@@ -1231,19 +1224,23 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                   <tbody className="divide-y divide-border">
                     {displayEntries.map((e, i) => {
                       const isHeader = headerNames.has(e.name);
-                      return (
-                        <tr key={i} className={isHeader ? "bg-muted/20" : "hover:bg-muted/10"}>
+                      return isHeader ? (
+                        <tr key={i} className="bg-muted/30">
+                          <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
+                        </tr>
+                      ) : (
+                        <tr key={i} className="hover:bg-muted/10">
                           <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
-                          <td className={`px-3 py-2 ${isHeader ? "font-bold text-foreground" : ""} ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
-                          <td className="px-3 py-2 text-muted-foreground">{isHeader ? "" : e.gegenstand}</td>
+                          <td className={`px-3 py-2 ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{e.gegenstand}</td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
+                            {e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.mangel ? <span className="text-amber-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
+                            {e.mangel ? <span className="text-amber-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {!isHeader && (e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>)}
+                            {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                         </tr>
                       );
