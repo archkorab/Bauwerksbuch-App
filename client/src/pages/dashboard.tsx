@@ -3,6 +3,7 @@ import { Layout } from "@/components/layout";
 import { useProjects, useCreateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
+import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { 
   Building, 
@@ -55,6 +56,7 @@ const mangelLabels: Record<string, string> = {
 export default function Dashboard() {
   const { data: projects, isLoading } = useProjects();
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const { data: clients } = useClients();
   const { data: defectSummary } = useDefectSummary();
   const createProject = useCreateProject();
@@ -107,7 +109,14 @@ export default function Dashboard() {
     <Layout>
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">Projektübersicht</h1>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2">
+            Projektübersicht
+            {(profile?.role === "hausverwaltung" || profile?.role === "eigentuemer") && user && (
+              <span className="text-muted-foreground font-normal text-xl ml-3">
+                – {user.firstName} {user.lastName}
+              </span>
+            )}
+          </h1>
           <p className="text-muted-foreground">Übersicht aller Bauwerksbücher</p>
         </div>
         
