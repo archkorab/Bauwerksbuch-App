@@ -186,7 +186,7 @@ async function generateInspectionPdf(inspection: any) {
     ["Projekt", inspection.projectName || `Projekt #${inspection.projectId}`],
   ];
   if (inspection.projectAddress) details.push(["Adresse", inspection.projectAddress]);
-  if (inspection.engineer) details.push(["Ingenieur", `${inspection.engineer.firstName} ${inspection.engineer.lastName}`]);
+  if (inspection.engineer) details.push(["Sachverständiger", `${inspection.engineer.firstName} ${inspection.engineer.lastName}`]);
 
   for (const [label, value] of details) {
     doc.setFont("helvetica", "bold");
@@ -1523,7 +1523,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             )}
             {inspection.engineer && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Ingenieur</span>
+                <span className="text-muted-foreground">Sachverständiger</span>
                 <span className="font-medium text-foreground">{inspection.engineer.firstName} {inspection.engineer.lastName}</span>
               </div>
             )}
