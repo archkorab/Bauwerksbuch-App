@@ -404,7 +404,7 @@ export default function InspectionsGlobal() {
     BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
-  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
+  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, getValues: getInspValues } = useForm({
     defaultValues: { projectId: "", date: "", status: "OK", type: "erstpruefung", notes: "" }
   });
 
@@ -417,10 +417,18 @@ export default function InspectionsGlobal() {
   };
 
   const addMangelToBauteil = (bauteilIndex: number) => {
-    setBauteilPruefungen(prev => prev.map((bp, i) => i === bauteilIndex
-      ? { ...bp, mangel: true, maengel: [...bp.maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "", repairDue: "" }] }
-      : bp
-    ));
+    setBauteilPruefungen(prev => {
+      const bp = prev[bauteilIndex];
+      const opt = BAUTEIL_OPTIONS.find(o => o.label === bp.bauteil);
+      const ref = opt?.ref || "";
+      const nextNum = bp.maengel.length + 1;
+      const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
+      const inspDate = getInspValues("date") || new Date().toISOString().split("T")[0];
+      return prev.map((b, i) => i === bauteilIndex
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "" }] }
+        : b
+      );
+    });
   };
 
   const updateMangel = (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => {
@@ -466,7 +474,7 @@ export default function InspectionsGlobal() {
     setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
 
-  const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp } = useForm({
+  const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp, getValues: getEditInspValues } = useForm({
     defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
   });
   const editInspType = watchEditInsp("type");
@@ -485,10 +493,18 @@ export default function InspectionsGlobal() {
   };
 
   const addEditMangelToBauteil = (bauteilIndex: number) => {
-    setEditBauteilPruefungen(prev => prev.map((bp, i) => i === bauteilIndex
-      ? { ...bp, mangel: true, maengel: [...bp.maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "", repairDue: "" }] }
-      : bp
-    ));
+    setEditBauteilPruefungen(prev => {
+      const bp = prev[bauteilIndex];
+      const opt = BAUTEIL_OPTIONS.find(o => o.label === bp.bauteil);
+      const ref = opt?.ref || "";
+      const nextNum = bp.maengel.length + 1;
+      const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
+      const inspDate = getEditInspValues("date") || new Date().toISOString().split("T")[0];
+      return prev.map((b, i) => i === bauteilIndex
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "" }] }
+        : b
+      );
+    });
   };
 
   const updateEditMangel = (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => {
@@ -698,7 +714,7 @@ export default function InspectionsGlobal() {
 
       for (const bp of bauteilPruefungen) {
         for (const m of bp.maengel) {
-          if (!m.defectId || !m.description || !m.location || !m.dateFound) continue;
+          if (!m.defectId || !m.dateFound) continue;
           const defect = await createDefect.mutateAsync({
             inspectionId: inspection.id,
             projectId,
@@ -707,8 +723,8 @@ export default function InspectionsGlobal() {
               defectId: m.defectId,
               bauteil: getParentBauteil(bp.bauteil) ? [getParentBauteil(bp.bauteil)!, bp.bauteil] : [bp.bauteil],
               dateFound: new Date(m.dateFound),
-              description: m.description,
-              location: m.location,
+              description: m.description || bp.bauteil,
+              location: m.location || "–",
               status: m.status as "leichter_mangel" | "grober_mangel",
               frist: (m.frist || null) as any,
               repairDue: m.repairDue ? new Date(m.repairDue) : null,
