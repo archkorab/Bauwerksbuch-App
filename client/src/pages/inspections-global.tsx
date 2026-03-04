@@ -1332,7 +1332,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
 function ExpandableImage({ src, alt }: { src: string; alt: string }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -1342,11 +1342,11 @@ function ExpandableImage({ src, alt }: { src: string; alt: string }) {
         <img src={src} alt={alt} className="w-full h-full object-cover" />
       </button>
       {expanded && (
-        <div className="mt-2">
+        <div className="absolute top-0 left-12 z-50">
           <img
             src={src}
             alt={alt}
-            className="max-w-xs max-h-64 rounded-lg border border-border shadow-md object-contain cursor-pointer"
+            className="max-w-xs max-h-64 rounded-lg border border-border shadow-lg object-contain cursor-pointer bg-card"
             onClick={() => setExpanded(false)}
             data-testid="img-expanded"
           />
