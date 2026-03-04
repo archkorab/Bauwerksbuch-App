@@ -944,10 +944,10 @@ export default function InspectionsGlobal() {
                             {ins.engineer.firstName} {ins.engineer.lastName}
                           </span>
                         )}
-                        {ins.notes && (
+                        {ins.notes && (ins.notes.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : ins.notes) && (
                           <span className="flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5" />
-                            <span className="truncate max-w-[200px]">{ins.notes}</span>
+                            <span className="truncate max-w-[200px]">{ins.notes.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : ins.notes}</span>
                           </span>
                         )}
                       </div>

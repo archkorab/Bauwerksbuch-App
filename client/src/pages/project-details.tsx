@@ -1250,7 +1250,7 @@ export default function ProjectDetails() {
                               </div>
                               <div>
                                 <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'dd.MM.yyyy')}</p>
-                                <p className="text-sm text-muted-foreground mt-1">{ins.notes || 'Keine Anmerkungen.'}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{(ins.notes?.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : ins.notes) || 'Keine Anmerkungen.'}</p>
                                 {ins.engineer && (
                                   <p className="text-xs text-muted-foreground mt-2 font-medium">Ingenieur: {ins.engineer.firstName} {ins.engineer.lastName}</p>
                                 )}
