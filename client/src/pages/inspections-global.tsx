@@ -943,20 +943,6 @@ export default function InspectionsGlobal() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      {defectCount > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          {groberCount > 0 && (
-                            <Badge variant="destructive" className="text-xs" data-testid={`badge-grober-${ins.id}`}>
-                              {groberCount} grob
-                            </Badge>
-                          )}
-                          {leichterCount > 0 && (
-                            <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-600" data-testid={`badge-leichter-${ins.id}`}>
-                              {leichterCount} leicht
-                            </Badge>
-                          )}
-                        </div>
-                      )}
                       <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase
                         ${effectiveStatus === 'OK' ? 'text-emerald-600 border-emerald-500/30' :
                           effectiveStatus === 'urgent' ? 'text-destructive border-destructive/30' :
