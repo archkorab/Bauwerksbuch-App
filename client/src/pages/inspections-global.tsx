@@ -877,6 +877,8 @@ export default function InspectionsGlobal() {
               const defectCount = ins.defects?.length || 0;
               const groberCount = ins.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
               const leichterCount = ins.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
+              const hasBauteilMangel = ins.notes?.includes("- Mangel") || false;
+              const effectiveStatus = groberCount > 0 ? "urgent" : (leichterCount > 0 || hasBauteilMangel) ? "needs_repair" : ins.status;
               const isExpanded = expandedId === ins.id;
 
               return (
@@ -891,10 +893,10 @@ export default function InspectionsGlobal() {
                     data-testid={`inspection-toggle-${ins.id}`}
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border
-                      ${ins.status === 'OK' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                        ins.status === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' :
+                      ${effectiveStatus === 'OK' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                        effectiveStatus === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' :
                         'bg-amber-500/10 text-amber-600 border-amber-500/20'}`}>
-                      {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                      {effectiveStatus === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -941,10 +943,10 @@ export default function InspectionsGlobal() {
                         </div>
                       )}
                       <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase
-                        ${ins.status === 'OK' ? 'text-emerald-600 border-emerald-500/30' :
-                          ins.status === 'urgent' ? 'text-destructive border-destructive/30' :
+                        ${effectiveStatus === 'OK' ? 'text-emerald-600 border-emerald-500/30' :
+                          effectiveStatus === 'urgent' ? 'text-destructive border-destructive/30' :
                           'text-amber-600 border-amber-500/30'}`}>
-                        {inspStatusLabels[ins.status] || ins.status}
+                        {inspStatusLabels[effectiveStatus] || effectiveStatus}
                       </span>
                       <Button
                         type="button"
@@ -1126,6 +1128,10 @@ export default function InspectionsGlobal() {
 function InspectionDetailPanel({ inspection }: { inspection: any }) {
   const primaryDefects = inspection.defects?.filter((d: any) => !d.parentDefectId) || [];
   const followUps = inspection.defects?.filter((d: any) => d.parentDefectId) || [];
+  const groberCount = inspection.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
+  const leichterCount = inspection.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
+  const hasBauteilMangel = inspection.notes?.includes("- Mangel") || false;
+  const effectiveStatus = groberCount > 0 ? "urgent" : (leichterCount > 0 || hasBauteilMangel) ? "needs_repair" : inspection.status;
 
   return (
     <div className="border-t border-border bg-muted/20 p-5 space-y-5" data-testid={`inspection-detail-${inspection.id}`}>
@@ -1143,8 +1149,8 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status</span>
-              <span className={`font-bold ${inspection.status === 'OK' ? 'text-emerald-600' : inspection.status === 'urgent' ? 'text-destructive' : 'text-amber-600'}`}>
-                {inspStatusLabels[inspection.status] || inspection.status}
+              <span className={`font-bold ${effectiveStatus === 'OK' ? 'text-emerald-600' : effectiveStatus === 'urgent' ? 'text-destructive' : 'text-amber-600'}`}>
+                {inspStatusLabels[effectiveStatus] || effectiveStatus}
               </span>
             </div>
           </div>

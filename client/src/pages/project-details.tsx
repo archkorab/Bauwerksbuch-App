@@ -1228,6 +1228,10 @@ export default function ProjectDetails() {
                     const primaryDefects = ins.defects?.filter((d: any) => !d.parentDefectId) || [];
                     const followUps = ins.defects?.filter((d: any) => d.parentDefectId) || [];
                     const isInsExpanded = expandedInspId === ins.id;
+                    const insGroberCount = ins.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
+                    const insLeichterCount = ins.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
+                    const insHasBauteilMangel = ins.notes?.includes("- Mangel") || false;
+                    const insEffectiveStatus = insGroberCount > 0 ? "urgent" : (insLeichterCount > 0 || insHasBauteilMangel) ? "needs_repair" : ins.status;
                     
                     return (
                       <div key={ins.id} className={`bg-card border rounded-2xl shadow-sm overflow-hidden transition-all ${isInsExpanded ? 'border-primary/40' : 'border-border'}`} data-testid={`inspection-card-${ins.id}`}>
@@ -1239,10 +1243,10 @@ export default function ProjectDetails() {
                           <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                             <div className="flex items-start gap-4">
                               <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border
-                                ${ins.status === 'OK' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                  ins.status === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
+                                ${insEffectiveStatus === 'OK' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                                  insEffectiveStatus === 'urgent' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
                                   'bg-amber-500/10 text-amber-500 border-amber-500/20'}`}>
-                                {ins.status === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                                {insEffectiveStatus === 'OK' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                               </div>
                               <div>
                                 <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'dd.MM.yyyy')}</p>
@@ -1264,10 +1268,10 @@ export default function ProjectDetails() {
                                 </>
                               )}
                               <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase
-                                ${ins.status === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
-                                  ins.status === 'urgent' ? 'text-destructive border-destructive/30' : 
+                                ${insEffectiveStatus === 'OK' ? 'text-emerald-500 border-emerald-500/30' : 
+                                  insEffectiveStatus === 'urgent' ? 'text-destructive border-destructive/30' : 
                                   'text-amber-500 border-amber-500/30'}`}>
-                                {inspStatusLabels[ins.status] || ins.status}
+                                {inspStatusLabels[insEffectiveStatus] || insEffectiveStatus}
                               </span>
                               {isInsExpanded ? (
                                 <ChevronDown className="w-5 h-5 text-primary" />
