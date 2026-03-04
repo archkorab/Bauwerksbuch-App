@@ -34,8 +34,8 @@ const statusLabels: Record<string, string> = {
 
 const inspStatusLabels: Record<string, string> = {
   OK: "OK",
-  needs_repair: "Reparaturbedarf",
-  urgent: "Dringend",
+  needs_repair: "Leichter Mangel",
+  urgent: "Schwerer Mangel",
 };
 
 const defectStatusLabels: Record<string, string> = {
@@ -877,8 +877,8 @@ export default function ProjectDetails() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="OK">OK</SelectItem>
-                                <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
-                                <SelectItem value="urgent">Dringend</SelectItem>
+                                <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
+                                <SelectItem value="urgent">Schwerer Mangel</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1052,8 +1052,8 @@ export default function ProjectDetails() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="OK">OK</SelectItem>
-                            <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
-                            <SelectItem value="urgent">Dringend</SelectItem>
+                            <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
+                            <SelectItem value="urgent">Schwerer Mangel</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

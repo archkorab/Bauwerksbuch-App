@@ -81,8 +81,8 @@ const inspTypeLabels: Record<string, string> = {
 
 const inspStatusLabels: Record<string, string> = {
   OK: "OK",
-  needs_repair: "Reparaturbedarf",
-  urgent: "Dringend",
+  needs_repair: "Leichter Mangel",
+  urgent: "Schwerer Mangel",
 };
 
 const fristLabels: Record<string, string> = {
@@ -583,12 +583,16 @@ export default function InspectionsGlobal() {
 
       const fullNotes = bauteilNotes ? `${data.notes || ""} | Bauteilprüfung: ${bauteilNotes}`.trim() : (data.notes || "");
 
+      const hasGroberMangel = editBauteilPruefungen.some(bp => bp.maengel.some(m => m.status === "grober_mangel"));
+      const hasMangel = editBauteilPruefungen.some(bp => bp.mangel || bp.maengel.length > 0);
+      const autoStatus = hasGroberMangel ? "urgent" : hasMangel ? "needs_repair" : data.status;
+
       await updateInspection.mutateAsync({
         id: editingInspection.id,
         projectId: editingInspection.projectId,
         data: {
           date: new Date(data.date),
-          status: data.status,
+          status: autoStatus,
           type: data.type,
           notes: fullNotes || null,
         }
@@ -640,13 +644,17 @@ export default function InspectionsGlobal() {
 
       const fullNotes = bauteilNotes ? `${data.notes || ""} | Bauteilprüfung: ${bauteilNotes}`.trim() : (data.notes || "");
 
+      const hasGroberMangel = bauteilPruefungen.some(bp => bp.maengel.some(m => m.status === "grober_mangel"));
+      const hasMangel = bauteilPruefungen.some(bp => bp.mangel || bp.maengel.length > 0);
+      const autoStatus = hasGroberMangel ? "urgent" : hasMangel ? "needs_repair" : data.status;
+
       const inspection = await createInspection.mutateAsync({
         projectId,
         data: {
           projectId,
           engineerId: profile.userId,
           date: new Date(data.date),
-          status: data.status,
+          status: autoStatus,
           type: data.type,
           notes: fullNotes || null,
         }
@@ -765,8 +773,8 @@ export default function InspectionsGlobal() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="OK">OK</SelectItem>
-                      <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
-                      <SelectItem value="urgent">Dringend</SelectItem>
+                      <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
+                      <SelectItem value="urgent">Schwerer Mangel</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1015,8 +1023,8 @@ export default function InspectionsGlobal() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="OK">OK</SelectItem>
-                    <SelectItem value="needs_repair">Reparaturbedarf</SelectItem>
-                    <SelectItem value="urgent">Dringend</SelectItem>
+                    <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
+                    <SelectItem value="urgent">Schwerer Mangel</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
