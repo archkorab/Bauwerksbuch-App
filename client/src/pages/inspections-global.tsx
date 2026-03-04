@@ -38,6 +38,10 @@ const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Saum-, Hängerinnen", level: 1, ref: "2.3", defaultGegenstand: "lose Teile, Fehlstellen" },
   { label: "Kamin-, Lüftungsköpfe", level: 1, ref: "2.4", defaultGegenstand: "Standsicherheit" },
   { label: "Decken/Treppen", level: 0 },
+  { label: "Konstruktion (Decken)", level: 1, ref: "3.1", defaultGegenstand: "Zustand" },
+  { label: "Treppen, Außentreppen, Rampen, sonst. Rettungswege", level: 1, ref: "3.2", defaultGegenstand: "Zustand (Risse, Schäden an Stufen)" },
+  { label: "Geländer, Absturzsicherungen", level: 1, ref: "3.3", defaultGegenstand: "Befestigungen, Handlauf, Füllung, Steher" },
+  { label: "Sonderbauteile (Decken/Treppen)", level: 1, ref: "3.4" },
   { label: "Wände", level: 0 },
 ];
 
