@@ -1315,7 +1315,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                             {e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {e.mangel ? <span className="text-amber-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                            {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                           <td className="px-3 py-2 text-center">
                             {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
