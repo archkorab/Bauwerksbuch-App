@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 interface BauteilOption {
   label: string;
@@ -229,7 +229,7 @@ async function generateInspectionPdf(inspection: any) {
         ];
       });
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: y,
         head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vert. Prüfung"]],
         body: bauteilRows,
@@ -267,7 +267,7 @@ async function generateInspectionPdf(inspection: any) {
       d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: y,
       head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Reparatur bis"]],
       body: defectRows,
