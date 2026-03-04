@@ -1454,7 +1454,7 @@ export default function ProjectDetails() {
 function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testId?: string }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="relative">
+    <>
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -1464,16 +1464,24 @@ function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testI
         <img src={src} alt={alt} className="w-full h-full object-cover" />
       </button>
       {expanded && (
-        <div className="absolute top-0 left-12 z-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpanded(false)}>
           <img
             src={src}
             alt={alt}
-            className="max-w-xs max-h-64 rounded-lg border border-border shadow-lg object-contain cursor-pointer bg-card"
-            onClick={() => setExpanded(false)}
+            className="max-w-[90vw] max-h-[85vh] rounded-xl border-2 border-border shadow-2xl object-contain bg-card"
+            onClick={(e) => e.stopPropagation()}
             data-testid="img-expanded"
           />
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors"
+            data-testid="button-close-image"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       )}
-    </div>
+    </>
   );
 }
