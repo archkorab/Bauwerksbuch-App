@@ -43,6 +43,10 @@ const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Geländer, Absturzsicherungen", level: 1, ref: "3.3", defaultGegenstand: "Befestigungen, Handlauf, Füllung, Steher" },
   { label: "Sonderbauteile (Decken/Treppen)", level: 1, ref: "3.4" },
   { label: "Wände", level: 0 },
+  { label: "Konstruktion (Wände)", level: 1, ref: "4.1", defaultGegenstand: "Zustand" },
+  { label: "Wände Brandabschnitte", level: 1, ref: "4.2", defaultGegenstand: "Zustand (Leichtbauwand, Rohrdurchführungen)" },
+  { label: "Türen und sonst. Öffnungen Brandabschnitte", level: 1, ref: "4.3", defaultGegenstand: "Funktionskontrolle" },
+  { label: "Sonderbauteile (Wände)", level: 1, ref: "4.4" },
 ];
 
 interface BauteilMangel {
