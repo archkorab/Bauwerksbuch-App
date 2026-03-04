@@ -50,7 +50,7 @@ const statusLabels: Record<string, string> = {
 const mangelLabels: Record<string, string> = {
   kein_mangel: "Kein Mangel",
   leichter_mangel: "Leichter Mangel",
-  grober_mangel: "Grober Mangel",
+  grober_mangel: "Schwerer Mangel",
 };
 
 export default function Dashboard() {
@@ -219,7 +219,7 @@ export default function Dashboard() {
             <AlertTriangle className="w-7 h-7 text-red-500" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-grober-label">Grober Mangel</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-grober-label">Schwerer Mangel</p>
             <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-grober-count">{groberCount}</h3>
           </div>
         </div>

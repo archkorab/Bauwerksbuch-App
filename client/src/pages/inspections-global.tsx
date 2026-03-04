@@ -282,7 +282,7 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                      <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                      <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1350,7 +1350,7 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
         <td className="px-4 py-2.5 text-foreground">{defect.location}</td>
         <td className="px-4 py-2.5">
           <Badge variant={defect.status === "grober_mangel" ? "destructive" : "outline"} className={defect.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}>
-            {defect.status === "grober_mangel" ? "Grober Mangel" : "Leichter Mangel"}
+            {defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}
           </Badge>
         </td>
         <td className="px-4 py-2.5 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
@@ -1382,7 +1382,7 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
           <td className="px-4 py-2.5 text-foreground">{child.location}</td>
           <td className="px-4 py-2.5">
             <Badge variant={child.status === "grober_mangel" ? "destructive" : "outline"} className={child.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}>
-              {child.status === "grober_mangel" ? "Grober Mangel" : "Leichter Mangel"}
+              {child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}
             </Badge>
           </td>
           <td className="px-4 py-2.5 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>

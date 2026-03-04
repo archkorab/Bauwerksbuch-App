@@ -40,7 +40,7 @@ const inspStatusLabels: Record<string, string> = {
 
 const defectStatusLabels: Record<string, string> = {
   leichter_mangel: "Leichter Mangel",
-  grober_mangel: "Grober Mangel",
+  grober_mangel: "Schwerer Mangel",
 };
 
 const inspTypeLabels: Record<string, string> = {
@@ -420,7 +420,7 @@ export default function ProjectDetails() {
               <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">{project.name}</h1>
               {(() => {
                 const mangel = defectSummary?.find(s => s.projectId === projectId)?.mangelStatus || "kein_mangel";
-                const mangelLabels: Record<string, string> = { kein_mangel: "Kein Mangel", leichter_mangel: "Leichter Mangel", grober_mangel: "Grober Mangel" };
+                const mangelLabels: Record<string, string> = { kein_mangel: "Kein Mangel", leichter_mangel: "Leichter Mangel", grober_mangel: "Schwerer Mangel" };
                 return (
                   <span className={`px-3 py-1 text-xs font-bold rounded-full border uppercase tracking-widest
                     ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' : 
@@ -953,7 +953,7 @@ export default function ProjectDetails() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                                      <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                      <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -1138,7 +1138,7 @@ export default function ProjectDetails() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                                  <SelectItem value="grober_mangel">Grober Mangel</SelectItem>
+                                  <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
