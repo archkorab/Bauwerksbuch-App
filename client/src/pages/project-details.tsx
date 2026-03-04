@@ -1334,9 +1334,7 @@ export default function ProjectDetails() {
                                         <td className="px-5 py-3 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
                                         <td className="px-5 py-3">
                                           {defect.imageUrl ? (
-                                            <a href={defect.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all" data-testid={`defect-image-${defect.defectId}`}>
-                                              <img src={defect.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
-                                            </a>
+                                            <ExpandableImage src={defect.imageUrl} alt="Mangel" testId={`defect-image-${defect.defectId}`} />
                                           ) : (
                                             <span className="text-muted-foreground">–</span>
                                           )}
@@ -1375,9 +1373,7 @@ export default function ProjectDetails() {
                                           <td className="px-5 py-3 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
                                           <td className="px-5 py-3">
                                             {child.imageUrl ? (
-                                              <a href={child.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all" data-testid={`defect-image-${child.defectId}`}>
-                                                <img src={child.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
-                                              </a>
+                                              <ExpandableImage src={child.imageUrl} alt="Mangel" testId={`defect-image-${child.defectId}`} />
                                             ) : (
                                               <span className="text-muted-foreground">–</span>
                                             )}
@@ -1452,5 +1448,32 @@ export default function ProjectDetails() {
           </Tabs>
       </div>
     </Layout>
+  );
+}
+
+function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testId?: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+        data-testid={testId}
+      >
+        <img src={src} alt={alt} className="w-full h-full object-cover" />
+      </button>
+      {expanded && (
+        <div className="mt-2">
+          <img
+            src={src}
+            alt={alt}
+            className="max-w-xs max-h-64 rounded-lg border border-border shadow-md object-contain cursor-pointer"
+            onClick={() => setExpanded(false)}
+            data-testid="img-expanded"
+          />
+        </div>
+      )}
+    </div>
   );
 }

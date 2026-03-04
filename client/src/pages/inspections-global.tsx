@@ -1329,6 +1329,33 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
   );
 }
 
+function ExpandableImage({ src, alt }: { src: string; alt: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+        data-testid="button-expand-image"
+      >
+        <img src={src} alt={alt} className="w-full h-full object-cover" />
+      </button>
+      {expanded && (
+        <div className="mt-2">
+          <img
+            src={src}
+            alt={alt}
+            className="max-w-xs max-h-64 rounded-lg border border-border shadow-md object-contain cursor-pointer"
+            onClick={() => setExpanded(false)}
+            data-testid="img-expanded"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects: any[] }) {
   return (
     <>
@@ -1354,9 +1381,7 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
         <td className="px-4 py-2.5 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
         <td className="px-4 py-2.5">
           {defect.imageUrl ? (
-            <a href={defect.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
-              <img src={defect.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
-            </a>
+            <ExpandableImage src={defect.imageUrl} alt="Mangel" />
           ) : (
             <span className="text-muted-foreground">–</span>
           )}
@@ -1386,9 +1411,7 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
           <td className="px-4 py-2.5 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
           <td className="px-4 py-2.5">
             {child.imageUrl ? (
-              <a href={child.imageUrl} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all">
-                <img src={child.imageUrl} alt="Mangel" className="w-full h-full object-cover" />
-              </a>
+              <ExpandableImage src={child.imageUrl} alt="Mangel" />
             ) : (
               <span className="text-muted-foreground">–</span>
             )}
