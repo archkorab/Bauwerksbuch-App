@@ -1231,7 +1231,7 @@ export default function ProjectDetails() {
                     const insGroberCount = ins.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
                     const insLeichterCount = ins.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
                     const insHasBauteilMangel = ins.notes?.includes("- Mangel") || false;
-                    const insEffectiveStatus = insGroberCount > 0 ? "urgent" : (insLeichterCount > 0 || insHasBauteilMangel) ? "needs_repair" : ins.status;
+                    const insEffectiveStatus = (insGroberCount > 0 || ins.status === "urgent") ? "urgent" : (insLeichterCount > 0 || insHasBauteilMangel || ins.status === "needs_repair") ? "needs_repair" : "OK";
                     
                     return (
                       <div key={ins.id} className={`bg-card border rounded-2xl shadow-sm overflow-hidden transition-all ${isInsExpanded ? 'border-primary/40' : 'border-border'}`} data-testid={`inspection-card-${ins.id}`}>

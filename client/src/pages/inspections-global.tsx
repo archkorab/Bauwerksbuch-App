@@ -878,7 +878,7 @@ export default function InspectionsGlobal() {
               const groberCount = ins.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
               const leichterCount = ins.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
               const hasBauteilMangel = ins.notes?.includes("- Mangel") || false;
-              const effectiveStatus = groberCount > 0 ? "urgent" : (leichterCount > 0 || hasBauteilMangel) ? "needs_repair" : ins.status;
+              const effectiveStatus = (groberCount > 0 || ins.status === "urgent") ? "urgent" : (leichterCount > 0 || hasBauteilMangel || ins.status === "needs_repair") ? "needs_repair" : "OK";
               const isExpanded = expandedId === ins.id;
 
               return (
@@ -1131,7 +1131,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
   const groberCount = inspection.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
   const leichterCount = inspection.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
   const hasBauteilMangel = inspection.notes?.includes("- Mangel") || false;
-  const effectiveStatus = groberCount > 0 ? "urgent" : (leichterCount > 0 || hasBauteilMangel) ? "needs_repair" : inspection.status;
+  const effectiveStatus = (groberCount > 0 || inspection.status === "urgent") ? "urgent" : (leichterCount > 0 || hasBauteilMangel || inspection.status === "needs_repair") ? "needs_repair" : "OK";
 
   return (
     <div className="border-t border-border bg-muted/20 p-5 space-y-5" data-testid={`inspection-detail-${inspection.id}`}>
