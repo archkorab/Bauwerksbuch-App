@@ -283,7 +283,7 @@ async function generateInspectionPdf(inspection: any) {
 
       autoTable(doc, {
         startY: y,
-        head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vert. Prüfung"]],
+        head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vertiefte Prüfung"]],
         body: bauteilRows,
         margin: { left: margin, right: margin },
         styles: { fontSize: 8, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
@@ -1590,7 +1590,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                       <th className="text-left px-3 py-2 font-semibold">Gegenstand</th>
                       <th className="text-center px-3 py-2 font-semibold w-20">Geprüft</th>
                       <th className="text-center px-3 py-2 font-semibold w-20">Mangel</th>
-                      <th className="text-center px-3 py-2 font-semibold w-28">Vert. Prüfung</th>
+                      <th className="text-center px-3 py-2 font-semibold w-28">Vertiefte Prüfung</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
