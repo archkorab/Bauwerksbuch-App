@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoPath from "@assets/logo_1772640036077.png";
 
 interface BauteilOption {
   label: string;
@@ -111,35 +112,72 @@ const fristLabels: Record<string, string> = {
   "1_jahr": "1 Jahr",
 };
 
+const PDF_COLORS = {
+  primary: [97, 97, 158] as [number, number, number],
+  foreground: [33, 33, 49] as [number, number, number],
+  accent: [195, 93, 87] as [number, number, number],
+  muted: [237, 237, 243] as [number, number, number],
+  border: [210, 210, 225] as [number, number, number],
+  mutedFg: [120, 120, 145] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  ok: [16, 185, 129] as [number, number, number],
+  amber: [217, 119, 6] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+};
+
+async function loadLogoDataUrl(): Promise<string> {
+  const response = await fetch(logoPath);
+  const blob = await response.blob();
+  return new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function generateInspectionPdf(inspection: any) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
-  let y = 20;
+  let y = 15;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("Archkorab ZT GmbH", margin, y);
-  y += 8;
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100);
-  doc.text("Bauwerksbuch - Prüfungsbericht", margin, y);
-  doc.setTextColor(0);
-  y += 4;
-  doc.setDrawColor(200);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 10;
+  let logoDataUrl: string | null = null;
+  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+
+  function drawHeader() {
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", margin, 8, 65, 16);
+    }
+    doc.setDrawColor(...PDF_COLORS.primary);
+    doc.setLineWidth(0.6);
+    doc.line(margin, 27, pageWidth - margin, 27);
+  }
+
+  function drawFooter(pageNum: number, totalPages: number) {
+    const footerY = pageHeight - 10;
+    doc.setDrawColor(...PDF_COLORS.border);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.mutedFg);
+    doc.text("Bauwerksbuch - Arch Dipl. Ing. Vera Korab ZT GmbH", margin, footerY);
+    doc.text(`Seite ${pageNum} von ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
+  }
+
+  drawHeader();
+  y = 33;
 
   const groberCount = inspection.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
   const leichterCount = inspection.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
   const hasBauteilMangel = inspection.notes?.includes("- Mangel") || false;
   const effectiveStatus = (groberCount > 0 || inspection.status === "urgent") ? "Schwerer Mangel" : (leichterCount > 0 || hasBauteilMangel || inspection.status === "needs_repair") ? "Leichter Mangel" : "OK";
 
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(inspTypeLabels[inspection.type] || "Prüfung", margin, y);
-  y += 8;
+  doc.setTextColor(...PDF_COLORS.foreground);
+  doc.text(`${inspTypeLabels[inspection.type] || "Prüfung"} - Prüfungsbericht`, margin, y);
+  y += 9;
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -149,26 +187,38 @@ async function generateInspectionPdf(inspection: any) {
   ];
   if (inspection.projectAddress) details.push(["Adresse", inspection.projectAddress]);
   if (inspection.engineer) details.push(["Ingenieur", `${inspection.engineer.firstName} ${inspection.engineer.lastName}`]);
-  details.push(["Status", effectiveStatus]);
 
   for (const [label, value] of details) {
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PDF_COLORS.mutedFg);
     doc.text(`${label}:`, margin, y);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(...PDF_COLORS.foreground);
     doc.text(value, margin + 30, y);
     y += 6;
   }
-  y += 4;
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  doc.text("Status:", margin, y);
+  const statusColor = effectiveStatus === "OK" ? PDF_COLORS.ok : effectiveStatus === "Schwerer Mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
+  doc.setTextColor(...statusColor);
+  doc.setFont("helvetica", "bold");
+  doc.text(effectiveStatus, margin + 30, y);
+  doc.setTextColor(...PDF_COLORS.foreground);
+  y += 10;
 
   const notes = inspection.notes || "";
   const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
   if (userNotes) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
+    doc.setTextColor(...PDF_COLORS.primary);
     doc.text("Anmerkungen", margin, y);
     y += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
+    doc.setTextColor(...PDF_COLORS.foreground);
     const lines = doc.splitTextToSize(userNotes, pageWidth - 2 * margin);
     doc.text(lines, margin, y);
     y += lines.length * 5 + 6;
@@ -211,14 +261,16 @@ async function generateInspectionPdf(inspection: any) {
         }
       }
 
-      if (y > 240) { doc.addPage(); y = 20; }
+      if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(...PDF_COLORS.primary);
       doc.text("Bauteil Prüfung", margin, y);
+      doc.setTextColor(...PDF_COLORS.foreground);
       y += 2;
 
       const bauteilRows = displayEntries.map((e: any) => {
-        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } }];
+        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
         return [
           e.ref,
           e.level === 1 ? `  ${e.name}` : e.name,
@@ -234,13 +286,27 @@ async function generateInspectionPdf(inspection: any) {
         head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vert. Prüfung"]],
         body: bauteilRows,
         margin: { left: margin, right: margin },
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [60, 60, 60], textColor: 255, fontStyle: "bold" },
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 248, 252] },
         columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
         didParseCell: (data: any) => {
-          if (data.section === "body" && data.column.index === 4 && data.cell.raw === "Ja") {
-            data.cell.styles.textColor = [220, 38, 38];
-            data.cell.styles.fontStyle = "bold";
+          if (data.section === "body") {
+            if (data.column.index === 3 && data.cell.raw === "Ja") {
+              data.cell.styles.textColor = PDF_COLORS.ok;
+              data.cell.styles.fontStyle = "bold";
+            }
+            if (data.column.index === 4 && data.cell.raw === "Ja") {
+              data.cell.styles.textColor = PDF_COLORS.red;
+              data.cell.styles.fontStyle = "bold";
+            }
+            if (data.column.index === 5 && data.cell.raw === "Ja") {
+              data.cell.styles.textColor = PDF_COLORS.primary;
+              data.cell.styles.fontStyle = "bold";
+            }
+            if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
           }
         },
       });
@@ -250,10 +316,12 @@ async function generateInspectionPdf(inspection: any) {
 
   const defects = inspection.defects || [];
   if (defects.length > 0) {
-    if (y > 240) { doc.addPage(); y = 20; }
+    if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
+    doc.setTextColor(...PDF_COLORS.primary);
     doc.text(`Mängel (${defects.length})`, margin, y);
+    doc.setTextColor(...PDF_COLORS.foreground);
     y += 2;
 
     const defectRows = defects.map((d: any) => [
@@ -269,19 +337,20 @@ async function generateInspectionPdf(inspection: any) {
 
     autoTable(doc, {
       startY: y,
-      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Reparatur bis"]],
+      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]],
       body: defectRows,
       margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [60, 60, 60], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+      headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 248, 252] },
       columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
       didParseCell: (data: any) => {
         if (data.section === "body" && data.column.index === 5) {
           if (data.cell.raw === "Schwerer Mangel") {
-            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.textColor = PDF_COLORS.red;
             data.cell.styles.fontStyle = "bold";
           } else if (data.cell.raw === "Leichter Mangel") {
-            data.cell.styles.textColor = [217, 119, 6];
+            data.cell.styles.textColor = PDF_COLORS.amber;
           }
         }
       },
@@ -299,9 +368,10 @@ async function generateInspectionPdf(inspection: any) {
           reader.onload = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-        if (y > 220) { doc.addPage(); y = 20; }
+        if (y > 220) { doc.addPage(); drawHeader(); y = 33; }
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
+        doc.setTextColor(...PDF_COLORS.foreground);
         doc.text(`Foto: ${defect.defectId}`, margin, y);
         y += 4;
         doc.addImage(dataUrl, "JPEG", margin, y, 60, 45);
@@ -313,12 +383,9 @@ async function generateInspectionPdf(inspection: any) {
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text(`Seite ${i} von ${totalPages}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 10, { align: "right" });
-    doc.text("Archkorab ZT GmbH - Bauwerksbuch", margin, doc.internal.pageSize.getHeight() - 10);
-    doc.setTextColor(0);
+    drawFooter(i, totalPages);
   }
+  doc.setTextColor(0);
 
   const projectName = (inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, "_");
   const dateStr = format(new Date(inspection.date), "yyyy-MM-dd");
