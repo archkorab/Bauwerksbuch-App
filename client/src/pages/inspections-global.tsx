@@ -637,6 +637,7 @@ export default function InspectionsGlobal() {
 
       for (const bp of editBauteilPruefungen) {
         for (const m of bp.maengel) {
+          if (!m.defectId || !m.dateFound) continue;
           const defects = editingInspection.defects || [];
           const matchingDefect = defects.find((d: any) => d.defectId === m.defectId);
           if (matchingDefect?.id) {
@@ -659,12 +660,34 @@ export default function InspectionsGlobal() {
               formData.append('image', m.imageFile);
               await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
             }
+          } else {
+            const defect = await createDefect.mutateAsync({
+              inspectionId: editingInspection.id,
+              projectId: editingInspection.projectId,
+              data: {
+                inspectionId: editingInspection.id,
+                defectId: m.defectId,
+                bauteil: getParentBauteil(bp.bauteil) ? [getParentBauteil(bp.bauteil)!, bp.bauteil] : [bp.bauteil],
+                dateFound: new Date(m.dateFound),
+                description: m.description || bp.bauteil,
+                location: m.location || "–",
+                status: m.status as "leichter_mangel" | "grober_mangel",
+                frist: (m.frist || null) as any,
+                repairDue: m.repairDue ? new Date(m.repairDue) : null,
+              }
+            });
+            if (m.imageFile && defect?.id) {
+              const formData = new FormData();
+              formData.append('image', m.imageFile);
+              await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+            }
           }
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/inspections"] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${editingInspection.projectId}/inspections`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
       setEditDialogOpen(false);
       setEditingInspection(null);
     } catch (error) {
