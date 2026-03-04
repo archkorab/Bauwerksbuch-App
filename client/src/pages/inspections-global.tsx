@@ -6,7 +6,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 interface BauteilOption {
   label: string;
@@ -108,6 +110,220 @@ const fristLabels: Record<string, string> = {
   "6_monate": "6 Monate",
   "1_jahr": "1 Jahr",
 };
+
+async function generateInspectionPdf(inspection: any) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 15;
+  let y = 20;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("Archkorab ZT GmbH", margin, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100);
+  doc.text("Bauwerksbuch - Prüfungsbericht", margin, y);
+  doc.setTextColor(0);
+  y += 4;
+  doc.setDrawColor(200);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
+
+  const groberCount = inspection.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
+  const leichterCount = inspection.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
+  const hasBauteilMangel = inspection.notes?.includes("- Mangel") || false;
+  const effectiveStatus = (groberCount > 0 || inspection.status === "urgent") ? "Schwerer Mangel" : (leichterCount > 0 || hasBauteilMangel || inspection.status === "needs_repair") ? "Leichter Mangel" : "OK";
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(inspTypeLabels[inspection.type] || "Prüfung", margin, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const details: [string, string][] = [
+    ["Datum", format(new Date(inspection.date), "dd.MM.yyyy")],
+    ["Projekt", inspection.projectName || `Projekt #${inspection.projectId}`],
+  ];
+  if (inspection.projectAddress) details.push(["Adresse", inspection.projectAddress]);
+  if (inspection.engineer) details.push(["Ingenieur", `${inspection.engineer.firstName} ${inspection.engineer.lastName}`]);
+  details.push(["Status", effectiveStatus]);
+
+  for (const [label, value] of details) {
+    doc.setFont("helvetica", "bold");
+    doc.text(`${label}:`, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(value, margin + 30, y);
+    y += 6;
+  }
+  y += 4;
+
+  const notes = inspection.notes || "";
+  const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
+  if (userNotes) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Anmerkungen", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(userNotes, pageWidth - 2 * margin);
+    doc.text(lines, margin, y);
+    y += lines.length * 5 + 6;
+  }
+
+  if (notes.includes("| Bauteilprüfung: ")) {
+    const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+    const entries = bauteilPart.split("; ").map((entry: string) => {
+      const nameMatch = entry.match(/^\[(.+?)\]/);
+      if (!nameMatch) return null;
+      const name = nameMatch[1];
+      const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
+      const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+      return {
+        name,
+        ref: opt?.ref || "",
+        level: opt?.level ?? 0,
+        geprueft: entry.includes("geprüft"),
+        mangel: entry.includes("Mangel"),
+        gegenstand: gegenstandMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
+        vertieftePruefung: entry.includes("vertiefte Prüfung"),
+      };
+    }).filter(Boolean) as any[];
+
+    if (entries.length > 0) {
+      const headerNames = new Set<string>();
+      for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
+        if (BAUTEIL_OPTIONS[i].level === 0 && BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
+      }
+      const entryMap = new Map(entries.map((e: any) => [e.name, e]));
+      const displayEntries: any[] = [];
+      for (const opt of BAUTEIL_OPTIONS) {
+        if (headerNames.has(opt.label)) {
+          const hasChild = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label));
+          if (hasChild || entryMap.has(opt.label)) {
+            displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, isHeader: true });
+          }
+        } else if (entryMap.has(opt.label)) {
+          displayEntries.push({ ...entryMap.get(opt.label), isHeader: false });
+        }
+      }
+
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Bauteil Prüfung", margin, y);
+      y += 2;
+
+      const bauteilRows = displayEntries.map((e: any) => {
+        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: [240, 240, 240] as [number, number, number] } }];
+        return [
+          e.ref,
+          e.level === 1 ? `  ${e.name}` : e.name,
+          e.gegenstand,
+          e.geprueft ? "Ja" : "Nein",
+          e.mangel ? "Ja" : "Nein",
+          e.vertieftePruefung ? "Ja" : "Nein",
+        ];
+      });
+
+      (doc as any).autoTable({
+        startY: y,
+        head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vert. Prüfung"]],
+        body: bauteilRows,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [60, 60, 60], textColor: 255, fontStyle: "bold" },
+        columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
+        didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 4 && data.cell.raw === "Ja") {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
+  const defects = inspection.defects || [];
+  if (defects.length > 0) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(`Mängel (${defects.length})`, margin, y);
+    y += 2;
+
+    const defectRows = defects.map((d: any) => [
+      d.defectId,
+      d.bauteil?.join(", ") || "–",
+      format(new Date(d.dateFound), "dd.MM.yyyy"),
+      d.description,
+      d.location,
+      d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
+      d.frist ? fristLabels[d.frist] || d.frist : "–",
+      d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
+    ]);
+
+    (doc as any).autoTable({
+      startY: y,
+      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Reparatur bis"]],
+      body: defectRows,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [60, 60, 60], textColor: 255, fontStyle: "bold" },
+      columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
+      didParseCell: (data: any) => {
+        if (data.section === "body" && data.column.index === 5) {
+          if (data.cell.raw === "Schwerer Mangel") {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = "bold";
+          } else if (data.cell.raw === "Leichter Mangel") {
+            data.cell.styles.textColor = [217, 119, 6];
+          }
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  }
+
+  for (const defect of defects) {
+    if (defect.imageUrl) {
+      try {
+        const response = await fetch(defect.imageUrl);
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        if (y > 220) { doc.addPage(); y = 20; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text(`Foto: ${defect.defectId}`, margin, y);
+        y += 4;
+        doc.addImage(dataUrl, "JPEG", margin, y, 60, 45);
+        y += 50;
+      } catch {}
+    }
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Seite ${i} von ${totalPages}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 10, { align: "right" });
+    doc.text("Archkorab ZT GmbH - Bauwerksbuch", margin, doc.internal.pageSize.getHeight() - 10);
+    doc.setTextColor(0);
+  }
+
+  const projectName = (inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, "_");
+  const dateStr = format(new Date(inspection.date), "yyyy-MM-dd");
+  doc.save(`Pruefung_${projectName}_${dateStr}.pdf`);
+}
 
 interface BauteilRowProps {
   bp: BauteilPruefung;
@@ -1005,6 +1221,17 @@ export default function InspectionsGlobal() {
                           'text-amber-600 border-amber-500/30'}`}>
                         {inspStatusLabels[effectiveStatus] || effectiveStatus}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={(e) => { e.stopPropagation(); generateInspectionPdf(ins); }}
+                        title="PDF erstellen"
+                        data-testid={`button-pdf-inspection-${ins.id}`}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
