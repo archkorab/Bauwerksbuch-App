@@ -324,60 +324,65 @@ async function generateInspectionPdf(inspection: any) {
     doc.setTextColor(...PDF_COLORS.foreground);
     y += 2;
 
-    const defectRows = defects.map((d: any) => [
-      d.defectId,
-      d.bauteil?.join(", ") || "–",
-      format(new Date(d.dateFound), "dd.MM.yyyy"),
-      d.description,
-      d.location,
-      d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
-      d.frist ? fristLabels[d.frist] || d.frist : "–",
-      d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
-    ]);
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const defectRow = [[
+        d.defectId,
+        d.bauteil?.join(", ") || "–",
+        format(new Date(d.dateFound), "dd.MM.yyyy"),
+        d.description,
+        d.location,
+        d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
+        d.frist ? fristLabels[d.frist] || d.frist : "–",
+        d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
+      ]];
 
-    autoTable(doc, {
-      startY: y,
-      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]],
-      body: defectRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
-      headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [248, 248, 252] },
-      columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
-      didParseCell: (data: any) => {
-        if (data.section === "body" && data.column.index === 5) {
-          if (data.cell.raw === "Schwerer Mangel") {
-            data.cell.styles.textColor = PDF_COLORS.red;
-            data.cell.styles.fontStyle = "bold";
-          } else if (data.cell.raw === "Leichter Mangel") {
-            data.cell.styles.textColor = PDF_COLORS.amber;
+      autoTable(doc, {
+        startY: y,
+        head: di === 0 ? [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]] : undefined,
+        body: defectRow,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 248, 252] },
+        columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
+        showHead: di === 0 ? "firstPage" : false,
+        didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 5) {
+            if (data.cell.raw === "Schwerer Mangel") {
+              data.cell.styles.textColor = PDF_COLORS.red;
+              data.cell.styles.fontStyle = "bold";
+            } else if (data.cell.raw === "Leichter Mangel") {
+              data.cell.styles.textColor = PDF_COLORS.amber;
+            }
           }
-        }
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 8;
-  }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY;
 
-  for (const defect of defects) {
-    if (defect.imageUrl) {
-      try {
-        const response = await fetch(defect.imageUrl);
-        const blob = await response.blob();
-        const dataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        if (y > 220) { doc.addPage(); drawHeader(); y = 33; }
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(...PDF_COLORS.foreground);
-        doc.text(`Foto: ${defect.defectId}`, margin, y);
-        y += 4;
-        doc.addImage(dataUrl, "JPEG", margin, y, 60, 45);
-        y += 50;
-      } catch {}
+      if (d.imageUrl) {
+        try {
+          const response = await fetch(d.imageUrl);
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          if (y + 50 > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+          y += 3;
+          doc.addImage(dataUrl, "JPEG", margin + 2, y, 55, 40);
+          doc.setFontSize(7);
+          doc.setTextColor(...PDF_COLORS.mutedFg);
+          doc.text(`Foto: ${d.defectId}`, margin + 60, y + 5);
+          doc.setTextColor(...PDF_COLORS.foreground);
+          y += 44;
+        } catch {}
+      }
+
+      y += 2;
     }
+    y += 4;
   }
 
   const totalPages = doc.getNumberOfPages();
