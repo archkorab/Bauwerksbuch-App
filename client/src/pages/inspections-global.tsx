@@ -49,6 +49,15 @@ const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Sonderbauteile (Wände)", level: 1, ref: "4.4" },
 ];
 
+function getParentBauteil(label: string): string | null {
+  const idx = BAUTEIL_OPTIONS.findIndex(b => b.label === label);
+  if (idx <= 0) return null;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (BAUTEIL_OPTIONS[i].level === 0) return BAUTEIL_OPTIONS[i].label;
+  }
+  return null;
+}
+
 interface BauteilMangel {
   defectId: string;
   description: string;
@@ -620,6 +629,7 @@ export default function InspectionsGlobal() {
                 id: matchingDefect.id,
                 projectId: editingInspection.projectId,
                 data: {
+                  bauteil: getParentBauteil(bp.bauteil) ? [getParentBauteil(bp.bauteil)!, bp.bauteil] : [bp.bauteil],
                   status: m.status as "leichter_mangel" | "grober_mangel",
                   description: m.description,
                   location: m.location,
@@ -695,7 +705,7 @@ export default function InspectionsGlobal() {
             data: {
               inspectionId: inspection.id,
               defectId: m.defectId,
-              bauteil: [bp.bauteil],
+              bauteil: getParentBauteil(bp.bauteil) ? [getParentBauteil(bp.bauteil)!, bp.bauteil] : [bp.bauteil],
               dateFound: new Date(m.dateFound),
               description: m.description,
               location: m.location,
