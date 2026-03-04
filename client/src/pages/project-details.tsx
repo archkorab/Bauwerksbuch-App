@@ -64,22 +64,18 @@ interface DefectEntry {
 }
 
 const fristLabels: Record<string, string> = {
-  "1_woche": "1 Woche",
-  "2_wochen": "2 Wochen",
-  "1_monat": "1 Monat",
-  "2_monate": "2 Monate",
+  "umgehend": "Umgehend",
   "6_monate": "6 Monate",
+  "1_jahr": "1 Jahr",
 };
 
 function calcRepairDue(dateFound: string, frist: string): string {
   if (!dateFound || !frist) return "";
   const d = new Date(dateFound);
   switch (frist) {
-    case "1_woche": d.setDate(d.getDate() + 7); break;
-    case "2_wochen": d.setDate(d.getDate() + 14); break;
-    case "1_monat": d.setMonth(d.getMonth() + 1); break;
-    case "2_monate": d.setMonth(d.getMonth() + 2); break;
+    case "umgehend": break;
     case "6_monate": d.setMonth(d.getMonth() + 6); break;
+    case "1_jahr": d.setFullYear(d.getFullYear() + 1); break;
   }
   return d.toISOString().split("T")[0];
 }
