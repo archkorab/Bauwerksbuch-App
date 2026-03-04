@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
-import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection, useUpdateDefect } from "@/hooks/use-inspections";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
@@ -367,6 +367,7 @@ export default function InspectionsGlobal() {
   const { data: profile } = useProfile();
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
+  const updateDefect = useUpdateDefect();
   const updateInspection = useUpdateInspection();
   const deleteInspection = useDeleteInspection();
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -600,13 +601,27 @@ export default function InspectionsGlobal() {
 
       for (const bp of editBauteilPruefungen) {
         for (const m of bp.maengel) {
-          if (!m.imageFile) continue;
           const defects = editingInspection.defects || [];
           const matchingDefect = defects.find((d: any) => d.defectId === m.defectId);
           if (matchingDefect?.id) {
-            const formData = new FormData();
-            formData.append('image', m.imageFile);
-            await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+            if (matchingDefect.status !== m.status || matchingDefect.description !== m.description || matchingDefect.location !== m.location || matchingDefect.frist !== (m.frist || null)) {
+              await updateDefect.mutateAsync({
+                id: matchingDefect.id,
+                projectId: editingInspection.projectId,
+                data: {
+                  status: m.status as "leichter_mangel" | "grober_mangel",
+                  description: m.description,
+                  location: m.location,
+                  frist: (m.frist || null) as any,
+                  repairDue: m.repairDue ? new Date(m.repairDue) : null,
+                },
+              });
+            }
+            if (m.imageFile) {
+              const formData = new FormData();
+              formData.append('image', m.imageFile);
+              await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+            }
           }
         }
       }
