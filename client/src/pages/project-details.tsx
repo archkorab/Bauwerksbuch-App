@@ -274,7 +274,12 @@ async function generateInspectionPdf(inspection: any) {
 
       const getImgBlockH = (di: number) => {
         const imgs = defectImagesList[di] || [];
-        return imgs.length ? Math.ceil(imgs.length / IMGS_PER_ROW) * (IMG_H + IMG_GAP) + IMG_LABEL_H + 4 : 0;
+        if (!imgs.length) return 0;
+        const dims = defectImageDims[di] || [];
+        const hasLandscape = dims.some(d => (d.w || 1) >= (d.h || 1));
+        const hasPortrait = dims.some(d => (d.h || 1) > (d.w || 1));
+        const rows = (hasLandscape ? 1 : 0) + (hasPortrait ? 1 : 0);
+        return rows * (IMG_H + IMG_GAP) + IMG_LABEL_H + 4;
       };
 
       const bauteilRows: any[] = [];
@@ -380,17 +385,25 @@ async function generateInspectionPdf(inspection: any) {
             doc.setFontSize(7);
             doc.setTextColor(...PDF_COLORS.mutedFg);
             doc.text(`Fotos: ${defectsInOrder[di].defectId}`, sx, imgStartY + IMG_LABEL_H - 2);
+            const imgDims = defectImageDims[di] || [];
+            const landscape: {img: string, dim: {w: number, h: number}}[] = [];
+            const portrait: {img: string, dim: {w: number, h: number}}[] = [];
             for (let ii = 0; ii < imgList.length; ii++) {
-              const cellX = sx + (ii % IMGS_PER_ROW) * (IMG_W + IMG_GAP);
-              const cellY = imgStartY + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
-              const dim = (defectImageDims[di] || [])[ii] || { w: 4, h: 3 };
-              const ratio = dim.w / (dim.h || 1);
-              let drawW = IMG_W, drawH = IMG_W / ratio;
-              if (drawH > IMG_H) { drawH = IMG_H; drawW = IMG_H * ratio; }
-              const offX = (IMG_W - drawW) / 2;
-              const offY = (IMG_H - drawH) / 2;
-              doc.addImage(imgList[ii], "JPEG", cellX + offX, cellY + offY, drawW, drawH);
+              const dim = imgDims[ii] || { w: 4, h: 3 };
+              (dim.h > dim.w ? portrait : landscape).push({ img: imgList[ii], dim });
             }
+            const drawRow = (group: {img: string, dim: {w: number, h: number}}[], rowY: number) => {
+              group.forEach(({ img, dim }, ii) => {
+                const ratio = dim.w / (dim.h || 1);
+                let drawW = IMG_W, drawH = IMG_W / ratio;
+                if (drawH > IMG_H) { drawH = IMG_H; drawW = IMG_H * ratio; }
+                const cellX = sx + ii * (IMG_W + IMG_GAP);
+                doc.addImage(img, "JPEG", cellX + (IMG_W - drawW) / 2, rowY + (IMG_H - drawH) / 2, drawW, drawH);
+              });
+            };
+            let rowY = imgStartY + IMG_LABEL_H;
+            if (landscape.length) { drawRow(landscape, rowY); rowY += IMG_H + IMG_GAP; }
+            if (portrait.length) { drawRow(portrait, rowY); }
           }
         },
       });
