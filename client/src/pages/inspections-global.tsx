@@ -178,7 +178,7 @@ async function generateInspectionPdf(inspection: any) {
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...PDF_COLORS.foreground);
-  doc.text(`${inspTypeLabels[inspection.type] || "Prüfung"} - Prüfungsbericht`, margin, y);
+  doc.text(`${inspTypeLabels[inspection.type] || "Prüfung"} - Überprüfung laut §128a der Bauordnung für Wien`, margin, y);
   y += 9;
 
   doc.setFontSize(10);
