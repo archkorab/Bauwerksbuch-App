@@ -337,6 +337,7 @@ export default function ProjectDetails() {
   const [editDefectEntries, setEditDefectEntries] = useState<(DefectEntry & { existingId?: number })[]>([]);
   const [editInspSubmitting, setEditInspSubmitting] = useState(false);
   const [deletedDefectIds, setDeletedDefectIds] = useState<number[]>([]);
+  const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>([]);
 
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
     BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }))
@@ -534,27 +535,125 @@ export default function ProjectDetails() {
     }
   };
 
+  const updateEditBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, i) => i === index ? { ...bp, [field]: value } : bp));
+  };
+
+  const addEditCustomBauteil = () => {
+    setEditBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }]);
+  };
+
+  const removeEditBauteilPruefung = (index: number) => {
+    setEditBauteilPruefungen(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addEditMangelToBauteil = (bauteilIndex: number) => {
+    setEditBauteilPruefungen(prev => {
+      const bp = prev[bauteilIndex];
+      const opt = BAUTEIL_OPTIONS.find(o => o.label === bp.bauteil);
+      const ref = opt?.ref || "";
+      const nextNum = bp.maengel.length + 1;
+      const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
+      const inspDate = watchEditInsp("date") || new Date().toISOString().split("T")[0];
+      return prev.map((b, i) => i === bauteilIndex
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "" }] }
+        : b
+      );
+    });
+  };
+
+  const updateEditMangel = (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => {
+        if (mi !== mangelIndex) return m;
+        const newM = { ...m, [field]: value };
+        if (field === "dateFound" || field === "frist") {
+          newM.repairDue = calcRepairDue(
+            field === "dateFound" ? value : m.dateFound,
+            field === "frist" ? value : m.frist
+          );
+        }
+        return newM;
+      });
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeEditMangel = (bauteilIndex: number, mangelIndex: number) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const newMaengel = bp.maengel.filter((_, mi) => mi !== mangelIndex);
+      return { ...bp, maengel: newMaengel, mangel: newMaengel.length > 0 };
+    }));
+  };
+
+  const updateEditMangelFile = (bauteilIndex: number, mangelIndex: number, file: File | null) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFile: file, imageUrl: file ? undefined : m.imageUrl } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
+    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
+    const notes = ins.notes || "";
+    if (notes.includes("| Bauteilprüfung: ")) {
+      const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+      const entries = bauteilPart.split("; ");
+      for (const entry of entries) {
+        const match = entry.match(/^\[(.+?)\]/);
+        if (!match) continue;
+        const name = match[1];
+        const bp = base.find(b => b.bauteil === name);
+        if (!bp) continue;
+        const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+        if (gegenstandMatch) bp.artDesMangels = gegenstandMatch[1].trim();
+        if (entry.includes("geprüft")) bp.geprueft = true;
+        if (entry.includes("Mangel")) {
+          bp.mangel = true;
+          if (!gegenstandMatch) {
+            const legacyMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+            if (legacyMatch) bp.artDesMangels = legacyMatch[1].trim();
+          }
+        }
+        if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
+      }
+    }
+    const defects = ins.defects || [];
+    for (const d of defects) {
+      const bauteilNames: string[] = d.bauteil || [];
+      const targetName = bauteilNames[0];
+      if (!targetName) continue;
+      const bp = base.find(b => b.bauteil === targetName);
+      if (!bp) continue;
+      bp.mangel = true;
+      bp.maengel.push({
+        defectId: d.defectId || "",
+        description: d.description || "",
+        location: d.location || "",
+        status: d.status || "leichter_mangel",
+        dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
+        frist: d.frist || "",
+        repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
+        imageUrl: d.imageUrl || "",
+      });
+    }
+    return base;
+  };
+
   const openEditInspection = (ins: any) => {
     setEditingInspection(ins);
+    const userNotes = ins.notes?.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : (ins.notes || "");
     resetEditInspForm({
       date: ins.date ? format(new Date(ins.date), 'yyyy-MM-dd') : "",
       status: ins.status || "OK",
       type: (ins as any).type || "erstpruefung",
-      notes: ins.notes || "",
+      notes: userNotes,
     });
-    const existingDefects = (ins.defects || []).map((d: any) => ({
-      existingId: d.id,
-      defectId: d.defectId,
-      bauteil: d.bauteil || [],
-      dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
-      description: d.description,
-      location: d.location,
-      status: d.status,
-      frist: d.frist || "",
-      repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
-      imageUrl: d.imageUrl || "",
-    }));
-    setEditDefectEntries(existingDefects);
+    setEditBauteilPruefungen(buildEditBauteilState(ins));
+    setEditDefectEntries([]);
     setDeletedDefectIds([]);
     setEditInspDialogOpen(true);
   };
@@ -569,14 +668,32 @@ export default function ProjectDetails() {
     if (!editingInspection) return;
     setEditInspSubmitting(true);
     try {
+      const bauteilNotes = editBauteilPruefungen
+        .filter(bp => bp.geprueft || bp.mangel || bp.vertieftePruefung)
+        .map(bp => {
+          const parts = [`[${bp.bauteil}]`];
+          if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
+          if (bp.geprueft) parts.push("geprüft");
+          if (bp.mangel) parts.push("Mangel");
+          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          return parts.join(" - ");
+        })
+        .join("; ");
+
+      const fullNotes = bauteilNotes ? `${data.notes || ""} | Bauteilprüfung: ${bauteilNotes}`.trim() : (data.notes || "");
+
+      const hasGroberMangel = editBauteilPruefungen.some(bp => bp.maengel.some(m => m.status === "grober_mangel"));
+      const hasMangel = editBauteilPruefungen.some(bp => bp.mangel || bp.maengel.length > 0);
+      const autoStatus = hasGroberMangel ? "urgent" : hasMangel ? "needs_repair" : data.status;
+
       await updateInspection.mutateAsync({
         id: editingInspection.id,
         projectId,
         data: {
           date: new Date(data.date),
-          status: data.status,
+          status: autoStatus,
           type: data.type,
-          notes: data.notes || null,
+          notes: fullNotes || null,
         }
       });
 
@@ -584,48 +701,51 @@ export default function ProjectDetails() {
         await deleteDefect.mutateAsync({ id, projectId });
       }
 
-      for (const entry of editDefectEntries) {
-        if (!entry.defectId || !entry.dateFound || !entry.description || !entry.location) continue;
-        if (entry.existingId) {
-          await updateDefect.mutateAsync({
-            id: entry.existingId,
-            projectId,
-            data: {
-              defectId: entry.defectId,
-              bauteil: entry.bauteil.length > 0 ? entry.bauteil : null,
-              dateFound: new Date(entry.dateFound),
-              description: entry.description,
-              location: entry.location,
-              status: entry.status as "leichter_mangel" | "grober_mangel",
-              frist: (entry.frist || null) as any,
-              repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
+      for (const bp of editBauteilPruefungen) {
+        for (const m of bp.maengel) {
+          if (!m.defectId || !m.dateFound) continue;
+          const existingDefect = editingInspection.defects?.find((d: any) => d.defectId === m.defectId);
+          if (existingDefect) {
+            await updateDefect.mutateAsync({
+              id: existingDefect.id,
+              projectId,
+              data: {
+                defectId: m.defectId,
+                bauteil: [bp.bauteil],
+                dateFound: new Date(m.dateFound),
+                description: m.description,
+                location: m.location,
+                status: m.status as "leichter_mangel" | "grober_mangel",
+                frist: (m.frist || null) as any,
+                repairDue: m.repairDue ? new Date(m.repairDue) : null,
+              }
+            });
+            if (m.imageFile) {
+              const formData = new FormData();
+              formData.append('image', m.imageFile);
+              await fetch(`/api/defects/${existingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
             }
-          });
-          if (entry.imageFile) {
-            const formData = new FormData();
-            formData.append('image', entry.imageFile);
-            await fetch(`/api/defects/${entry.existingId}/image`, { method: 'POST', body: formData, credentials: 'include' });
-          }
-        } else {
-          const defect = await createDefect.mutateAsync({
-            inspectionId: editingInspection.id,
-            projectId,
-            data: {
+          } else {
+            const defect = await createDefect.mutateAsync({
               inspectionId: editingInspection.id,
-              defectId: entry.defectId,
-              bauteil: entry.bauteil.length > 0 ? entry.bauteil : null,
-              dateFound: new Date(entry.dateFound),
-              description: entry.description,
-              location: entry.location,
-              status: entry.status as "leichter_mangel" | "grober_mangel",
-              frist: (entry.frist || null) as any,
-              repairDue: entry.repairDue ? new Date(entry.repairDue) : null,
+              projectId,
+              data: {
+                inspectionId: editingInspection.id,
+                defectId: m.defectId,
+                bauteil: [bp.bauteil],
+                dateFound: new Date(m.dateFound),
+                description: m.description,
+                location: m.location,
+                status: m.status as "leichter_mangel" | "grober_mangel",
+                frist: (m.frist || null) as any,
+                repairDue: m.repairDue ? new Date(m.repairDue) : null,
+              }
+            });
+            if (m.imageFile && defect?.id) {
+              const formData = new FormData();
+              formData.append('image', m.imageFile);
+              await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
             }
-          });
-          if (entry.imageFile && defect?.id) {
-            const formData = new FormData();
-            formData.append('image', entry.imageFile);
-            await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
           }
         }
       }
@@ -1333,8 +1453,8 @@ export default function ProjectDetails() {
                   </Dialog>
                 )}
               </div>
-              <Dialog open={editInspDialogOpen} onOpenChange={(open) => { setEditInspDialogOpen(open); if (!open) { setEditingInspection(null); setEditDefectEntries([]); setDeletedDefectIds([]); } }}>
-                <DialogContent className="bg-card border-border sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+              <Dialog open={editInspDialogOpen} onOpenChange={(open) => { setEditInspDialogOpen(open); if (!open) { setEditingInspection(null); setEditDefectEntries([]); setDeletedDefectIds([]); setEditBauteilPruefungen([]); } }}>
+                <DialogContent className="bg-card border-border sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle className="font-display text-xl">Prüfung bearbeiten</DialogTitle></DialogHeader>
                   <form onSubmit={handleEditInspSubmit(onEditInspSubmit)} className="space-y-6 mt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1377,148 +1497,47 @@ export default function ProjectDetails() {
 
                     <div className="border-t border-border pt-5">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-display font-bold text-base">Mängel</h4>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setEditDefectEntries(prev => [...prev, { defectId: "", bauteil: [], dateFound: "", description: "", location: "", status: "leichter_mangel", frist: "", repairDue: "" }])} className="bg-card border-border hover:bg-muted/60" data-testid="edit-button-add-defect-entry">
-                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Mangel hinzufügen
+                        <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
+                        <Button type="button" variant="outline" size="sm" onClick={addEditCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="edit-button-add-bauteil">
+                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
                         </Button>
                       </div>
 
-                      {editDefectEntries.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">Keine Mängel vorhanden.</p>
-                      )}
-
-                      <div className="space-y-4">
-                        {editDefectEntries.map((entry, index) => (
-                          <div key={index} className="bg-background border border-border rounded-xl p-4 space-y-3" data-testid={`edit-defect-entry-${index}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                {entry.existingId ? "Mangel" : "Neuer Mangel"} {index + 1}
-                              </span>
-                              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => {
-                                if (entry.existingId) setDeletedDefectIds(prev => [...prev, entry.existingId!]);
-                                setEditDefectEntries(prev => prev.filter((_, i) => i !== index));
-                              }} data-testid={`edit-button-remove-defect-${index}`}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Mangel-Nr.</Label>
-                                <Input value={entry.defectId} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, defectId: e.target.value } : ent))} placeholder="z.B. M-001" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-id-${index}`} />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Bauteil</Label>
-                                <div className="flex flex-wrap gap-1.5" data-testid={`edit-bauteil-select-${index}`}>
-                                  {BAUTEIL_OPTIONS_SIMPLE.map(opt => (
-                                    <button key={opt} type="button" onClick={() => {
-                                      setEditDefectEntries(prev => prev.map((ent, i) => {
-                                        if (i !== index) return ent;
-                                        const has = ent.bauteil.includes(opt);
-                                        return { ...ent, bauteil: has ? ent.bauteil.filter(b => b !== opt) : [...ent.bauteil, opt] };
-                                      }));
-                                    }} className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${entry.bauteil.includes(opt) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-border text-muted-foreground hover:border-primary/50'}`}>
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Datum der Feststellung</Label>
-                                <Input type="date" value={entry.dateFound} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => {
-                                  if (i !== index) return ent;
-                                  const updated = { ...ent, dateFound: e.target.value };
-                                  if (updated.frist) updated.repairDue = calcRepairDue(e.target.value, updated.frist);
-                                  return updated;
-                                }))} required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-date-${index}`} />
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Lage</Label>
-                                <Input value={entry.location} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, location: e.target.value } : ent))} placeholder="z.B. Keller, 2. OG" required className="bg-card border-border h-9 text-sm" data-testid={`edit-input-defect-location-${index}`} />
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Beschreibung</Label>
-                              <Textarea value={entry.description} onChange={(e) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, description: e.target.value } : ent))} placeholder="Beschreibung des Mangels..." required className="bg-card border-border min-h-[60px] text-sm" data-testid={`edit-input-defect-description-${index}`} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Status</Label>
-                              <Select value={entry.status} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, status: val } : ent))}>
-                                <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-status-${index}`}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
-                                  <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Frist</Label>
-                                <Select value={entry.frist} onValueChange={(val) => setEditDefectEntries(prev => prev.map((ent, i) => {
-                                  if (i !== index) return ent;
-                                  const updated = { ...ent, frist: val };
-                                  if (updated.dateFound) updated.repairDue = calcRepairDue(updated.dateFound, val);
-                                  return updated;
-                                }))}>
-                                  <SelectTrigger className="bg-card border-border h-9 text-sm" data-testid={`edit-select-defect-frist-${index}`}>
-                                    <SelectValue placeholder="Frist wählen" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(fristLabels).map(([k, v]) => (
-                                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1.5">
-                                <Label className="text-xs">Reparatur bis</Label>
-                                <Input type="date" value={entry.repairDue} readOnly className="bg-card border-border h-9 text-sm text-muted-foreground" data-testid={`edit-input-defect-repair-due-${index}`} />
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-xs">Foto</Label>
-                              {entry.imageFile ? (
-                                <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border">
-                                  <Image className="w-4 h-4 text-primary shrink-0" />
-                                  <span className="text-xs text-foreground truncate flex-1">{entry.imageFile.name}</span>
-                                  <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => {
-                                    setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: null } : ent));
-                                  }} data-testid={`edit-button-remove-defect-image-${index}`}>
-                                    <X className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              ) : entry.imageUrl ? (
-                                <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-lg border border-border">
-                                  <img src={entry.imageUrl} alt="Mangel" className="w-12 h-12 object-cover rounded" />
-                                  <span className="text-xs text-foreground flex-1">Vorhandenes Bild</span>
-                                  <label className="text-xs text-primary cursor-pointer hover:underline">
-                                    Ersetzen
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: file } : ent));
-                                      }
-                                    }} />
-                                  </label>
-                                </div>
-                              ) : (
-                                <label className="flex items-center gap-2 p-2 bg-card border border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/40 transition-colors" data-testid={`edit-input-defect-image-${index}`}>
-                                  <ImagePlus className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">Bild hochladen</span>
-                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      setEditDefectEntries(prev => prev.map((ent, i) => i === index ? { ...ent, imageFile: file } : ent));
-                                    }
-                                  }} />
-                                </label>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                      <div className="overflow-x-auto rounded-xl border border-border mb-6">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                              <th className="text-left px-3 py-2.5 font-semibold whitespace-nowrap">Nr.</th>
+                              <th className="text-left px-3 py-2.5 font-semibold">Bauteil</th>
+                              <th className="text-left px-3 py-2.5 font-semibold">Gegenstand</th>
+                              <th className="text-center px-3 py-2.5 font-semibold">Geprüft</th>
+                              <th className="text-center px-3 py-2.5 font-semibold">Mangel</th>
+                              <th className="text-center px-3 py-2.5 font-semibold whitespace-nowrap">Vertiefte Prüfung</th>
+                              <th className="px-2 py-2.5 w-8"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {editBauteilPruefungen.map((bp, index) => {
+                              const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
+                              const isHeader = isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1;
+                              return (
+                                <BauteilRow
+                                  key={index}
+                                  bp={bp}
+                                  index={index}
+                                  isDefault={isDefault}
+                                  isHeader={isHeader}
+                                  onUpdate={updateEditBauteilPruefung}
+                                  onRemove={removeEditBauteilPruefung}
+                                  onAddMangel={addEditMangelToBauteil}
+                                  onUpdateMangel={updateEditMangel}
+                                  onUpdateMangelFile={updateEditMangelFile}
+                                  onRemoveMangel={removeEditMangel}
+                                />
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
