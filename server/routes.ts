@@ -11,6 +11,7 @@ import path from "path";
 import fs from "fs";
 import XLSX from "xlsx";
 import bcrypt from "bcryptjs";
+import sharp from "sharp";
 
 const uploadsBaseDir = path.join(process.cwd(), "uploads", "bauakt");
 fs.mkdirSync(uploadsBaseDir, { recursive: true });
@@ -994,7 +995,8 @@ export async function registerRoutes(
       
       const finalDir = getDefectImagesDir(defectId);
       const finalPath = path.join(finalDir, req.file.filename);
-      fs.renameSync(req.file.path, finalPath);
+      await sharp(req.file.path).rotate().toFile(finalPath);
+      fs.unlinkSync(req.file.path);
       
       const imageUrl = `/api/defect-images/${defectId}/${encodeURIComponent(req.file.filename)}`;
       const existing = await storage.getDefect(defectId);

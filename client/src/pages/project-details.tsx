@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { displayName, displayInitials } from "@/lib/utils";
@@ -2220,8 +2220,8 @@ export default function ProjectDetails() {
                                               <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
                                             </tr>
                                           ) : (
-                                            <>
-                                              <tr key={i} className="hover:bg-muted/10">
+                                            <Fragment key={i}>
+                                              <tr className="hover:bg-muted/10">
                                                 <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
                                                 <td className={`px-3 py-2 ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
                                                 <td className="px-3 py-2 text-muted-foreground">{e.gegenstand}</td>
@@ -2236,7 +2236,7 @@ export default function ProjectDetails() {
                                                 </td>
                                               </tr>
                                               {e.vertieftePruefung && e.vertieftePruefungText && (
-                                                <tr key={`vp-${i}`} className="border-b border-border bg-blue-50/20 dark:bg-blue-900/10">
+                                                <tr className="border-b border-border bg-blue-50/20 dark:bg-blue-900/10">
                                                   <td colSpan={6} className="px-3 py-3">
                                                     <div className="ml-4 border-l-2 border-blue-500/40 pl-4">
                                                       <div className="flex items-center gap-2 mb-1">
@@ -2247,7 +2247,7 @@ export default function ProjectDetails() {
                                                   </td>
                                                 </tr>
                                               )}
-                                            </>
+                                            </Fragment>
                                           );
                                         })}
                                       </tbody>
