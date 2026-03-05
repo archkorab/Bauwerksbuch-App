@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoPath from "@assets/logo_1772640036077.png";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List
+  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List, RotateCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -456,6 +456,28 @@ interface BauteilPruefung {
   maengel: BauteilMangel[];
 }
 
+async function rotateImageFile(src: string | File): Promise<File> {
+  const blob = src instanceof File ? src : await fetch(src, { credentials: "include" }).then(r => r.blob());
+  const blobUrl = URL.createObjectURL(blob);
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = blobUrl;
+  });
+  URL.revokeObjectURL(blobUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalHeight;
+  canvas.height = img.naturalWidth;
+  const ctx = canvas.getContext("2d")!;
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+  return new Promise<File>((resolve) => {
+    canvas.toBlob((b) => resolve(new File([b!], "rotated.jpg", { type: "image/jpeg" })), "image/jpeg", 0.92);
+  });
+}
+
 interface BauteilRowProps {
   bp: BauteilPruefung;
   index: number;
@@ -468,10 +490,12 @@ interface BauteilRowProps {
   onAddMangelImages: (bauteilIndex: number, mangelIndex: number, files: File[]) => void;
   onRemoveMangelFile: (bauteilIndex: number, mangelIndex: number, fileIndex: number) => void;
   onRemoveMangelUrl: (bauteilIndex: number, mangelIndex: number, url: string) => void;
+  onRotateMangelFile: (bauteilIndex: number, mangelIndex: number, fileIndex: number) => void;
+  onRotateMangelUrl: (bauteilIndex: number, mangelIndex: number, url: string) => void;
   onRemoveMangel: (bauteilIndex: number, mangelIndex: number) => void;
 }
 
-function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onAddMangelImages, onRemoveMangelFile, onRemoveMangelUrl, onRemoveMangel }: BauteilRowProps) {
+function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onAddMangelImages, onRemoveMangelFile, onRemoveMangelUrl, onRotateMangelFile, onRotateMangelUrl, onRemoveMangel }: BauteilRowProps) {
   const [expanded, setExpanded] = useState(bp.maengel.length > 0);
   const hasMaengel = bp.maengel.length > 0;
   const prevLenRef = useRef(bp.maengel.length);
@@ -612,6 +636,9 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                         <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
                           <img src={url} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
                         </div>
+                        <button type="button" onClick={() => onRotateMangelUrl(index, mi, url)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-rotate-mangel-url-${index}-${mi}-${ui}`}>
+                          <RotateCw className="w-3 h-3" />
+                        </button>
                         <button type="button" onClick={() => onRemoveMangelUrl(index, mi, url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-url-${index}-${mi}-${ui}`}>
                           <X className="w-3 h-3" />
                         </button>
@@ -622,6 +649,9 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                         <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
                           <img src={URL.createObjectURL(file)} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
                         </div>
+                        <button type="button" onClick={() => onRotateMangelFile(index, mi, fi)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-rotate-mangel-file-${index}-${mi}-${fi}`}>
+                          <RotateCw className="w-3 h-3" />
+                        </button>
                         <button type="button" onClick={() => onRemoveMangelFile(index, mi, fi)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-file-${index}-${mi}-${fi}`}>
                           <X className="w-3 h-3" />
                         </button>
@@ -1022,6 +1052,34 @@ export default function ProjectDetails() {
     setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
       if (bi !== bauteilIndex) return bp;
       const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageUrls: (m.imageUrls || []).filter(u => u !== url) } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const rotateEditMangelFile = async (bauteilIndex: number, mangelIndex: number, fileIndex: number) => {
+    const file = editBauteilPruefungen[bauteilIndex]?.maengel[mangelIndex]?.imageFiles?.[fileIndex];
+    if (!file) return;
+    const rotated = await rotateImageFile(file);
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => {
+        if (mi !== mangelIndex) return m;
+        const files = [...(m.imageFiles || [])];
+        files[fileIndex] = rotated;
+        return { ...m, imageFiles: files };
+      });
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const rotateEditMangelUrl = async (bauteilIndex: number, mangelIndex: number, url: string) => {
+    const rotated = await rotateImageFile(url);
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => {
+        if (mi !== mangelIndex) return m;
+        return { ...m, imageUrls: (m.imageUrls || []).filter(u => u !== url), imageFiles: [...(m.imageFiles || []), rotated] };
+      });
       return { ...bp, maengel: updated };
     }));
   };
@@ -2046,6 +2104,8 @@ export default function ProjectDetails() {
                                   onAddMangelImages={addEditMangelImages}
                                   onRemoveMangelFile={removeEditMangelFile}
                                   onRemoveMangelUrl={removeEditMangelUrl}
+                                  onRotateMangelFile={rotateEditMangelFile}
+                                  onRotateMangelUrl={rotateEditMangelUrl}
                                   onRemoveMangel={removeEditMangel}
                                 />
                               );
