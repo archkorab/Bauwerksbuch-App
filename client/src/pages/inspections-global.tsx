@@ -162,7 +162,8 @@ async function generateInspectionPdf(inspection: any) {
     doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
     doc.setFontSize(7);
     doc.setTextColor(...PDF_COLORS.mutedFg);
-    doc.text("Bauwerksbuch - Arch Dipl. Ing. Vera Korab ZT GmbH", margin, footerY);
+    const footerAddress = inspection.projectAddress ? `Bauwerksbuch - ${inspection.projectAddress}` : "Bauwerksbuch";
+    doc.text(footerAddress, margin, footerY);
     doc.text(`Seite ${pageNum} von ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
@@ -195,7 +196,7 @@ async function generateInspectionPdf(inspection: any) {
     doc.text(`${label}:`, margin, y);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...PDF_COLORS.foreground);
-    doc.text(value, margin + 30, y);
+    doc.text(value, margin + 45, y);
     y += 6;
   }
 
@@ -205,7 +206,7 @@ async function generateInspectionPdf(inspection: any) {
   const statusColor = effectiveStatus === "OK" ? PDF_COLORS.ok : effectiveStatus === "Schwerer Mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
   doc.setTextColor(...statusColor);
   doc.setFont("helvetica", "bold");
-  doc.text(effectiveStatus, margin + 30, y);
+  doc.text(effectiveStatus, margin + 45, y);
   doc.setTextColor(...PDF_COLORS.foreground);
   y += 10;
 
@@ -370,14 +371,15 @@ async function generateInspectionPdf(inspection: any) {
             reader.onload = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
-          if (y + 50 > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+          if (y + 55 > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
           y += 3;
           doc.addImage(dataUrl, "JPEG", margin + 2, y, 55, 40);
+          y += 42;
           doc.setFontSize(7);
           doc.setTextColor(...PDF_COLORS.mutedFg);
-          doc.text(`Foto: ${d.defectId}`, margin + 60, y + 5);
+          doc.text(`Foto M${d.defectId}`, margin + 2, y);
           doc.setTextColor(...PDF_COLORS.foreground);
-          y += 44;
+          y += 5;
         } catch {}
       }
 
@@ -393,9 +395,8 @@ async function generateInspectionPdf(inspection: any) {
   }
   doc.setTextColor(0);
 
-  const projectName = (inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, "_");
-  const dateStr = format(new Date(inspection.date), "yyyy-MM-dd");
-  doc.save(`Pruefung_${projectName}_${dateStr}.pdf`);
+  const addressForFilename = (inspection.projectAddress || inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, "_").trim();
+  doc.save(`BWB Prüfbericht ${addressForFilename}.pdf`);
 }
 
 interface BauteilRowProps {
