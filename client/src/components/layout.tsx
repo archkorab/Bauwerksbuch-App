@@ -6,6 +6,7 @@ import logoPath from "@assets/logo_1772006994795.png";
 import { 
   CalendarDays, 
   ClipboardCheck, 
+  FolderOpen,
   LayoutDashboard, 
   LogOut, 
   User as UserIcon,
@@ -36,6 +37,7 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { name: "Übersicht", id: "dashboard", href: "/projects", icon: LayoutDashboard },
+    { name: "Projekte", id: "projekte", href: "/projekte", icon: FolderOpen },
     { name: "Kalender", id: "calendar", href: "/calendar", icon: CalendarDays },
     { name: "Prüfprotokoll", id: "inspections", href: "/inspections", icon: ClipboardCheck },
     ...(role === "admin" && !isImpersonating ? [{ name: "Einstellungen", id: "settings", href: "/settings", icon: Settings }] : []),

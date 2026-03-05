@@ -1,0 +1,323 @@
+import { useState } from "react";
+import { Layout } from "@/components/layout";
+import { useProjects, useCreateProject, useDefectSummary } from "@/hooks/use-projects";
+import { useClients } from "@/hooks/use-users";
+import { useProfile } from "@/hooks/use-profile";
+import { Link } from "wouter";
+import {
+  Building,
+  MapPin,
+  Calendar as CalendarIcon,
+  Plus,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  LayoutGrid,
+  List,
+  Search,
+  ChevronRight
+} from "lucide-react";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const createProjectSchema = z.object({
+  name: z.string().default(""),
+  address: z.string().min(1, "Adresse ist erforderlich"),
+  clientId: z.string().min(1, "Eigentümer ist erforderlich"),
+  verwaltungId: z.string().optional(),
+  eigentuemer: z.string().optional(),
+  status: z.enum(["active", "completed", "archived"]),
+});
+
+type CreateProjectForm = z.infer<typeof createProjectSchema>;
+
+const mangelLabels: Record<string, string> = {
+  kein_mangel: "Kein Mangel",
+  leichter_mangel: "Leichter Mangel",
+  grober_mangel: "Schwerer Mangel",
+};
+
+export default function ProjektePage() {
+  const { data: projects, isLoading } = useProjects();
+  const { data: profile } = useProfile();
+  const { data: clients } = useClients();
+  const { data: defectSummary } = useDefectSummary();
+  const createProject = useCreateProject();
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [search, setSearch] = useState("");
+
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
+    resolver: zodResolver(createProjectSchema),
+    defaultValues: { status: "active", address: "", name: "" }
+  });
+  const addressValue = watch("address");
+
+  const onSubmit = (data: CreateProjectForm) => {
+    createProject.mutate(data, {
+      onSuccess: () => setIsDialogOpen(false)
+    });
+  };
+
+  const isAdmin = profile?.role === "admin";
+  const canCreateProject = isAdmin || profile?.role === "hausverwaltung" || profile?.role === "eigentuemer";
+
+  const getMangelStatus = (projectId: number) => {
+    if (!defectSummary) return "kein_mangel";
+    const entry = defectSummary.find(s => s.projectId === projectId);
+    return entry?.mangelStatus || "kein_mangel";
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const filteredProjects = projects?.filter(p => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
+  });
+
+  return (
+    <Layout>
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2" data-testid="text-projekte-title">
+            Projekte
+          </h1>
+          <p className="text-muted-foreground">Alle Bauwerksbücher verwalten</p>
+        </div>
+
+        {canCreateProject && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" data-testid="button-add-project-projekte">
+                <Plus className="w-4 h-4 mr-2" /> Projekt hinzufügen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] bg-card border-border">
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl">Neues Projekt erstellen</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit((data) => onSubmit({ ...data, name: data.address }))} className="space-y-6 mt-4">
+                <input type="hidden" {...register("name")} />
+                <div className="space-y-2">
+                  <Label htmlFor="address-projekte">Adresse</Label>
+                  <AddressAutocomplete
+                    id="address-projekte"
+                    value={addressValue}
+                    onChange={(val) => { setValue("address", val); setValue("name", val); }}
+                    className="bg-background border-border focus:ring-primary/20"
+                    data-testid="input-address-projekte"
+                  />
+                  {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Eigentümer zuweisen</Label>
+                  <Select onValueChange={(val) => setValue("clientId", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-client-projekte">
+                      <SelectValue placeholder="Eigentümer wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients?.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName} ({client.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.clientId && <p className="text-xs text-destructive">{errors.clientId.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Verwaltung</Label>
+                  <Select onValueChange={(val) => setValue("verwaltungId", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-verwaltung-projekte">
+                      <SelectValue placeholder="Verwaltung wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients?.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName} ({client.profile?.company || ""})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="eigentuemer-projekte">Eigentümer</Label>
+                  <Input id="eigentuemer-projekte" {...register("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer-projekte" />
+                </div>
+                <Button type="submit" className="w-full" disabled={createProject.isPending}>
+                  {createProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Projekt erstellen
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Projekt suchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-card border-border"
+            data-testid="input-search-projekte"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="px-3 h-8"
+            data-testid="button-view-list-projekte"
+          >
+            <List className="w-4 h-4 mr-1.5" />
+            <span className="text-xs">Liste</span>
+          </Button>
+          <Button
+            variant={viewMode === "grid" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("grid")}
+            className="px-3 h-8"
+            data-testid="button-view-grid-projekte"
+          >
+            <LayoutGrid className="w-4 h-4 mr-1.5" />
+            <span className="text-xs">Kacheln</span>
+          </Button>
+        </div>
+      </div>
+
+      {filteredProjects?.length === 0 ? (
+        <div className="py-16 text-center border-2 border-dashed border-border rounded-2xl bg-card/30">
+          <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-bold text-foreground mb-1" data-testid="text-no-projects">{search ? "Keine Ergebnisse" : "Keine Projekte gefunden"}</h3>
+          <p className="text-muted-foreground">{search ? "Versuchen Sie einen anderen Suchbegriff." : "Ihnen sind noch keine Projekte zugewiesen."}</p>
+        </div>
+      ) : viewMode === "list" ? (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm" data-testid="projekte-list-view">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Projekt</th>
+                <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Adresse</th>
+                <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Nächste Prüfung</th>
+                <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Status</th>
+                {isAdmin && <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Eigentümer</th>}
+                <th className="w-10"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredProjects?.map((project) => {
+                const mangel = getMangelStatus(project.id);
+                return (
+                  <Link key={project.id} href={`/projects/${project.id}`}>
+                    <tr className="hover:bg-muted/40 transition-colors cursor-pointer group" data-testid={`row-project-projekte-${project.id}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center border border-border shrink-0">
+                            <Building className="w-4 h-4 text-primary" />
+                          </div>
+                          <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{project.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground max-w-xs truncate">{project.address}</td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'dd.MM.yyyy') : '—'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border uppercase tracking-wider
+                          ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                            mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                            'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
+                          data-testid={`badge-mangel-projekte-${project.id}`}>
+                          {mangelLabels[mangel]}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {project.client ? `${project.client.firstName} ${project.client.lastName}` : '—'}
+                        </td>
+                      )}
+                      <td className="px-3 py-4">
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </td>
+                    </tr>
+                  </Link>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6" data-testid="projekte-grid-view">
+          {filteredProjects?.map((project) => {
+            const mangel = getMangelStatus(project.id);
+            return (
+              <Link key={project.id} href={`/projects/${project.id}`}>
+                <div className="group bg-card border border-border rounded-2xl p-6 hover-elevate cursor-pointer h-full flex flex-col" data-testid={`card-project-projekte-${project.id}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center border border-border">
+                      <Building className="w-6 h-6 text-primary" />
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider
+                      ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                        mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                        'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
+                      data-testid={`badge-mangel-grid-projekte-${project.id}`}>
+                      {mangelLabels[mangel]}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">{project.name}</h3>
+                  <div className="space-y-3 mt-auto pt-4">
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                      <span className="line-clamp-2">{project.address}</span>
+                    </div>
+                    {project.nextInspectionDue && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarIcon className="w-4 h-4 shrink-0" />
+                        <span>Nächste Prüfung: <strong className="text-foreground">{format(new Date(project.nextInspectionDue), 'dd.MM.yyyy')}</strong></span>
+                      </div>
+                    )}
+                    {isAdmin && project.client && (
+                      <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-primary">
+                          {project.client.firstName?.[0]}{project.client.lastName?.[0]}
+                        </div>
+                        <div className="text-xs">
+                          <p className="text-muted-foreground font-medium uppercase tracking-wider">Eigentümer</p>
+                          <p className="text-foreground font-semibold">{project.client.firstName} {project.client.lastName}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </Layout>
+  );
+}
