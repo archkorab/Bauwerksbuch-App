@@ -8,7 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useClients } from "@/hooks/use-users";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download, CornerDownRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -1794,6 +1794,64 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                               </td>
                             </tr>
                           )}
+                          {(() => {
+                            const bauteilPrimary = primaryDefects.filter((d: any) => d.bauteil?.[0] === e.name);
+                            const orphanedFollowUps = followUps.filter((f: any) => f.bauteil?.[0] === e.name && !primaryDefects.some((p: any) => p.id === f.parentDefectId));
+                            const allForBauteil = [...bauteilPrimary, ...orphanedFollowUps];
+                            if (allForBauteil.length === 0) return null;
+                            return allForBauteil.map((defect: any) => {
+                              const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                              const imgs: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
+                              const isGrober = defect.status === 'grober_mangel';
+                              return (
+                                <Fragment key={`defect-inline-${defect.id}`}>
+                                  <tr className={`border-b border-border/40 ${isGrober ? 'bg-red-50/20 dark:bg-red-950/15' : 'bg-amber-50/10 dark:bg-amber-950/5'}`}>
+                                    <td colSpan={6} className="px-3 py-2.5">
+                                      <div className={`ml-4 pl-4 border-l-2 ${isGrober ? 'border-red-500/40' : 'border-amber-500/40'}`}>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mb-0.5">
+                                          <span className="font-mono font-semibold text-xs text-primary">{defect.defectId}</span>
+                                          <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full border uppercase ${isGrober ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
+                                            {isGrober ? 'Schwerer Mangel' : 'Leichter Mangel'}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
+                                          {defect.frist && <span className="text-xs text-muted-foreground">· Frist: {fristLabels[defect.frist] || defect.frist}</span>}
+                                          {defect.repairDue && <span className="text-xs text-muted-foreground">· bis {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
+                                        </div>
+                                        <p className="text-xs text-foreground leading-snug">{defect.description}</p>
+                                        {defect.location && <p className="text-xs text-muted-foreground mt-0.5">{defect.location}</p>}
+                                        {imgs.length > 0 && <div className="flex flex-wrap gap-1 mt-1.5">{imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}</div>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {children.map((child: any) => {
+                                    const childImgs: string[] = child.imageUrls?.length ? child.imageUrls : (child.imageUrl ? [child.imageUrl] : []);
+                                    const childGrober = child.status === 'grober_mangel';
+                                    return (
+                                      <tr key={`followup-${child.id}`} className="bg-muted/10 border-b border-border/30">
+                                        <td colSpan={6} className="px-3 py-2">
+                                          <div className="ml-8 pl-4 border-l-2 border-muted-foreground/20">
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mb-0.5">
+                                              <CornerDownRight className="w-3 h-3 text-muted-foreground" />
+                                              <span className="font-mono text-xs text-muted-foreground">{child.defectId}</span>
+                                              <span className={`px-1.5 py-0.5 text-xs font-bold rounded-full border uppercase ${childGrober ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
+                                                {childGrober ? 'Schwerer Mangel' : 'Leichter Mangel'}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground">{format(new Date(child.dateFound), 'dd.MM.yyyy')}</span>
+                                              {child.frist && <span className="text-xs text-muted-foreground">· Frist: {fristLabels[child.frist] || child.frist}</span>}
+                                              {child.repairDue && <span className="text-xs text-muted-foreground">· bis {format(new Date(child.repairDue), 'dd.MM.yyyy')}</span>}
+                                            </div>
+                                            <p className="text-xs text-foreground leading-snug">{child.description}</p>
+                                            {child.location && <p className="text-xs text-muted-foreground mt-0.5">{child.location}</p>}
+                                            {childImgs.length > 0 && <div className="flex flex-wrap gap-1 mt-1.5">{childImgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}</div>}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </Fragment>
+                              );
+                            });
+                          })()}
                         </Fragment>
                       );
                     })}
@@ -1804,46 +1862,6 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
           );
       })()}
 
-      <div>
-        <h4 className="font-display font-bold text-base mb-3">
-          Mängel ({inspection.defects?.length || 0})
-        </h4>
-
-        {(!inspection.defects || inspection.defects.length === 0) ? (
-          <div className="p-4 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm">
-            Keine Mängel bei dieser Prüfung erfasst.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full text-sm" data-testid={`detail-defects-table-${inspection.id}`}>
-              <thead>
-                <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                  <th className="text-left px-4 py-2.5 font-semibold">Mangel-Nr.</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Bauteil</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Datum</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Beschreibung</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Lage</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Status</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Frist</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Reparatur bis</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Foto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {primaryDefects.map((defect: any) => {
-                  const childDefects = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                  return (
-                    <DefectRows key={defect.id} defect={defect} followUpDefects={childDefects} />
-                  );
-                })}
-                {followUps.filter((f: any) => !primaryDefects.some((p: any) => p.id === f.parentDefectId)).map((defect: any) => (
-                  <DefectRows key={defect.id} defect={defect} followUpDefects={[]} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
