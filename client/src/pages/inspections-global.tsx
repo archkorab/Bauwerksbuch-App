@@ -296,8 +296,42 @@ async function generateInspectionPdf(inspection: any) {
       const pdfPrimary = (inspection.defects || []).filter((d: any) => !d.parentDefectId);
       const pdfFollowUps = (inspection.defects || []).filter((d: any) => d.parentDefectId);
       const defectsInOrder: any[] = [];
+
+      for (const e of displayEntries) {
+        if (!e.isHeader) {
+          const bp = pdfPrimary.filter((d: any) => d.bauteil?.at(-1) === e.name);
+          const orph = pdfFollowUps.filter((f: any) => f.bauteil?.at(-1) === e.name && !pdfPrimary.some((p: any) => p.id === f.parentDefectId));
+          for (const defect of [...bp, ...orph]) {
+            defectsInOrder.push(defect);
+            for (const child of pdfFollowUps.filter((f: any) => f.parentDefectId === defect.id)) defectsInOrder.push(child);
+          }
+        }
+      }
+
+      const IMG_W = 80, IMG_H = 60, IMG_GAP = 4, IMGS_PER_ROW = 3, IMG_LABEL_H = 7;
+      const defectImagesList: string[][] = [];
+      for (const defect of defectsInOrder) {
+        const urls: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
+        const loaded: string[] = [];
+        for (const url of urls) {
+          try {
+            const blob = await (await fetch(url)).blob();
+            const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
+            loaded.push(dataUrl);
+          } catch {}
+        }
+        defectImagesList.push(loaded);
+      }
+
+      const getImgBlockH = (di: number) => {
+        const imgs = defectImagesList[di] || [];
+        return imgs.length ? Math.ceil(imgs.length / IMGS_PER_ROW) * (IMG_H + IMG_GAP) + IMG_LABEL_H + 4 : 0;
+      };
+
       const bauteilRows: any[] = [];
       const rowTypes: string[] = [];
+      const rowToDefectIndex: Map<number, number> = new Map();
+      let defCounter = 0;
 
       for (const e of displayEntries) {
         if (e.isHeader) {
@@ -315,25 +349,37 @@ async function generateInspectionPdf(inspection: any) {
           const bauteilPrimary = pdfPrimary.filter((d: any) => d.bauteil?.at(-1) === e.name);
           const orphaned = pdfFollowUps.filter((f: any) => f.bauteil?.at(-1) === e.name && !pdfPrimary.some((p: any) => p.id === f.parentDefectId));
           for (const defect of [...bauteilPrimary, ...orphaned]) {
+            const di = defCounter++;
             const statusLabel = defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
             let content = `${defect.defectId}   ${statusLabel}   ${format(new Date(defect.dateFound), "dd.MM.yyyy")}`;
             if (defect.description) content += `\n${defect.description}`;
             if (defect.location) content += `   |   Lage: ${defect.location}`;
             if (defect.frist) content += `   |   Frist: ${fristLabels[defect.frist] || defect.frist}`;
             if (defect.repairDue) content += `   |   bis: ${format(new Date(defect.repairDue), "dd.MM.yyyy")}`;
+            rowToDefectIndex.set(bauteilRows.length, di);
             bauteilRows.push([{ content, colSpan: 6 }]);
             rowTypes.push(defect.status === "grober_mangel" ? "defect-grober" : "defect-leichter");
-            defectsInOrder.push(defect);
+            if ((defectImagesList[di] || []).length > 0) {
+              rowToDefectIndex.set(bauteilRows.length, di);
+              bauteilRows.push([{ content: "", colSpan: 6 }]);
+              rowTypes.push(defect.status === "grober_mangel" ? "img-grober" : "img-leichter");
+            }
             for (const child of pdfFollowUps.filter((f: any) => f.parentDefectId === defect.id)) {
+              const ci = defCounter++;
               const cl = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
               let cc = `\u21B3 ${child.defectId}   ${cl}   ${format(new Date(child.dateFound), "dd.MM.yyyy")}`;
               if (child.description) cc += `\n${child.description}`;
               if (child.location) cc += `   |   Lage: ${child.location}`;
               if (child.frist) cc += `   |   Frist: ${fristLabels[child.frist] || child.frist}`;
               if (child.repairDue) cc += `   |   bis: ${format(new Date(child.repairDue), "dd.MM.yyyy")}`;
+              rowToDefectIndex.set(bauteilRows.length, ci);
               bauteilRows.push([{ content: cc, colSpan: 6 }]);
               rowTypes.push(child.status === "grober_mangel" ? "child-grober" : "child-leichter");
-              defectsInOrder.push(child);
+              if ((defectImagesList[ci] || []).length > 0) {
+                rowToDefectIndex.set(bauteilRows.length, ci);
+                bauteilRows.push([{ content: "", colSpan: 6 }]);
+                rowTypes.push(child.status === "grober_mangel" ? "img-grober" : "img-leichter");
+              }
             }
           }
         }
@@ -361,49 +407,38 @@ async function generateInspectionPdf(inspection: any) {
           if (rt === "defect-leichter") { data.cell.styles.fillColor = [254, 243, 199]; data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, left: 8, right: 2.5 }; }
           if (rt === "child-grober") { data.cell.styles.fillColor = [255, 237, 237]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
           if (rt === "child-leichter") { data.cell.styles.fillColor = [255, 250, 225]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
+          if (rt === "img-grober" || rt === "img-leichter") {
+            const di = rowToDefectIndex.get(data.row.index);
+            if (di !== undefined) {
+              data.cell.styles.minCellHeight = getImgBlockH(di);
+              data.cell.styles.fillColor = rt === "img-grober" ? [254, 226, 226] : [254, 243, 199];
+              data.cell.styles.cellPadding = 0;
+            }
+          }
+        },
+        didDrawCell: (data: any) => {
+          if (data.section !== "body") return;
+          const rt = rowTypes[data.row.index];
+          if ((rt === "img-grober" || rt === "img-leichter") && data.column.index === 0) {
+            const di = rowToDefectIndex.get(data.row.index);
+            if (di === undefined) return;
+            const imgList = defectImagesList[di] || [];
+            if (!imgList.length) return;
+            const sx = data.cell.x + 8;
+            const sy = data.cell.y + 3;
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(7);
+            doc.setTextColor(...PDF_COLORS.mutedFg);
+            doc.text(`Fotos: ${defectsInOrder[di].defectId}`, sx, sy + 3.5);
+            for (let ii = 0; ii < imgList.length; ii++) {
+              const xPos = sx + (ii % IMGS_PER_ROW) * (IMG_W + IMG_GAP);
+              const yPos = sy + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
+              doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+            }
+          }
         },
       });
       y = (doc as any).lastAutoTable.finalY + 4;
-
-      const IMG_W = 80;
-      const IMG_H = 60;
-      const defectsWithImgs = defectsInOrder.filter((d: any) => d.imageUrls?.length || d.imageUrl);
-      if (defectsWithImgs.length > 0) {
-        const defectImages: Map<number, string[]> = new Map();
-        for (let di = 0; di < defectsWithImgs.length; di++) {
-          const d = defectsWithImgs[di];
-          const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
-          const loaded: string[] = [];
-          for (const url of urls) {
-            try {
-              const blob = await (await fetch(url)).blob();
-              const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
-              loaded.push(dataUrl);
-            } catch {}
-          }
-          if (loaded.length) defectImages.set(di, loaded);
-        }
-        for (let di = 0; di < defectsWithImgs.length; di++) {
-          const d = defectsWithImgs[di];
-          const imgList = defectImages.get(di) || [];
-          if (!imgList.length) continue;
-          const rowCount = Math.ceil(imgList.length / 3);
-          const needed = rowCount * (IMG_H + 4) + 10;
-          if (y + needed > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(7.5);
-          doc.setTextColor(...PDF_COLORS.mutedFg);
-          doc.text(`Fotos: ${d.defectId}`, margin + 2, y + 3);
-          y += 6;
-          for (let ii = 0; ii < imgList.length; ii++) {
-            const xPos = margin + 2 + (ii % 3) * (IMG_W + 4);
-            const yPos = y + Math.floor(ii / 3) * (IMG_H + 4);
-            doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
-          }
-          y += rowCount * (IMG_H + 4) + 4;
-        }
-      }
-      y += 4;
     }
   }
 
