@@ -394,6 +394,7 @@ async function generateInspectionPdf(inspection: any) {
         styles: { fontSize: 8, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
         headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
         columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
+        rowPageBreak: "avoid",
         didParseCell: (data: any) => {
           if (data.section !== "body") return;
           const rt = rowTypes[data.row.index];
