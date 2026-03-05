@@ -51,6 +51,7 @@ export interface IStorage {
   getProject(id: number): Promise<ProjectResponse | undefined>;
   createProject(data: InsertProject): Promise<Project>;
   updateProject(id: number, data: UpdateProjectRequest): Promise<Project>;
+  deleteProject(id: number): Promise<void>;
 
   getDocuments(projectId: number): Promise<Document[]>;
   createDocument(data: InsertDocument): Promise<Document>;
@@ -236,6 +237,19 @@ export class DatabaseStorage implements IStorage {
   async updateProject(id: number, data: UpdateProjectRequest): Promise<Project> {
     const [updated] = await db.update(projects).set(data).where(eq(projects.id, id)).returning();
     return updated;
+  }
+
+  async deleteProject(id: number): Promise<void> {
+    const projectInspections = await db.select({ id: inspections.id }).from(inspections).where(eq(inspections.projectId, id));
+    for (const ins of projectInspections) {
+      await db.delete(defects).where(eq(defects.inspectionId, ins.id));
+    }
+    await db.delete(inspections).where(eq(inspections.projectId, id));
+    await db.delete(documents).where(eq(documents.projectId, id));
+    await db.delete(events).where(eq(events.projectId, id));
+    await db.delete(projectImages).where(eq(projectImages.projectId, id));
+    await db.delete(bauakt).where(eq(bauakt.projectId, id));
+    await db.delete(projects).where(eq(projects.id, id));
   }
 
   async getDocuments(projectId: number): Promise<Document[]> {

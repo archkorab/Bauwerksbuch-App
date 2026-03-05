@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { useProjects, useCreateProject, useDefectSummary } from "@/hooks/use-projects";
+import { useProjects, useCreateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
 import { Link, useLocation } from "wouter";
@@ -16,15 +16,18 @@ import {
   LayoutGrid,
   List,
   Search,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -52,8 +55,11 @@ export default function ProjektePage() {
   const { data: clients } = useClients();
   const { data: defectSummary } = useDefectSummary();
   const createProject = useCreateProject();
+  const deleteProject = useDeleteProject();
+  const { toast } = useToast();
 
   const [, navigate] = useLocation();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [search, setSearch] = useState("");
@@ -94,6 +100,7 @@ export default function ProjektePage() {
     const s = search.toLowerCase();
     return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
   });
+  const deleteConfirmProject = projects?.find(p => p.id === deleteConfirmId);
 
   return (
     <Layout>
@@ -260,7 +267,20 @@ export default function ProjektePage() {
                         </td>
                       )}
                       <td className="px-3 py-4">
-                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex items-center gap-1">
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
+                              data-testid={`button-delete-project-${project.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </td>
                     </tr>
                 );
@@ -279,13 +299,26 @@ export default function ProjektePage() {
                     <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center border border-border">
                       <Building className="w-6 h-6 text-primary" />
                     </div>
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider
-                      ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
-                        mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                        'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
-                      data-testid={`badge-mangel-grid-projekte-${project.id}`}>
-                      {mangelLabels[mangel]}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider
+                        ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                          mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                          'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
+                        data-testid={`badge-mangel-grid-projekte-${project.id}`}>
+                        {mangelLabels[mangel]}
+                      </span>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(project.id); }}
+                          data-testid={`button-delete-project-grid-${project.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <h3 className="font-display text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">{project.name}</h3>
                   <div className="space-y-3 mt-auto pt-4">
@@ -317,6 +350,41 @@ export default function ProjektePage() {
           })}
         </div>
       )}
+
+      <AlertDialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Projekt löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie das Projekt <strong>"{deleteConfirmProject?.name}"</strong> wirklich löschen? Alle zugehörigen Prüfungen, Mängel, Dokumente und Bauakte werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border" data-testid="button-cancel-delete-project">Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteProject.isPending}
+              onClick={() => {
+                if (deleteConfirmId) {
+                  deleteProject.mutate(deleteConfirmId, {
+                    onSuccess: () => {
+                      setDeleteConfirmId(null);
+                      toast({ title: "Projekt gelöscht", description: "Das Projekt wurde erfolgreich gelöscht." });
+                    },
+                    onError: () => {
+                      toast({ title: "Fehler", description: "Das Projekt konnte nicht gelöscht werden.", variant: "destructive" });
+                    },
+                  });
+                }
+              }}
+              data-testid="button-confirm-delete-project"
+            >
+              {deleteProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

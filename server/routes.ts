@@ -548,6 +548,21 @@ export async function registerRoutes(
     }
   });
 
+  app.delete('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      if (profile?.role !== "admin") {
+        return res.status(403).json({ message: "Nur Administratoren können Projekte löschen" });
+      }
+      const id = parseInt(req.params.id, 10);
+      await storage.deleteProject(id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
   // Helper to check project access for clients
   async function checkProjectAccess(userId: string, projectId: number): Promise<boolean> {
     const profile = await storage.getProfile(userId);

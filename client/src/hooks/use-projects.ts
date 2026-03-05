@@ -59,6 +59,24 @@ export function useDefectSummary() {
   });
 }
 
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete project");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.projects.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
+    },
+  });
+}
+
 export function useUpdateProject() {
   const queryClient = useQueryClient();
   return useMutation({
