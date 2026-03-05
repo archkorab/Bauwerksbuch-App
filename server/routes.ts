@@ -442,6 +442,7 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
       }
+      console.error("Update user error:", err);
       res.status(500).json({ message: "Failed to update user" });
     }
   });
