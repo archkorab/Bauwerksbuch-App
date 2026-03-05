@@ -185,9 +185,9 @@ async function generateInspectionPdf(inspection: any) {
   doc.setFont("helvetica", "normal");
   const details: [string, string][] = [
     ["Datum", format(new Date(inspection.date), "dd.MM.yyyy")],
-    ["Projekt", inspection.projectName || `Projekt #${inspection.projectId}`],
+    ["Adresse", inspection.projectAddress || inspection.projectName || `Projekt #${inspection.projectId}`],
   ];
-  if (inspection.projectAddress) details.push(["Adresse", inspection.projectAddress]);
+  if (inspection.projectName && inspection.projectName !== inspection.projectAddress) details.push(["Projekt", inspection.projectName]);
   if (inspection.engineer) details.push(["Sachverständiger", displayName(inspection.engineer)]);
 
   for (const [label, value] of details) {
