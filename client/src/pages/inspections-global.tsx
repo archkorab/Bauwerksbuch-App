@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Layout } from "@/components/layout";
 import { displayName } from "@/lib/utils";
-import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection, useUpdateDefect } from "@/hooks/use-inspections";
+import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection, useUpdateDefect, useDeleteDefect } from "@/hooks/use-inspections";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
@@ -65,6 +65,7 @@ function getParentBauteil(label: string): string | null {
 
 interface BauteilMangel {
   defectId: string;
+  existingDefectId?: number;
   description: string;
   location: string;
   status: string;
@@ -768,8 +769,10 @@ export default function InspectionsGlobal() {
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
   const updateDefect = useUpdateDefect();
+  const deleteDefect = useDeleteDefect();
   const updateInspection = useUpdateInspection();
   const deleteInspection = useDeleteInspection();
+  const [deletedDefectIds, setDeletedDefectIds] = useState<number[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -971,11 +974,20 @@ export default function InspectionsGlobal() {
   };
 
   const removeEditMangel = (bauteilIndex: number, mangelIndex: number) => {
-    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
-      if (bi !== bauteilIndex) return bp;
-      const newMaengel = bp.maengel.filter((_, mi) => mi !== mangelIndex);
-      return { ...bp, maengel: newMaengel, mangel: newMaengel.length > 0 };
-    }));
+    setEditBauteilPruefungen(prev => {
+      const bp = prev[bauteilIndex];
+      if (bp) {
+        const m = bp.maengel[mangelIndex];
+        if (m?.existingDefectId) {
+          setDeletedDefectIds(ids => [...ids, m.existingDefectId!]);
+        }
+      }
+      return prev.map((bp, bi) => {
+        if (bi !== bauteilIndex) return bp;
+        const newMaengel = bp.maengel.filter((_, mi) => mi !== mangelIndex);
+        return { ...bp, maengel: newMaengel, mangel: newMaengel.length > 0 };
+      });
+    });
   };
 
   const addEditMangelImages = (bauteilIndex: number, mangelIndex: number, files: File[]) => {
@@ -1069,6 +1081,7 @@ export default function InspectionsGlobal() {
       bp.mangel = true;
       bp.maengel.push({
         defectId: d.defectId || "",
+        existingDefectId: d.id,
         description: d.description || "",
         location: d.location || "",
         status: d.status || "leichter_mangel",
@@ -1094,6 +1107,7 @@ export default function InspectionsGlobal() {
       engineerId: ins.engineerId || "",
     });
     setEditBauteilPruefungen(buildEditBauteilState(ins));
+    setDeletedDefectIds([]);
     setEditDialogOpen(true);
   };
 
@@ -1130,6 +1144,10 @@ export default function InspectionsGlobal() {
           engineerId: data.engineerId || editingInspection.engineerId,
         }
       });
+
+      for (const id of deletedDefectIds) {
+        await deleteDefect.mutateAsync({ id, projectId: editingInspection.projectId });
+      }
 
       for (const bp of editBauteilPruefungen) {
         for (const m of bp.maengel) {
@@ -1193,6 +1211,7 @@ export default function InspectionsGlobal() {
       queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
       setEditDialogOpen(false);
       setEditingInspection(null);
+      setDeletedDefectIds([]);
     } catch (error) {
       console.error("Failed to update inspection:", error);
     } finally {
