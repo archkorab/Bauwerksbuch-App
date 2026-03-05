@@ -209,7 +209,18 @@ async function generateInspectionPdf(inspection: any) {
   doc.setFont("helvetica", "bold");
   doc.text(effectiveStatus, margin + 45, y);
   doc.setTextColor(...PDF_COLORS.foreground);
-  y += 10;
+  y += 8;
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  const hinweisText = "Hinweis: Weitere bei der Besichtigung gemachte Fotos sind dem zur Verfügung gestellten Ordner zu entnehmen.";
+  const hinweisLines = doc.splitTextToSize(hinweisText, pageWidth - 2 * margin);
+  doc.text(hinweisLines, margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLORS.foreground);
+  y += hinweisLines.length * 4.5 + 6;
 
   const notes = inspection.notes || "";
   const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
