@@ -328,9 +328,10 @@ export async function registerRoutes(
 
   app.get(api.users.listClients.path, isAuthenticated, async (req: any, res) => {
     try {
+      const admins = await storage.getUsersByRole("admin");
       const hausverwaltungen = await storage.getUsersByRole("hausverwaltung");
       const eigentuemer = await storage.getUsersByRole("eigentuemer");
-      res.json([...hausverwaltungen, ...eigentuemer]);
+      res.json([...admins, ...hausverwaltungen, ...eigentuemer]);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch clients" });
     }
