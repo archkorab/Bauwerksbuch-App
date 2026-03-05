@@ -1204,7 +1204,7 @@ export default function InspectionsGlobal() {
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
                   <Button type="button" variant="outline" size="sm" onClick={addCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="button-add-bauteil">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Sonderbauteil hinzufügen
                   </Button>
                 </div>
 
@@ -1466,7 +1466,7 @@ export default function InspectionsGlobal() {
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
                 <Button type="button" variant="outline" size="sm" onClick={addEditCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-add-bauteil">
-                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Sonderbauteil hinzufügen
                 </Button>
               </div>
 

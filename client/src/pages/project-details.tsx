@@ -1488,7 +1488,7 @@ export default function ProjectDetails() {
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="font-display font-bold text-base">Bauteilprüfung</h4>
                             <Button type="button" variant="outline" size="sm" onClick={addBauteilPruefung} className="bg-card border-border hover:bg-muted/60" data-testid="button-add-bauteil">
-                              <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                              <Plus className="w-3.5 h-3.5 mr-1.5" /> Sonderbauteil hinzufügen
                             </Button>
                           </div>
                           <div className="overflow-x-auto border border-border rounded-xl">
@@ -1600,7 +1600,7 @@ export default function ProjectDetails() {
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
                         <Button type="button" variant="outline" size="sm" onClick={addEditCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="edit-button-add-bauteil">
-                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Bauteil hinzufügen
+                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Sonderbauteil hinzufügen
                         </Button>
                       </div>
 
