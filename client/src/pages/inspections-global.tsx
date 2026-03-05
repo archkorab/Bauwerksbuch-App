@@ -5,6 +5,7 @@ import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspe
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
 import { useProfile } from "@/hooks/use-profile";
+import { useClients } from "@/hooks/use-users";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
   ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download
@@ -701,6 +702,7 @@ export default function InspectionsGlobal() {
   const { data: allInspections, isLoading: insLoading } = useAllInspections();
   const { data: projects, isLoading: projLoading } = useProjects();
   const { data: profile } = useProfile();
+  const { data: clients } = useClients();
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
   const updateDefect = useUpdateDefect();
@@ -791,10 +793,11 @@ export default function InspectionsGlobal() {
   };
 
   const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp, getValues: getEditInspValues } = useForm({
-    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "", engineerId: "" }
   });
   const editInspType = watchEditInsp("type");
   const editInspStatus = watchEditInsp("status");
+  const editInspEngineerId = watchEditInsp("engineerId");
 
   const updateEditBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
     setEditBauteilPruefungen(prev => prev.map((bp, i) => i === index ? { ...bp, [field]: value } : bp));
@@ -913,6 +916,7 @@ export default function InspectionsGlobal() {
       status: ins.status || "OK",
       type: ins.type || "erstpruefung",
       notes: userNotes,
+      engineerId: ins.engineerId || "",
     });
     setEditBauteilPruefungen(buildEditBauteilState(ins));
     setEditDialogOpen(true);
@@ -948,6 +952,7 @@ export default function InspectionsGlobal() {
           status: autoStatus,
           type: data.type,
           notes: fullNotes || null,
+          engineerId: data.engineerId || editingInspection.engineerId,
         }
       });
 
@@ -1415,6 +1420,19 @@ export default function InspectionsGlobal() {
                     <SelectItem value="OK">OK</SelectItem>
                     <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
                     <SelectItem value="urgent">Schwerer Mangel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Sachverständiger</Label>
+                <Select value={editInspEngineerId} onValueChange={(val) => setEditInspValue("engineerId", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-inspection-engineer">
+                    <SelectValue placeholder="Sachverständigen wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(clients || []).map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{displayName(c)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

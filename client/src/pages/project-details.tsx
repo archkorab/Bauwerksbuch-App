@@ -705,6 +705,7 @@ export default function ProjectDetails() {
       status: ins.status || "OK",
       type: (ins as any).type || "erstpruefung",
       notes: userNotes,
+      engineerId: ins.engineerId || "",
     });
     setEditBauteilPruefungen(buildEditBauteilState(ins));
     setEditDefectEntries([]);
@@ -713,10 +714,11 @@ export default function ProjectDetails() {
   };
 
   const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp } = useForm({
-    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "", engineerId: "" }
   });
   const editInspType = watchEditInsp("type");
   const editInspStatus = watchEditInsp("status");
+  const editInspEngineerId = watchEditInsp("engineerId");
 
   const onEditInspSubmit = async (data: any) => {
     if (!editingInspection) return;
@@ -748,6 +750,7 @@ export default function ProjectDetails() {
           status: autoStatus,
           type: data.type,
           notes: fullNotes || null,
+          engineerId: data.engineerId || editingInspection.engineerId,
         }
       });
 
@@ -1555,6 +1558,19 @@ export default function ProjectDetails() {
                         </Select>
                       </div>
                       <div className="space-y-2">
+                        <Label>Sachverständiger</Label>
+                        <Select value={editInspEngineerId} onValueChange={(val) => setEditInspValue("engineerId", val)}>
+                          <SelectTrigger className="bg-background border-border" data-testid="edit-select-inspection-engineer">
+                            <SelectValue placeholder="Sachverständigen wählen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(clients || []).map((c: any) => (
+                              <SelectItem key={c.id} value={c.id}>{displayName(c)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
                         <Label>Anmerkungen</Label>
                         <Input {...editInspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="edit-input-inspection-notes" />
                       </div>
