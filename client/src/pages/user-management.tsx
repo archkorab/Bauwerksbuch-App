@@ -351,8 +351,8 @@ export default function UserManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {!isCurrentUser && (
-                        <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1">
+                        {!isCurrentUser && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -366,15 +366,17 @@ export default function UserManagement() {
                           >
                             <LogIn className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-                            onClick={() => openEditDialog(user)}
-                            data-testid={`button-edit-user-${user.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          onClick={() => openEditDialog(user)}
+                          data-testid={`button-edit-user-${user.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        {!isCurrentUser && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -384,8 +386,8 @@ export default function UserManagement() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
