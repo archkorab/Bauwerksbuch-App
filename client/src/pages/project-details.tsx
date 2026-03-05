@@ -254,17 +254,22 @@ async function generateInspectionPdf(inspection: any) {
 
       const IMG_W = 80, IMG_H = 60, IMG_GAP = 4, IMGS_PER_ROW = 2, IMG_LABEL_H = 7;
       const defectImagesList: string[][] = [];
+      const defectImageDims: {w: number, h: number}[][] = [];
       for (const defect of defectsInOrder) {
         const urls: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
         const loaded: string[] = [];
+        const dims: {w: number, h: number}[] = [];
         for (const url of urls) {
           try {
             const blob = await (await fetch(url)).blob();
             const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
+            const dim = await new Promise<{w: number, h: number}>((res) => { const img = new Image(); img.onload = () => res({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = () => res({ w: 4, h: 3 }); img.src = dataUrl; });
             loaded.push(dataUrl);
-          } catch {}
+            dims.push(dim);
+          } catch { dims.push({ w: 4, h: 3 }); }
         }
         defectImagesList.push(loaded);
+        defectImageDims.push(dims);
       }
 
       const getImgBlockH = (di: number) => {
@@ -376,9 +381,15 @@ async function generateInspectionPdf(inspection: any) {
             doc.setTextColor(...PDF_COLORS.mutedFg);
             doc.text(`Fotos: ${defectsInOrder[di].defectId}`, sx, imgStartY + IMG_LABEL_H - 2);
             for (let ii = 0; ii < imgList.length; ii++) {
-              const xPos = sx + (ii % IMGS_PER_ROW) * (IMG_W + IMG_GAP);
-              const yPos = imgStartY + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
-              doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+              const cellX = sx + (ii % IMGS_PER_ROW) * (IMG_W + IMG_GAP);
+              const cellY = imgStartY + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
+              const dim = (defectImageDims[di] || [])[ii] || { w: 4, h: 3 };
+              const ratio = dim.w / (dim.h || 1);
+              let drawW = IMG_W, drawH = IMG_W / ratio;
+              if (drawH > IMG_H) { drawH = IMG_H; drawW = IMG_H * ratio; }
+              const offX = (IMG_W - drawW) / 2;
+              const offY = (IMG_H - drawH) / 2;
+              doc.addImage(imgList[ii], "JPEG", cellX + offX, cellY + offY, drawW, drawH);
             }
           }
         },
