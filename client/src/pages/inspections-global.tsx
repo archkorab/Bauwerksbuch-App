@@ -1044,7 +1044,19 @@ export default function InspectionsGlobal() {
   };
 
   const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
-    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] as BauteilMangel[] }));
+    const base: BauteilPruefung[] = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] as BauteilMangel[] }));
+    let customCounter = 1;
+    const getOrCreate = (name: string): BauteilPruefung => {
+      let bp = base.find(b => b.bauteil === name);
+      if (!bp) {
+        if (!base.some(b => b.bauteil === "Sonderbauteile" && b.level === 0)) {
+          base.push({ bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] });
+        }
+        bp = { bauteil: name, level: 1, refNr: `5.${customCounter++}`, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+        base.push(bp);
+      }
+      return bp;
+    };
     const notes = ins.notes || "";
     if (notes.includes("| Bauteilprüfung: ")) {
       const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
@@ -1053,7 +1065,8 @@ export default function InspectionsGlobal() {
         const match = entry.match(/^\[(.+?)\]/);
         if (!match) continue;
         const name = match[1];
-        const bp = base.find(b => b.bauteil === name);
+        const knownEntry = BAUTEIL_OPTIONS.find(b => b.label === name);
+        const bp = knownEntry ? base.find(b => b.bauteil === name) : getOrCreate(name);
         if (!bp) continue;
         const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
         if (gegenstandMatch) bp.artDesMangels = gegenstandMatch[1].trim();
@@ -1077,7 +1090,8 @@ export default function InspectionsGlobal() {
       const bauteilNames: string[] = d.bauteil || [];
       const targetName = bauteilNames.at(-1);
       if (!targetName) continue;
-      const bp = base.find(b => b.bauteil === targetName);
+      const knownEntry = BAUTEIL_OPTIONS.find(b => b.label === targetName);
+      const bp = knownEntry ? base.find(b => b.bauteil === targetName) : getOrCreate(targetName);
       if (!bp) continue;
       bp.mangel = true;
       bp.maengel.push({
