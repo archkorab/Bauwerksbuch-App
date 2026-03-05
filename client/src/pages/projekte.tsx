@@ -36,7 +36,7 @@ import { z } from "zod";
 const createProjectSchema = z.object({
   name: z.string().default(""),
   address: z.string().min(1, "Adresse ist erforderlich"),
-  clientId: z.string().min(1, "Eigentümer ist erforderlich"),
+  clientId: z.string().min(1, "User ist erforderlich"),
   verwaltungId: z.string().optional(),
   eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
@@ -138,10 +138,10 @@ export default function ProjektePage() {
                   {errors.address && <p className="text-xs text-destructive">{errors.address.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label>Eigentümer zuweisen</Label>
+                  <Label>User zuweisen</Label>
                   <Select onValueChange={(val) => setValue("clientId", val)}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-client-projekte">
-                      <SelectValue placeholder="Eigentümer wählen..." />
+                      <SelectValue placeholder="User wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {clients?.map(client => (
@@ -169,8 +169,8 @@ export default function ProjektePage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="eigentuemer-projekte">Eigentümer</Label>
-                  <Input id="eigentuemer-projekte" {...register("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer-projekte" />
+                  <Label htmlFor="eigentuemer-projekte">User</Label>
+                  <Input id="eigentuemer-projekte" {...register("eigentuemer")} placeholder="Name des Users" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer-projekte" />
                 </div>
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>
                   {createProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -232,7 +232,7 @@ export default function ProjektePage() {
                 <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Adresse</th>
                 <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Nächste Prüfung</th>
                 <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Status</th>
-                {isAdmin && <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Eigentümer</th>}
+                {isAdmin && <th className="text-left px-6 py-3.5 font-semibold text-muted-foreground uppercase tracking-wider text-xs">User</th>}
                 <th className="w-10"></th>
               </tr>
             </thead>
@@ -339,7 +339,7 @@ export default function ProjektePage() {
                           {displayInitials(project.client)}
                         </div>
                         <div className="text-xs">
-                          <p className="text-muted-foreground font-medium uppercase tracking-wider">Eigentümer</p>
+                          <p className="text-muted-foreground font-medium uppercase tracking-wider">User</p>
                           <p className="text-foreground font-semibold">{displayName(project.client)}</p>
                         </div>
                       </div>

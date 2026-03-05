@@ -789,8 +789,8 @@ export default function ProjectDetails() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-eigentuemer">Eigentümer</Label>
-                <Input id="edit-eigentuemer" {...editReg("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border" data-testid="input-edit-eigentuemer" />
+                <Label htmlFor="edit-eigentuemer">User</Label>
+                <Input id="edit-eigentuemer" {...editReg("eigentuemer")} placeholder="Name des Users" className="bg-background border-border" data-testid="input-edit-eigentuemer" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-nextInspection">Nächste Prüfung</Label>
@@ -810,7 +810,7 @@ export default function ProjectDetails() {
           <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Eigentümer</p>
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">User</p>
               <p className="font-medium" data-testid="text-client-name">{project.eigentuemer || '—'}</p>
             </div>
             <div>

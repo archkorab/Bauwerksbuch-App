@@ -34,7 +34,7 @@ import { z } from "zod";
 const createProjectSchema = z.object({
   name: z.string().default(""),
   address: z.string().min(1, "Adresse ist erforderlich"),
-  clientId: z.string().min(1, "Eigentümer ist erforderlich"),
+  clientId: z.string().min(1, "User ist erforderlich"),
   verwaltungId: z.string().optional(),
   eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
@@ -148,10 +148,10 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Eigentümer zuweisen</Label>
+                  <Label>User zuweisen</Label>
                   <Select onValueChange={(val) => setValue("clientId", val)}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-client">
-                      <SelectValue placeholder="Eigentümer wählen..." />
+                      <SelectValue placeholder="User wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {clients?.map(client => (
@@ -181,8 +181,8 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="eigentuemer">Eigentümer</Label>
-                  <Input id="eigentuemer" {...register("eigentuemer")} placeholder="Name des Eigentümers" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer" />
+                  <Label htmlFor="eigentuemer">User</Label>
+                  <Input id="eigentuemer" {...register("eigentuemer")} placeholder="Name des Users" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer" />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>
@@ -306,7 +306,7 @@ export default function Dashboard() {
                           {displayInitials(project.client)}
                         </div>
                         <div className="text-xs">
-                          <p className="text-muted-foreground font-medium uppercase tracking-wider">Eigentümer</p>
+                          <p className="text-muted-foreground font-medium uppercase tracking-wider">User</p>
                           <p className="text-foreground font-semibold">{displayName(project.client)}</p>
                         </div>
                       </div>
@@ -326,7 +326,7 @@ export default function Dashboard() {
                 <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Adresse</th>
                 <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Nächste Prüfung</th>
                 <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Status</th>
-                {isAdmin && <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Eigentümer</th>}
+                {isAdmin && <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">User</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
