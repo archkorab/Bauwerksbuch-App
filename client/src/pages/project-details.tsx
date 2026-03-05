@@ -875,11 +875,12 @@ export default function ProjectDetails() {
       name: "",
       address: "",
       status: "active",
-      clientId: "",
       verwaltungId: "",
       nextInspectionDue: "",
     }
   });
+
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([]);
 
   const openEditDialog = () => {
     if (!project) return;
@@ -887,7 +888,6 @@ export default function ProjectDetails() {
       name: project.name,
       address: project.address,
       status: project.status,
-      clientId: project.clientId || "",
       verwaltungId: project.verwaltungId || "",
       nextInspectionDue: project.nextInspectionDue
         ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd')
@@ -895,16 +895,26 @@ export default function ProjectDetails() {
           ? format(new Date(new Date(project.createdAt).setFullYear(new Date(project.createdAt).getFullYear() + 1)), 'yyyy-MM-dd')
           : "",
     });
+    const existing = (project as any).assignedUsers?.map((u: any) => u.id) || [];
+    setAssignedUserIds(existing.length > 0 ? existing : (project.clientId ? [project.clientId] : []));
     setEditDialogOpen(true);
   };
 
+  const toggleAssignedUser = (userId: string) => {
+    setAssignedUserIds(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
   const onEditSubmit = (data: any) => {
+    const primaryClient = assignedUserIds[0] || project?.clientId || "";
     const updates: any = {
       name: data.name,
       address: data.address,
       status: data.status,
-      clientId: data.clientId || null,
+      clientId: primaryClient || null,
       verwaltungId: data.verwaltungId || null,
+      assignedUserIds,
     };
     if (data.nextInspectionDue) {
       updates.nextInspectionDue = new Date(data.nextInspectionDue);
@@ -1014,18 +1024,22 @@ export default function ProjectDetails() {
               </div>
               <div className="space-y-2">
                 <Label>User zuweisen</Label>
-                <Select defaultValue={project.clientId || ""} onValueChange={(val) => setEditValue("clientId", val)}>
-                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-client">
-                    <SelectValue placeholder="User wählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients?.map(client => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {displayName(client)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="max-h-48 overflow-y-auto border border-border rounded-md p-2 space-y-1 bg-background" data-testid="user-assign-list">
+                  {clients?.map(client => (
+                    <div key={client.id} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-muted/30 cursor-pointer" onClick={() => toggleAssignedUser(client.id)}>
+                      <Checkbox
+                        id={`assign-${client.id}`}
+                        checked={assignedUserIds.includes(client.id)}
+                        onCheckedChange={() => toggleAssignedUser(client.id)}
+                        data-testid={`checkbox-assign-user-${client.id}`}
+                      />
+                      <label htmlFor={`assign-${client.id}`} className="text-sm cursor-pointer flex-1">{displayName(client)}</label>
+                    </div>
+                  ))}
+                </div>
+                {assignedUserIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{assignedUserIds.length} User ausgewählt</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-nextInspection">Nächste Prüfung</Label>
@@ -1063,9 +1077,18 @@ export default function ProjectDetails() {
             {isAdmin && (
               <div>
                 <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">User</p>
-                <p className="font-medium" data-testid="text-client-name">
-                  {project.client ? displayName(project.client) : '—'}
-                </p>
+                <div className="flex flex-wrap gap-1.5" data-testid="text-client-name">
+                  {(project as any).assignedUsers && (project as any).assignedUsers.length > 0
+                    ? (project as any).assignedUsers.map((u: any) => (
+                        <span key={u.id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-primary/10 text-primary font-medium">
+                          {displayName(u)}
+                        </span>
+                      ))
+                    : project.client
+                      ? <span className="font-medium">{displayName(project.client)}</span>
+                      : <span className="text-muted-foreground">—</span>
+                  }
+                </div>
               </div>
             )}
           </div>

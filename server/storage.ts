@@ -2,6 +2,7 @@ import { db } from "./db";
 import {
   profiles,
   projects,
+  projectAssignedUsers,
   documents,
   events,
   inspections,
@@ -33,7 +34,7 @@ import {
   type Bauakt,
   type InsertBauakt,
 } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getProfile(userId: string): Promise<Profile | undefined>;
@@ -51,6 +52,8 @@ export interface IStorage {
   getProject(id: number): Promise<ProjectResponse | undefined>;
   createProject(data: InsertProject): Promise<Project>;
   updateProject(id: number, data: UpdateProjectRequest): Promise<Project>;
+  setProjectAssignedUsers(projectId: number, userIds: string[]): Promise<void>;
+  getProjectAssignedUsers(projectId: number): Promise<(typeof users.$inferSelect & { profile?: any })[]>;
   deleteProject(id: number): Promise<void>;
 
   getDocuments(projectId: number): Promise<Document[]>;
@@ -200,7 +203,7 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  private async enrichProjectWithVerwaltung(project: any, clientUser: any): Promise<ProjectResponse> {
+  private async enrichProject(project: any, clientUser: any): Promise<ProjectResponse> {
     let verwaltung: any = undefined;
     if (project.verwaltungId) {
       const [vUser] = await db.select().from(users).where(eq(users.id, project.verwaltungId));
@@ -214,27 +217,55 @@ export class DatabaseStorage implements IStorage {
       const [cp] = await db.select().from(profiles).where(eq(profiles.userId, clientUser.id));
       clientProfile = cp || undefined;
     }
+    const assignedUserRows = await db
+      .select()
+      .from(projectAssignedUsers)
+      .where(eq(projectAssignedUsers.projectId, project.id));
+    const assignedUsers: any[] = [];
+    for (const row of assignedUserRows) {
+      const [u] = await db.select().from(users).where(eq(users.id, row.userId));
+      if (u) {
+        const [p] = await db.select().from(profiles).where(eq(profiles.userId, u.id));
+        assignedUsers.push({ ...u, profile: p || undefined });
+      }
+    }
     return {
       ...project,
       client: clientUser ? { ...clientUser, profile: clientProfile } : undefined,
       verwaltung,
+      assignedUsers,
     };
   }
 
   async getProjects(clientId?: string): Promise<ProjectResponse[]> {
-    const baseQuery = db
-      .select()
-      .from(projects)
-      .leftJoin(users, eq(projects.clientId, users.id))
-      .orderBy(desc(projects.createdAt));
-
-    const result = clientId
-      ? await baseQuery.where(eq(projects.clientId, clientId))
-      : await baseQuery;
+    let result: any[];
+    if (clientId) {
+      const assignedProjectIds = await db
+        .select({ projectId: projectAssignedUsers.projectId })
+        .from(projectAssignedUsers)
+        .where(eq(projectAssignedUsers.userId, clientId));
+      const assignedIds = assignedProjectIds.map(r => r.projectId);
+      const baseQuery = db
+        .select()
+        .from(projects)
+        .leftJoin(users, eq(projects.clientId, users.id))
+        .orderBy(desc(projects.createdAt));
+      if (assignedIds.length > 0) {
+        result = await baseQuery.where(or(eq(projects.clientId, clientId), inArray(projects.id, assignedIds)));
+      } else {
+        result = await baseQuery.where(eq(projects.clientId, clientId));
+      }
+    } else {
+      result = await db
+        .select()
+        .from(projects)
+        .leftJoin(users, eq(projects.clientId, users.id))
+        .orderBy(desc(projects.createdAt));
+    }
 
     const enriched: ProjectResponse[] = [];
     for (const r of result) {
-      enriched.push(await this.enrichProjectWithVerwaltung(r.projects, r.users));
+      enriched.push(await this.enrichProject(r.projects, r.users));
     }
     return enriched;
   }
@@ -246,7 +277,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(projects.clientId, users.id))
       .where(eq(projects.id, id));
     if (!result) return undefined;
-    return this.enrichProjectWithVerwaltung(result.projects, result.users);
+    return this.enrichProject(result.projects, result.users);
   }
 
   async createProject(data: InsertProject): Promise<Project> {
@@ -259,6 +290,29 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async setProjectAssignedUsers(projectId: number, userIds: string[]): Promise<void> {
+    await db.delete(projectAssignedUsers).where(eq(projectAssignedUsers.projectId, projectId));
+    if (userIds.length > 0) {
+      await db.insert(projectAssignedUsers).values(userIds.map(userId => ({ projectId, userId })));
+    }
+  }
+
+  async getProjectAssignedUsers(projectId: number): Promise<(typeof users.$inferSelect & { profile?: any })[]> {
+    const rows = await db
+      .select()
+      .from(projectAssignedUsers)
+      .where(eq(projectAssignedUsers.projectId, projectId));
+    const result: any[] = [];
+    for (const row of rows) {
+      const [u] = await db.select().from(users).where(eq(users.id, row.userId));
+      if (u) {
+        const [p] = await db.select().from(profiles).where(eq(profiles.userId, u.id));
+        result.push({ ...u, profile: p || undefined });
+      }
+    }
+    return result;
+  }
+
   async deleteProject(id: number): Promise<void> {
     const projectInspections = await db.select({ id: inspections.id }).from(inspections).where(eq(inspections.projectId, id));
     for (const ins of projectInspections) {
@@ -269,6 +323,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(events).where(eq(events.projectId, id));
     await db.delete(projectImages).where(eq(projectImages.projectId, id));
     await db.delete(bauakt).where(eq(bauakt.projectId, id));
+    await db.delete(projectAssignedUsers).where(eq(projectAssignedUsers.projectId, id));
     await db.delete(projects).where(eq(projects.id, id));
   }
 

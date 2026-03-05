@@ -497,7 +497,8 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
       const role = profile?.role || "eigentuemer";
-      if (role !== "admin" && project.clientId !== userId) {
+      const isAssigned = project.assignedUsers?.some((u: any) => u.id === userId);
+      if (role !== "admin" && project.clientId !== userId && !isAssigned) {
         return res.status(404).json({ message: "Project not found" });
       }
       res.json(project);
@@ -532,14 +533,19 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Nur Administratoren können Projekte bearbeiten" });
       }
       const id = parseInt(req.params.id, 10);
-      const body = { ...req.body };
+      const { assignedUserIds, ...rest } = req.body;
+      const body = { ...rest };
       if (body.nextInspectionDue && typeof body.nextInspectionDue === 'string') {
         body.nextInspectionDue = new Date(body.nextInspectionDue);
       }
       const input = api.projects.update.input.parse(body);
       const project = await storage.updateProject(id, input);
       if (!project) return res.status(404).json({ message: "Project not found" });
-      res.json(project);
+      if (Array.isArray(assignedUserIds)) {
+        await storage.setProjectAssignedUsers(id, assignedUserIds);
+      }
+      const enriched = await storage.getProject(id);
+      res.json(enriched);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });

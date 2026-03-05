@@ -91,6 +91,12 @@ export const projectImages = pgTable("project_images", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const projectAssignedUsers = pgTable("project_assigned_users", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id),
+  userId: text("user_id").notNull().references(() => users.id),
+});
+
 export const bauakt = pgTable("bauakt", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id),
@@ -131,10 +137,22 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
     relationName: "verwaltung_projects",
   }),
+  assignedUsers: many(projectAssignedUsers),
   documents: many(documents),
   events: many(events),
   inspections: many(inspections),
   bauakte: many(bauakt),
+}));
+
+export const projectAssignedUsersRelations = relations(projectAssignedUsers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectAssignedUsers.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectAssignedUsers.userId],
+    references: [users.id],
+  }),
 }));
 
 export const documentsRelations = relations(documents, ({ one }) => ({
@@ -209,7 +227,7 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type CreateProjectRequest = InsertProject;
 export type UpdateProjectRequest = Partial<InsertProject>;
-export type ProjectResponse = Project & { client?: typeof users.$inferSelect & { profile?: Profile }, verwaltung?: typeof users.$inferSelect & { profile?: Profile } };
+export type ProjectResponse = Project & { client?: typeof users.$inferSelect & { profile?: Profile }, verwaltung?: typeof users.$inferSelect & { profile?: Profile }, assignedUsers?: (typeof users.$inferSelect & { profile?: Profile })[] };
 export type ProjectsListResponse = ProjectResponse[];
 
 // Documents
