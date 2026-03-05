@@ -36,7 +36,7 @@ const BAUTEIL_OPTIONS: BauteilOption[] = [
   { label: "Verputz", level: 1, ref: "1.1", defaultGegenstand: "Risse, lose Teile, Hohlstellen, Abplatzungen" },
   { label: "Gesimse", level: 1, ref: "1.2", defaultGegenstand: "Risse, lose Teile, Hohlstellen, Abplatzungen" },
   { label: "Fenster", level: 1, ref: "1.3", defaultGegenstand: "Verformungen, Sprünge, Verglasungen, Rahmen, Absturzsicherung" },
-  { label: "Sonderbauteile", level: 1, ref: "1.4" },
+  { label: "Sonderbauteile", level: 1, ref: "1.4", defaultGegenstand: "z.B. Befestigungen von SAT-Anlagen" },
   { label: "Dach", level: 0 },
   { label: "Konstruktion", level: 1, ref: "2.1", defaultGegenstand: "Zustand" },
   { label: "Eindeckung, Schneefangeinrichtung", level: 1, ref: "2.2", defaultGegenstand: "lose Teile, Fehlstellen" },
