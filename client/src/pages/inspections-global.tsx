@@ -1716,8 +1716,9 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
               mangel: entry.includes("Mangel"),
               gegenstand: gegenstandMatch?.[1]?.trim() || legacyMangelMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
               vertieftePruefung: entry.includes("vertiefte Prüfung"),
+              vertieftePruefungText: (() => { const m = entry.match(/vertiefte Prüfung: (.+)$/); return m ? m[1].trim() : ""; })(),
             };
-          }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
+          }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean; vertieftePruefungText: string }[];
           if (entries.length === 0) return null;
           const headerNames = new Set<string>();
           for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
@@ -1777,7 +1778,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                             {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                           <td className="px-3 py-2 text-center">
-                            {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                            {e.vertieftePruefung ? <span className="text-blue-600 font-medium">{e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja"}</span> : <span className="text-muted-foreground">Nein</span>}
                           </td>
                         </tr>
                       );
