@@ -433,20 +433,22 @@ export default function ProjectDetails() {
     setDefectEntries(prev => prev.filter((_, i) => i !== index));
   };
 
-  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
   const { register: docReg, handleSubmit: handleDocSubmit, reset: resetDocForm } = useForm({
     defaultValues: { name: "" }
   });
 
   const onDocSubmit = (data: any) => {
-    if (!docFile) return;
+    if (docFiles.length === 0) return;
     const formData = new FormData();
-    formData.append('file', docFile);
-    formData.append('name', data.name || docFile.name);
+    docFiles.forEach(f => formData.append('file', f));
+    if (docFiles.length === 1 && data.name) {
+      formData.append('name', data.name);
+    }
     createDocument.mutate({ projectId, formData }, {
       onSuccess: () => {
         setDocDialogOpen(false);
-        setDocFile(null);
+        setDocFiles([]);
         resetDocForm();
       }
     });
@@ -862,24 +864,30 @@ export default function ProjectDetails() {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle>Dokument hochladen</DialogTitle></DialogHeader>
+                      <DialogHeader><DialogTitle>Dokumente hochladen</DialogTitle></DialogHeader>
                       <form onSubmit={handleDocSubmit(onDocSubmit)} className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Datei auswählen</Label>
+                          <Label>Dateien auswählen</Label>
                           <Input
                             type="file"
+                            multiple
                             onChange={(e) => {
-                              const f = e.target.files?.[0] || null;
-                              setDocFile(f);
+                              const files = e.target.files ? Array.from(e.target.files) : [];
+                              setDocFiles(files);
                             }}
                             required
                             className="bg-background"
                             data-testid="input-doc-file"
                           />
+                          {docFiles.length > 1 && (
+                            <p className="text-xs text-muted-foreground">{docFiles.length} Dateien ausgewählt</p>
+                          )}
                         </div>
-                        <div className="space-y-2"><Label>Dokumentname (optional)</Label><Input {...docReg("name")} placeholder={docFile?.name || "Wird aus Dateiname übernommen"} className="bg-background" data-testid="input-doc-name"/></div>
-                        <Button type="submit" className="w-full" disabled={createDocument.isPending || !docFile} data-testid="button-doc-submit">
-                          {createDocument.isPending ? "Wird hochgeladen..." : "Hochladen"}
+                        {docFiles.length <= 1 && (
+                          <div className="space-y-2"><Label>Dokumentname (optional)</Label><Input {...docReg("name")} placeholder={docFiles[0]?.name || "Wird aus Dateiname übernommen"} className="bg-background" data-testid="input-doc-name"/></div>
+                        )}
+                        <Button type="submit" className="w-full" disabled={createDocument.isPending || docFiles.length === 0} data-testid="button-doc-submit">
+                          {createDocument.isPending ? "Wird hochgeladen..." : docFiles.length > 1 ? `${docFiles.length} Dateien hochladen` : "Hochladen"}
                         </Button>
                       </form>
                     </DialogContent>

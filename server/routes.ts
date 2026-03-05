@@ -584,7 +584,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.documents.create.path, isAuthenticated, documentUpload.single('file'), async (req: any, res) => {
+  app.post(api.documents.create.path, isAuthenticated, documentUpload.array('file', 50), async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
       const userId = req.user.claims.sub;
@@ -592,16 +592,23 @@ export async function registerRoutes(
       if (!profile || profile.role !== "admin") {
         return res.status(403).json({ message: "Nur Administratoren können Dokumente hochladen" });
       }
-      const file = req.file as Express.Multer.File | undefined;
-      const name = req.body.name || (file ? file.filename : "Unnamed");
-      const type = req.body.type || (file ? path.extname(file.originalname).replace('.', '') : "pdf");
-      let url = req.body.url || "";
-      if (file) {
-        url = `/api/document-files/${projectId}/${encodeURIComponent(file.filename)}`;
+      const files = (req.files as Express.Multer.File[]) || [];
+      const customName = req.body.name || "";
+
+      if (files.length === 0) {
+        return res.status(400).json({ message: "Keine Dateien ausgewählt" });
       }
-      const input = { projectId, name, url, type, uploadedBy: userId };
-      const doc = await storage.createDocument(input);
-      res.status(201).json(doc);
+
+      const docs = [];
+      for (const file of files) {
+        const name = files.length === 1 && customName ? customName : file.originalname;
+        const type = path.extname(file.originalname).replace('.', '') || "pdf";
+        const url = `/api/document-files/${projectId}/${encodeURIComponent(file.filename)}`;
+        const input = { projectId, name, url, type, uploadedBy: userId };
+        const doc = await storage.createDocument(input);
+        docs.push(doc);
+      }
+      res.status(201).json(docs.length === 1 ? docs[0] : docs);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
