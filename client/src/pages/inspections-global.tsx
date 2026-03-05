@@ -728,11 +728,12 @@ export default function InspectionsGlobal() {
   };
 
   const addCustomBauteil = () => {
+    const isFolge = getInspValues("type") === "folgepruefung";
     setBauteilPruefungen(prev => {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: isFolge, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
         const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
@@ -1208,7 +1209,10 @@ export default function InspectionsGlobal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Art der Prüfung</Label>
-                  <Select defaultValue="erstpruefung" onValueChange={(val) => setInspValue("type", val)}>
+                  <Select defaultValue="erstpruefung" onValueChange={(val) => {
+                    setInspValue("type", val);
+                    setBauteilPruefungen(prev => prev.map(bp => ({ ...bp, geprueft: val === "folgepruefung" })));
+                  }}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-inspection-type-global">
                       <SelectValue />
                     </SelectTrigger>
@@ -1461,7 +1465,10 @@ export default function InspectionsGlobal() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Art der Prüfung</Label>
-                <Select value={editInspType} onValueChange={(val) => setEditInspValue("type", val)}>
+                <Select value={editInspType} onValueChange={(val) => {
+                  setEditInspValue("type", val);
+                  setEditBauteilPruefungen(prev => prev.map(bp => ({ ...bp, geprueft: val === "folgepruefung" ? true : bp.geprueft })));
+                }}>
                   <SelectTrigger className="bg-background border-border" data-testid="select-edit-inspection-type">
                     <SelectValue />
                   </SelectTrigger>
