@@ -326,8 +326,32 @@ async function generateInspectionPdf(inspection: any) {
     doc.setTextColor(...PDF_COLORS.foreground);
     y += 2;
 
+    const defectImages: Map<number, string> = new Map();
     for (let di = 0; di < defects.length; di++) {
       const d = defects[di];
+      if (d.imageUrl) {
+        try {
+          const response = await fetch(d.imageUrl);
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          defectImages.set(di, dataUrl);
+        } catch {}
+      }
+    }
+
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const hasImage = defectImages.has(di);
+      const estimatedRowHeight = di === 0 ? 22 : 14;
+      const imageBlockHeight = hasImage ? 50 : 0;
+      const totalNeeded = estimatedRowHeight + imageBlockHeight;
+
+      if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+
       const defectRow = [[
         d.defectId,
         d.bauteil?.join(", ") || "–",
@@ -362,25 +386,16 @@ async function generateInspectionPdf(inspection: any) {
       });
       y = (doc as any).lastAutoTable.finalY;
 
-      if (d.imageUrl) {
-        try {
-          const response = await fetch(d.imageUrl);
-          const blob = await response.blob();
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          if (y + 55 > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-          y += 3;
-          doc.addImage(dataUrl, "JPEG", margin + 2, y, 55, 40);
-          y += 42;
-          doc.setFontSize(7);
-          doc.setTextColor(...PDF_COLORS.mutedFg);
-          doc.text(`Foto M${d.defectId}`, margin + 2, y);
-          doc.setTextColor(...PDF_COLORS.foreground);
-          y += 5;
-        } catch {}
+      if (hasImage) {
+        const dataUrl = defectImages.get(di)!;
+        y += 3;
+        doc.addImage(dataUrl, "JPEG", margin + 2, y, 55, 40);
+        y += 42;
+        doc.setFontSize(7);
+        doc.setTextColor(...PDF_COLORS.mutedFg);
+        doc.text(`Foto M${d.defectId}`, margin + 2, y);
+        doc.setTextColor(...PDF_COLORS.foreground);
+        y += 5;
       }
 
       y += 2;
