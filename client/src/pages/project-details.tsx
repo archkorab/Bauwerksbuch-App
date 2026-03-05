@@ -11,6 +11,9 @@ import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-b
 import { useProjectImages, useUploadProjectImages, useDeleteProjectImage } from "@/hooks/use-project-images";
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import logoPath from "@assets/logo_1772640036077.png";
 import { 
   Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List
 } from "lucide-react";
@@ -50,6 +53,325 @@ const inspTypeLabels: Record<string, string> = {
   erstpruefung: "Erstprüfung",
   folgepruefung: "Folgeprüfung",
 };
+
+const fristLabels: Record<string, string> = {
+  "umgehend": "Umgehend",
+  "6_monate": "6 Monate",
+  "1_jahr": "1 Jahr",
+};
+
+const PDF_COLORS = {
+  primary: [97, 97, 158] as [number, number, number],
+  foreground: [33, 33, 49] as [number, number, number],
+  muted: [237, 237, 243] as [number, number, number],
+  border: [210, 210, 225] as [number, number, number],
+  mutedFg: [120, 120, 145] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  ok: [16, 185, 129] as [number, number, number],
+  amber: [217, 119, 6] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+};
+
+async function loadLogoDataUrl(): Promise<string> {
+  const response = await fetch(logoPath);
+  const blob = await response.blob();
+  return new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function generateInspectionPdf(inspection: any) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  let y = 15;
+
+  let logoDataUrl: string | null = null;
+  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+
+  function drawHeader() {
+    if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 8, 65, 16);
+    doc.setDrawColor(...PDF_COLORS.primary);
+    doc.setLineWidth(0.6);
+    doc.line(margin, 27, pageWidth - margin, 27);
+  }
+
+  function drawFooter(pageNum: number, totalPages: number) {
+    const footerY = pageHeight - 10;
+    doc.setDrawColor(...PDF_COLORS.border);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+    doc.setFontSize(7);
+    doc.setTextColor(...PDF_COLORS.mutedFg);
+    const footerAddress = inspection.projectAddress ? `Bauwerksbuch - ${inspection.projectAddress}` : "Bauwerksbuch";
+    doc.text(footerAddress, margin, footerY);
+    doc.text(`Seite ${pageNum} von ${totalPages}`, pageWidth - margin, footerY, { align: "right" });
+  }
+
+  drawHeader();
+  y = 33;
+
+  const groberCount = inspection.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
+  const leichterCount = inspection.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
+  const hasBauteilMangel = inspection.notes?.includes("- Mangel") || false;
+  const effectiveStatus = (groberCount > 0 || inspection.status === "urgent")
+    ? "Schwerer Mangel"
+    : (leichterCount > 0 || hasBauteilMangel || inspection.status === "needs_repair")
+      ? "Leichter Mangel"
+      : "OK";
+
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PDF_COLORS.foreground);
+  doc.text(`${inspTypeLabels[inspection.type] || "Prüfung"} - Überprüfung laut §128a der Bauordnung für Wien`, margin, y);
+  y += 9;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const details: [string, string][] = [
+    ["Datum", format(new Date(inspection.date), "dd.MM.yyyy")],
+    ["Adresse", inspection.projectAddress || inspection.projectName || `Projekt #${inspection.projectId}`],
+  ];
+  if (inspection.projectName && inspection.projectName !== inspection.projectAddress) details.push(["Projekt", inspection.projectName]);
+  if (inspection.engineer) details.push(["Sachverständiger", displayName(inspection.engineer)]);
+
+  for (const [label, value] of details) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PDF_COLORS.mutedFg);
+    doc.text(`${label}:`, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...PDF_COLORS.foreground);
+    doc.text(value, margin + 45, y);
+    y += 6;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  doc.text("Status:", margin, y);
+  const statusColor = effectiveStatus === "OK" ? PDF_COLORS.ok : effectiveStatus === "Schwerer Mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
+  doc.setTextColor(...statusColor);
+  doc.setFont("helvetica", "bold");
+  doc.text(effectiveStatus, margin + 45, y);
+  doc.setTextColor(...PDF_COLORS.foreground);
+  y += 8;
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  const hinweisText = "Hinweis: Weitere bei der Besichtigung gemachte Fotos sind dem zur Verfügung gestellten Ordner zu entnehmen.";
+  const hinweisLines = doc.splitTextToSize(hinweisText, pageWidth - 2 * margin);
+  doc.text(hinweisLines, margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...PDF_COLORS.foreground);
+  y += hinweisLines.length * 4.5 + 6;
+
+  const notes = inspection.notes || "";
+  const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
+  if (userNotes) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PDF_COLORS.primary);
+    doc.text("Anmerkungen", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...PDF_COLORS.foreground);
+    const lines = doc.splitTextToSize(userNotes, pageWidth - 2 * margin);
+    doc.text(lines, margin, y);
+    y += lines.length * 5 + 6;
+  }
+
+  if (notes.includes("| Bauteilprüfung: ")) {
+    const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+    const entries = bauteilPart.split("; ").map((entry: string) => {
+      const nameMatch = entry.match(/^\[(.+?)\]/);
+      if (!nameMatch) return null;
+      const name = nameMatch[1];
+      const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
+      const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+      return {
+        name,
+        ref: (opt as any)?.ref || "",
+        level: opt?.level ?? 0,
+        geprueft: entry.includes("geprüft"),
+        mangel: entry.includes("Mangel"),
+        gegenstand: gegenstandMatch?.[1]?.trim() || (opt as any)?.defaultGegenstand || "",
+        vertieftePruefung: entry.includes("vertiefte Prüfung"),
+        vertieftePruefungText: (() => { const m = entry.match(/vertiefte Prüfung: (.+)$/); return m ? m[1].trim() : ""; })(),
+      };
+    }).filter(Boolean) as any[];
+
+    if (entries.length > 0) {
+      const headerNames = new Set<string>();
+      for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
+        if (BAUTEIL_OPTIONS[i].level === 0 && BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
+      }
+      const entryMap = new Map(entries.map((e: any) => [e.name, e]));
+      const displayEntries: any[] = [];
+      for (const opt of BAUTEIL_OPTIONS) {
+        if (headerNames.has(opt.label)) {
+          const hasChild = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label));
+          if (hasChild || entryMap.has(opt.label)) {
+            displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, vertieftePruefungText: "", isHeader: true });
+          }
+        } else if (entryMap.has(opt.label)) {
+          displayEntries.push({ ...entryMap.get(opt.label), isHeader: false });
+        }
+      }
+      const standardLabels = new Set(BAUTEIL_OPTIONS.map(o => o.label));
+      const customEntries = entries.filter((e: any) => !standardLabels.has(e.name));
+      if (customEntries.length > 0) {
+        displayEntries.push({ name: "Sonderbauteile", ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, vertieftePruefungText: "", isHeader: true });
+        for (const ce of customEntries) displayEntries.push({ ...ce, level: 1, isHeader: false });
+      }
+
+      if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text("Bauteil Prüfung", margin, y);
+      doc.setTextColor(...PDF_COLORS.foreground);
+      y += 2;
+
+      const bauteilRows = displayEntries.map((e: any) => {
+        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
+        return [e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"];
+      });
+      const levelFlags = displayEntries.map((e: any) => e.level === 1);
+
+      autoTable(doc, {
+        startY: y,
+        head: [["Nr.", "Bauteil", "Gegenstand", "Geprüft", "Mangel", "Vertiefte Prüfung"]],
+        body: bauteilRows,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 8, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 248, 252] },
+        columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
+        didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 1 && levelFlags[data.row.index]) {
+            data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
+          }
+          if (data.section === "body") {
+            if (data.column.index === 3 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 4 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 5 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
+  const defects = inspection.defects || [];
+  if (defects.length > 0) {
+    if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PDF_COLORS.primary);
+    doc.text(`Mängel (${defects.length})`, margin, y);
+    doc.setTextColor(...PDF_COLORS.foreground);
+    y += 2;
+
+    const defectImages: Map<number, string[]> = new Map();
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+      const loadedUrls: string[] = [];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          loadedUrls.push(dataUrl);
+        } catch {}
+      }
+      if (loadedUrls.length) defectImages.set(di, loadedUrls);
+    }
+
+    const IMG_W = 80;
+    const IMG_H = 60;
+
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const imgList = defectImages.get(di) || [];
+      const hasImage = imgList.length > 0;
+      const estimatedRowHeight = di === 0 ? 22 : 14;
+      const imageBlockHeight = hasImage ? (IMG_H + 4) * Math.ceil(imgList.length / 3) : 0;
+      const totalNeeded = estimatedRowHeight + imageBlockHeight;
+
+      if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+
+      const defectRow = [[
+        d.defectId,
+        d.bauteil?.join(", ") || "–",
+        format(new Date(d.dateFound), "dd.MM.yyyy"),
+        d.description,
+        d.location,
+        d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
+        d.frist ? fristLabels[d.frist] || d.frist : "–",
+        d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
+      ]];
+
+      autoTable(doc, {
+        startY: y,
+        head: di === 0 ? [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]] : undefined,
+        body: defectRow,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 248, 252] },
+        columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
+        showHead: di === 0 ? "firstPage" : false,
+        didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 5) {
+            if (data.cell.raw === "Schwerer Mangel") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+            else if (data.cell.raw === "Leichter Mangel") { data.cell.styles.textColor = PDF_COLORS.amber; }
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY;
+
+      if (hasImage) {
+        y += 3;
+        const maxPerRow = 3;
+        const gap = 4;
+        for (let ii = 0; ii < imgList.length; ii++) {
+          const col = ii % maxPerRow;
+          const row = Math.floor(ii / maxPerRow);
+          const xPos = margin + 2 + col * (IMG_W + gap);
+          const yPos = y + row * (IMG_H + gap);
+          doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+        }
+        const rowCount = Math.ceil(imgList.length / maxPerRow);
+        y += rowCount * (IMG_H + gap);
+      }
+      y += 2;
+    }
+    y += 4;
+  }
+
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    drawFooter(i, totalPages);
+  }
+  doc.setTextColor(0);
+
+  const addressForFilename = (inspection.projectAddress || inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, "_").trim();
+  doc.save(`BWB Prüfbericht ${addressForFilename}.pdf`);
+}
 
 const BAUTEIL_OPTIONS_SIMPLE = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
 
@@ -309,12 +631,6 @@ interface DefectEntry {
   imageFile?: File | null;
   imageUrl?: string;
 }
-
-const fristLabels: Record<string, string> = {
-  "umgehend": "Umgehend",
-  "6_monate": "6 Monate",
-  "1_jahr": "1 Jahr",
-};
 
 function calcRepairDue(dateFound: string, frist: string): string {
   if (!dateFound || !frist) return "";
@@ -1760,6 +2076,9 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); generateInspectionPdf({ ...ins, projectAddress: project?.address, projectName: project?.name }); }} title="PDF herunterladen" data-testid={`button-pdf-inspection-${ins.id}`}>
+                                <Download className="w-4 h-4" />
+                              </Button>
                               {isAdmin && (
                                 <>
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); openEditInspection(ins); }} data-testid={`button-edit-inspection-${ins.id}`}>
