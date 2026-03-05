@@ -713,10 +713,10 @@ export default function InspectionsGlobal() {
   const [editingInspection, setEditingInspection] = useState<any>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, getValues: getInspValues } = useForm({
@@ -728,12 +728,11 @@ export default function InspectionsGlobal() {
   };
 
   const addCustomBauteil = () => {
-    const isFolge = getInspValues("type") === "folgepruefung";
     setBauteilPruefungen(prev => {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: isFolge, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
         const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
@@ -813,7 +812,7 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
   };
 
   const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp, getValues: getEditInspValues } = useForm({
@@ -832,7 +831,7 @@ export default function InspectionsGlobal() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
         const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
@@ -1209,10 +1208,7 @@ export default function InspectionsGlobal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Art der Prüfung</Label>
-                  <Select defaultValue="erstpruefung" onValueChange={(val) => {
-                    setInspValue("type", val);
-                    setBauteilPruefungen(prev => prev.map(bp => ({ ...bp, geprueft: val === "folgepruefung" })));
-                  }}>
+                  <Select defaultValue="erstpruefung" onValueChange={(val) => setInspValue("type", val)}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-inspection-type-global">
                       <SelectValue />
                     </SelectTrigger>
