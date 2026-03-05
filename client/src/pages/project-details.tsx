@@ -103,33 +103,6 @@ interface BauteilPruefung {
   maengel: BauteilMangel[];
 }
 
-interface ParsedBauteilEntry {
-  bauteil: string;
-  gegenstand: string;
-  geprueft: boolean;
-  mangel: boolean;
-  vertieftePruefung: boolean;
-}
-
-function parseBauteilNotes(notes: string | null | undefined): ParsedBauteilEntry[] {
-  if (!notes || !notes.includes("| Bauteilprüfung: ")) return [];
-  const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
-  if (!bauteilPart) return [];
-  return bauteilPart.split("; ").map(entry => {
-    const bauteilMatch = entry.match(/^\[(.+?)\]/);
-    const bauteil = bauteilMatch ? bauteilMatch[1] : "";
-    const gegenstandMatch = entry.match(/Gegenstand: ([^-]+?)(?:\s*-\s*|$)/);
-    const gegenstand = gegenstandMatch ? gegenstandMatch[1].trim() : "";
-    return {
-      bauteil,
-      gegenstand,
-      geprueft: entry.includes("geprüft"),
-      mangel: entry.includes("Mangel"),
-      vertieftePruefung: entry.includes("vertiefte Prüfung erforderlich"),
-    };
-  }).filter(e => e.bauteil);
-}
-
 interface BauteilRowProps {
   bp: BauteilPruefung;
   index: number;
@@ -1611,147 +1584,249 @@ export default function ProjectDetails() {
                           </div>
                         </div>
 
-                        {isInsExpanded && (() => {
-                          const parsedBauteil = parseBauteilNotes(ins.notes);
-                          return parsedBauteil.length > 0 ? (
-                            <div className="px-5 pb-4 pt-1" data-testid={`bauteil-pruefung-display-${ins.id}`}>
-                              <h4 className="font-display font-bold text-sm mb-2">Bauteilprüfung</h4>
-                              <div className="overflow-x-auto rounded-lg border border-border">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                                      <th className="text-left px-4 py-2 font-semibold">Bauteil</th>
-                                      <th className="text-left px-4 py-2 font-semibold">Gegenstand</th>
-                                      <th className="text-center px-4 py-2 font-semibold">Geprüft</th>
-                                      <th className="text-center px-4 py-2 font-semibold">Mangel</th>
-                                      <th className="text-center px-4 py-2 font-semibold">Vertiefte Prüfung</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-border">
-                                    {parsedBauteil.map((bp, bpIdx) => (
-                                      <tr key={bpIdx} className="hover:bg-muted/40 transition-colors">
-                                        <td className="px-4 py-2 text-foreground font-medium">{bp.bauteil}</td>
-                                        <td className="px-4 py-2 text-foreground">{bp.gegenstand || "–"}</td>
-                                        <td className="px-4 py-2 text-center">
-                                          {bp.geprueft ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" /> : <span className="text-muted-foreground">–</span>}
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                          {bp.mangel ? <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" /> : <span className="text-muted-foreground">–</span>}
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                          {bp.vertieftePruefung ? <AlertTriangle className="w-4 h-4 text-destructive mx-auto" /> : <span className="text-muted-foreground">–</span>}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                        {isInsExpanded && (
+                          <div className="border-t border-border bg-muted/20 p-5 space-y-5" data-testid={`inspection-detail-${ins.id}`}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Prüfungsdetails</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Art</span>
+                                    <span className="font-medium text-foreground">{inspTypeLabels[(ins as any).type] || (ins as any).type}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Datum</span>
+                                    <span className="font-medium text-foreground">{format(new Date(ins.date), 'dd.MM.yyyy')}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Status</span>
+                                    <span className={`font-bold ${insEffectiveStatus === 'OK' ? 'text-emerald-600' : insEffectiveStatus === 'urgent' ? 'text-destructive' : 'text-amber-600'}`}>
+                                      {inspStatusLabels[insEffectiveStatus] || insEffectiveStatus}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Zuordnung</h4>
+                                <div className="space-y-2 text-sm">
+                                  {ins.engineer && (
+                                    <div className="flex justify-between">
+                                      <span className="text-muted-foreground">Sachverständiger</span>
+                                      <span className="font-medium text-foreground">{displayName(ins.engineer)}</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          ) : null;
-                        })()}
 
-                        {isInsExpanded && ins.defects && ins.defects.length > 0 && (
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm" data-testid={`defects-table-${ins.id}`}>
-                              <thead>
-                                <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                                  <th className="text-left px-5 py-3 font-semibold">Mangel-Nr.</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Bauteil</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Datum der Feststellung</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Beschreibung</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Lage</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Status</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Frist</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Reparatur bis</th>
-                                  <th className="text-left px-5 py-3 font-semibold">Foto</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border">
-                                {primaryDefects.flatMap((defect: any) => {
-                                  const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                                  return [
-                                    <tr key={`defect-${defect.id}`} className="hover:bg-muted/40 transition-colors" data-testid={`defect-row-${defect.defectId}`}>
-                                        <td className="px-5 py-3">
-                                          <div className="flex items-center gap-2">
-                                            <Hash className="w-3.5 h-3.5 text-primary" />
-                                            <span className="font-mono font-semibold text-primary">{defect.defectId}</span>
-                                          </div>
-                                        </td>
-                                        <td className="px-5 py-3 text-foreground">{defect.bauteil && defect.bauteil.length > 0 ? defect.bauteil.join(", ") : "–"}</td>
-                                        <td className="px-5 py-3">
-                                          <div className="flex items-center gap-2 text-foreground">
-                                            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                                            {format(new Date(defect.dateFound), 'MMM d, yyyy')}
-                                          </div>
-                                        </td>
-                                        <td className="px-5 py-3 text-foreground max-w-xs">{defect.description}</td>
-                                        <td className="px-5 py-3">
-                                          <div className="flex items-center gap-2 text-foreground">
-                                            <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                            {defect.location}
-                                          </div>
-                                        </td>
-                                        <td className="px-5 py-3">
-                                          <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                            ${defect.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
-                                              'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
-                                            {defectStatusLabels[defect.status] || defect.status}
-                                          </span>
-                                        </td>
-                                        <td className="px-5 py-3 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
-                                        <td className="px-5 py-3 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
-                                        <td className="px-5 py-3">
-                                          {defect.imageUrl ? (
-                                            <ExpandableImage src={defect.imageUrl} alt="Mangel" testId={`defect-image-${defect.defectId}`} />
-                                          ) : (
-                                            <span className="text-muted-foreground">–</span>
-                                          )}
-                                        </td>
-                                      </tr>,
-                                    ...children.map((child: any) => (
-                                        <tr key={`child-${child.id}`} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
-                                          <td className="px-5 py-3">
-                                            <div className="flex items-center gap-2 pl-4">
-                                              <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground" />
-                                              <span className="font-mono font-semibold text-muted-foreground">{child.defectId}</span>
-                                            </div>
-                                          </td>
-                                          <td className="px-5 py-3 text-foreground">{child.bauteil && child.bauteil.length > 0 ? child.bauteil.join(", ") : "–"}</td>
-                                          <td className="px-5 py-3">
-                                            <div className="flex items-center gap-2 text-foreground">
-                                              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                                              {format(new Date(child.dateFound), 'MMM d, yyyy')}
-                                            </div>
-                                          </td>
-                                          <td className="px-5 py-3 text-foreground max-w-xs">{child.description}</td>
-                                          <td className="px-5 py-3">
-                                            <div className="flex items-center gap-2 text-foreground">
-                                              <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                                              {child.location}
-                                            </div>
-                                          </td>
-                                          <td className="px-5 py-3">
-                                            <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
-                                              ${child.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
-                                                'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
-                                              {defectStatusLabels[child.status] || child.status}
-                                            </span>
-                                          </td>
-                                          <td className="px-5 py-3 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
-                                          <td className="px-5 py-3 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
-                                          <td className="px-5 py-3">
-                                            {child.imageUrl ? (
-                                              <ExpandableImage src={child.imageUrl} alt="Mangel" testId={`defect-image-${child.defectId}`} />
-                                            ) : (
-                                              <span className="text-muted-foreground">–</span>
-                                            )}
-                                          </td>
+                            {(() => {
+                              const notes = ins.notes || "";
+                              const userNotes = notes.includes("| Bauteilprüfung: ") ? notes.split("| Bauteilprüfung: ")[0].trim() : notes;
+                              return userNotes ? (
+                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Anmerkungen</h4>
+                                  <p className="text-sm text-foreground">{userNotes}</p>
+                                </div>
+                              ) : null;
+                            })()}
+
+                            {(() => {
+                              const notes = ins.notes || "";
+                              if (!notes.includes("| Bauteilprüfung: ")) return null;
+                              const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+                              const entries = bauteilPart.split("; ").map((entry: string) => {
+                                const nameMatch = entry.match(/^\[(.+?)\]/);
+                                if (!nameMatch) return null;
+                                const name = nameMatch[1];
+                                const opt = BAUTEIL_OPTIONS.find(b => b.label === name);
+                                const gegenstandMatch = entry.match(/Gegenstand: (.+?)(?:\s*-|$)/);
+                                const legacyMangelMatch = entry.match(/Mangel: (.+?)(?:\s*-|$)/);
+                                return {
+                                  name,
+                                  ref: opt?.ref || "",
+                                  level: opt?.level ?? 0,
+                                  geprueft: entry.includes("geprüft"),
+                                  mangel: entry.includes("Mangel"),
+                                  gegenstand: gegenstandMatch?.[1]?.trim() || legacyMangelMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
+                                  vertieftePruefung: entry.includes("vertiefte Prüfung"),
+                                };
+                              }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
+                              if (entries.length === 0) return null;
+                              const headerNames = new Set<string>();
+                              for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
+                                if (BAUTEIL_OPTIONS[i].level === 0 && BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
+                              }
+                              const entryMap = new Map(entries.map(e => [e.name, e]));
+                              const displayEntries: typeof entries = [];
+                              for (const opt of BAUTEIL_OPTIONS) {
+                                if (headerNames.has(opt.label)) {
+                                  const hasChildInEntries = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label) && BAUTEIL_OPTIONS.indexOf(o) > BAUTEIL_OPTIONS.indexOf(opt) && (BAUTEIL_OPTIONS.indexOf(o) === BAUTEIL_OPTIONS.indexOf(opt) + 1 || BAUTEIL_OPTIONS.slice(BAUTEIL_OPTIONS.indexOf(opt) + 1, BAUTEIL_OPTIONS.indexOf(o)).every(s => s.level === 1)));
+                                  if (hasChildInEntries || entryMap.has(opt.label)) {
+                                    displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
+                                  }
+                                } else if (entryMap.has(opt.label)) {
+                                  displayEntries.push(entryMap.get(opt.label)!);
+                                }
+                              }
+                              return (
+                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+                                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Bauteil Prüfung</h4>
+                                  <div className="overflow-x-auto rounded-lg border border-border">
+                                    <table className="w-full text-sm" data-testid={`detail-bauteil-table-${ins.id}`}>
+                                      <thead>
+                                        <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                                          <th className="text-left px-3 py-2 font-semibold w-10">Nr.</th>
+                                          <th className="text-left px-3 py-2 font-semibold">Bauteil</th>
+                                          <th className="text-left px-3 py-2 font-semibold">Gegenstand</th>
+                                          <th className="text-center px-3 py-2 font-semibold w-20">Geprüft</th>
+                                          <th className="text-center px-3 py-2 font-semibold w-20">Mangel</th>
+                                          <th className="text-center px-3 py-2 font-semibold w-28">Vertiefte Prüfung</th>
                                         </tr>
-                                      ))
-                                  ];
-                                })}
-                              </tbody>
-                            </table>
+                                      </thead>
+                                      <tbody className="divide-y divide-border">
+                                        {displayEntries.map((e, i) => {
+                                          const isHeader = headerNames.has(e.name);
+                                          return isHeader ? (
+                                            <tr key={i} className="bg-muted/30">
+                                              <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
+                                            </tr>
+                                          ) : (
+                                            <tr key={i} className="hover:bg-muted/10">
+                                              <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
+                                              <td className={`px-3 py-2 ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
+                                              <td className="px-3 py-2 text-muted-foreground">{e.gegenstand}</td>
+                                              <td className="px-3 py-2 text-center">
+                                                {e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                                              </td>
+                                              <td className="px-3 py-2 text-center">
+                                                {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                                              </td>
+                                              <td className="px-3 py-2 text-center">
+                                                {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            <div>
+                              <h4 className="font-display font-bold text-base mb-3">
+                                Mängel ({ins.defects?.length || 0})
+                              </h4>
+                              {(!ins.defects || ins.defects.length === 0) ? (
+                                <div className="p-4 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm">
+                                  Keine Mängel bei dieser Prüfung erfasst.
+                                </div>
+                              ) : (
+                                <div className="overflow-x-auto rounded-xl border border-border">
+                                  <table className="w-full text-sm" data-testid={`defects-table-${ins.id}`}>
+                                    <thead>
+                                      <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                                        <th className="text-left px-4 py-2.5 font-semibold">Mangel-Nr.</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Bauteil</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Datum</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Beschreibung</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Lage</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Status</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Frist</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Reparatur bis</th>
+                                        <th className="text-left px-4 py-2.5 font-semibold">Foto</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                      {primaryDefects.flatMap((defect: any) => {
+                                        const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                                        return [
+                                          <tr key={`defect-${defect.id}`} className="hover:bg-muted/40 transition-colors" data-testid={`defect-row-${defect.defectId}`}>
+                                            <td className="px-4 py-2.5">
+                                              <div className="flex items-center gap-2">
+                                                <Hash className="w-3.5 h-3.5 text-primary" />
+                                                <span className="font-mono font-semibold text-primary">{defect.defectId}</span>
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-2.5 text-foreground">{defect.bauteil && defect.bauteil.length > 0 ? defect.bauteil.join(", ") : "–"}</td>
+                                            <td className="px-4 py-2.5">
+                                              <div className="flex items-center gap-2 text-foreground">
+                                                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                                                {format(new Date(defect.dateFound), 'dd.MM.yyyy')}
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-2.5 text-foreground max-w-xs">{defect.description}</td>
+                                            <td className="px-4 py-2.5">
+                                              <div className="flex items-center gap-2 text-foreground">
+                                                <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                                {defect.location}
+                                              </div>
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                              <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
+                                                ${defect.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
+                                                  'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
+                                                {defectStatusLabels[defect.status] || defect.status}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-2.5 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
+                                            <td className="px-4 py-2.5 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
+                                            <td className="px-4 py-2.5">
+                                              {defect.imageUrl ? (
+                                                <ExpandableImage src={defect.imageUrl} alt="Mangel" testId={`defect-image-${defect.defectId}`} />
+                                              ) : (
+                                                <span className="text-muted-foreground">–</span>
+                                              )}
+                                            </td>
+                                          </tr>,
+                                          ...children.map((child: any) => (
+                                            <tr key={`child-${child.id}`} className="bg-muted/10 hover:bg-muted/40 transition-colors" data-testid={`defect-row-${child.defectId}`}>
+                                              <td className="px-4 py-2.5">
+                                                <div className="flex items-center gap-2 pl-4">
+                                                  <CornerDownRight className="w-3.5 h-3.5 text-muted-foreground" />
+                                                  <span className="font-mono font-semibold text-muted-foreground">{child.defectId}</span>
+                                                </div>
+                                              </td>
+                                              <td className="px-4 py-2.5 text-foreground">{child.bauteil && child.bauteil.length > 0 ? child.bauteil.join(", ") : "–"}</td>
+                                              <td className="px-4 py-2.5">
+                                                <div className="flex items-center gap-2 text-foreground">
+                                                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                                                  {format(new Date(child.dateFound), 'dd.MM.yyyy')}
+                                                </div>
+                                              </td>
+                                              <td className="px-4 py-2.5 text-foreground max-w-xs">{child.description}</td>
+                                              <td className="px-4 py-2.5">
+                                                <div className="flex items-center gap-2 text-foreground">
+                                                  <MapPinned className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                                  {child.location}
+                                                </div>
+                                              </td>
+                                              <td className="px-4 py-2.5">
+                                                <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase
+                                                  ${child.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 
+                                                    'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>
+                                                  {defectStatusLabels[child.status] || child.status}
+                                                </span>
+                                              </td>
+                                              <td className="px-4 py-2.5 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
+                                              <td className="px-4 py-2.5 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
+                                              <td className="px-4 py-2.5">
+                                                {child.imageUrl ? (
+                                                  <ExpandableImage src={child.imageUrl} alt="Mangel" testId={`defect-image-${child.defectId}`} />
+                                                ) : (
+                                                  <span className="text-muted-foreground">–</span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))
+                                        ];
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
 
