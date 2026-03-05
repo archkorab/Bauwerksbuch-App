@@ -810,10 +810,6 @@ export default function ProjectDetails() {
           <h3 className="font-display font-bold text-lg mb-4">Projektdetails</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">User</p>
-              <p className="font-medium" data-testid="text-client-name">{project.eigentuemer || '—'}</p>
-            </div>
-            <div>
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
               <p className="font-medium" data-testid="text-verwaltung">
                 {project.verwaltung 
@@ -829,6 +825,14 @@ export default function ProjectDetails() {
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
               <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Nicht geplant'}</p>
             </div>
+            {isAdmin && (
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">User</p>
+                <p className="font-medium" data-testid="text-client-name">
+                  {project.client ? displayName(project.client) : '—'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
