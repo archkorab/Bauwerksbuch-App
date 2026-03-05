@@ -83,6 +83,7 @@ interface BauteilPruefung {
   geprueft: boolean;
   mangel: boolean;
   vertieftePruefung: boolean;
+  vertieftePruefungText: string;
   maengel: BauteilMangel[];
 }
 
@@ -254,6 +255,7 @@ async function generateInspectionPdf(inspection: any) {
         mangel: entry.includes("Mangel"),
         gegenstand: gegenstandMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
         vertieftePruefung: entry.includes("vertiefte Prüfung"),
+        vertieftePruefungText: (() => { const m = entry.match(/vertiefte Prüfung: (.+)$/); return m ? m[1].trim() : ""; })(),
       };
     }).filter(Boolean) as any[];
 
@@ -268,7 +270,7 @@ async function generateInspectionPdf(inspection: any) {
         if (headerNames.has(opt.label)) {
           const hasChild = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label));
           if (hasChild || entryMap.has(opt.label)) {
-            displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, isHeader: true });
+            displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, vertieftePruefungText: "", isHeader: true });
           }
         } else if (entryMap.has(opt.label)) {
           displayEntries.push({ ...entryMap.get(opt.label), isHeader: false });
@@ -291,7 +293,7 @@ async function generateInspectionPdf(inspection: any) {
           e.gegenstand,
           e.geprueft ? "Ja" : "Nein",
           e.mangel ? "Ja" : "Nein",
-          e.vertieftePruefung ? "Ja" : "Nein",
+          e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein",
         ];
       });
 
@@ -564,6 +566,24 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
           </>
         )}
       </tr>
+      {bp.vertieftePruefung && (
+        <tr className="border-b border-border bg-blue-50/20 dark:bg-blue-900/10" data-testid={`vertiefte-pruefung-row-${index}`}>
+          <td colSpan={7} className="px-3 py-3">
+            <div className="ml-4 border-l-2 border-blue-500/40 pl-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Vertiefte Prüfung — {bp.bauteil || "Bauteil"}</span>
+              </div>
+              <Input
+                value={bp.vertieftePruefungText || ""}
+                onChange={(e) => onUpdate(index, "vertieftePruefungText", e.target.value)}
+                placeholder="Beschreibung der vertieften Prüfung..."
+                className="h-8 text-sm bg-background border-border"
+                data-testid={`input-vertiefte-pruefung-${index}`}
+              />
+            </div>
+          </td>
+        </tr>
+      )}
       {hasMaengel && expanded && bp.maengel.map((m, mi) => (
         <tr key={`mangel-${index}-${mi}`} className="border-b border-border bg-muted/10" data-testid={`mangel-row-${index}-${mi}`}>
           <td colSpan={7} className="px-3 py-3">
@@ -718,10 +738,10 @@ export default function InspectionsGlobal() {
   const [editingInspection, setEditingInspection] = useState<any>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, getValues: getInspValues } = useForm({
@@ -737,9 +757,9 @@ export default function InspectionsGlobal() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
@@ -817,7 +837,7 @@ export default function InspectionsGlobal() {
 
   const resetDialog = () => {
     resetInspForm();
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
   };
 
   const { register: editInspReg, handleSubmit: handleEditInspSubmit, setValue: setEditInspValue, reset: resetEditInspForm, watch: watchEditInsp, getValues: getEditInspValues } = useForm({
@@ -836,9 +856,9 @@ export default function InspectionsGlobal() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
@@ -915,7 +935,7 @@ export default function InspectionsGlobal() {
   };
 
   const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
-    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
+    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] as BauteilMangel[] }));
     const notes = ins.notes || "";
     if (notes.includes("| Bauteilprüfung: ")) {
       const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
@@ -936,7 +956,11 @@ export default function InspectionsGlobal() {
             if (legacyMatch) bp.artDesMangels = legacyMatch[1].trim();
           }
         }
-        if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
+        if (entry.includes("vertiefte Prüfung")) {
+          bp.vertieftePruefung = true;
+          const vtMatch = entry.match(/vertiefte Prüfung: (.+)$/);
+          if (vtMatch) bp.vertieftePruefungText = vtMatch[1].trim();
+        }
       }
     }
     const defects = ins.defects || [];
@@ -988,7 +1012,7 @@ export default function InspectionsGlobal() {
           if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
           if (bp.mangel) parts.push("Mangel");
-          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          if (bp.vertieftePruefung) parts.push(bp.vertieftePruefungText ? `vertiefte Prüfung: ${bp.vertieftePruefungText}` : "vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
         .join("; ");
@@ -1090,7 +1114,7 @@ export default function InspectionsGlobal() {
           if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
           if (bp.mangel) parts.push("Mangel");
-          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          if (bp.vertieftePruefung) parts.push(bp.vertieftePruefungText ? `vertiefte Prüfung: ${bp.vertieftePruefungText}` : "vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
         .join("; ");

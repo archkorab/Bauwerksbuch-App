@@ -106,6 +106,7 @@ interface BauteilPruefung {
   geprueft: boolean;
   mangel: boolean;
   vertieftePruefung: boolean;
+  vertieftePruefungText: string;
   maengel: BauteilMangel[];
 }
 
@@ -185,6 +186,24 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
           </>
         )}
       </tr>
+      {bp.vertieftePruefung && (
+        <tr className="border-b border-border bg-blue-50/20 dark:bg-blue-900/10" data-testid={`vertiefte-pruefung-row-${index}`}>
+          <td colSpan={7} className="px-3 py-3">
+            <div className="ml-4 border-l-2 border-blue-500/40 pl-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Vertiefte Prüfung — {bp.bauteil || "Bauteil"}</span>
+              </div>
+              <Input
+                value={bp.vertieftePruefungText || ""}
+                onChange={(e) => onUpdate(index, "vertieftePruefungText", e.target.value)}
+                placeholder="Beschreibung der vertieften Prüfung..."
+                className="h-8 text-sm bg-background border-border"
+                data-testid={`input-vertiefte-pruefung-${index}`}
+              />
+            </div>
+          </td>
+        </tr>
+      )}
       {hasMaengel && expanded && bp.maengel.map((m, mi) => (
         <tr key={`mangel-${index}-${mi}`} className="border-b border-border bg-muted/10" data-testid={`mangel-row-${index}-${mi}`}>
           <td colSpan={7} className="px-3 py-3">
@@ -357,7 +376,7 @@ export default function ProjectDetails() {
   const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>([]);
 
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
 
   const updateBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
@@ -369,9 +388,9 @@ export default function ProjectDetails() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
@@ -444,7 +463,7 @@ export default function ProjectDetails() {
   };
 
   const resetBauteilPruefungen = () => {
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
   };
 
   const addDefectEntry = () => {
@@ -515,7 +534,7 @@ export default function ProjectDetails() {
           if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
           if (bp.mangel) parts.push("Mangel");
-          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          if (bp.vertieftePruefung) parts.push(bp.vertieftePruefungText ? `vertiefte Prüfung: ${bp.vertieftePruefungText}` : "vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
         .join("; ");
@@ -589,9 +608,9 @@ export default function ProjectDetails() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
@@ -668,7 +687,7 @@ export default function ProjectDetails() {
   };
 
   const buildEditBauteilState = (ins: any): BauteilPruefung[] => {
-    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] as BauteilMangel[] }));
+    const base = BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] as BauteilMangel[] }));
     const notes = ins.notes || "";
     if (notes.includes("| Bauteilprüfung: ")) {
       const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
@@ -689,7 +708,11 @@ export default function ProjectDetails() {
             if (legacyMatch) bp.artDesMangels = legacyMatch[1].trim();
           }
         }
-        if (entry.includes("vertiefte Prüfung")) bp.vertieftePruefung = true;
+        if (entry.includes("vertiefte Prüfung")) {
+          bp.vertieftePruefung = true;
+          const vtMatch = entry.match(/vertiefte Prüfung: (.+)$/);
+          if (vtMatch) bp.vertieftePruefungText = vtMatch[1].trim();
+        }
       }
     }
     const defects = ins.defects || [];
@@ -751,7 +774,7 @@ export default function ProjectDetails() {
           if (bp.artDesMangels) parts.push(`Gegenstand: ${bp.artDesMangels}`);
           if (bp.geprueft) parts.push("geprüft");
           if (bp.mangel) parts.push("Mangel");
-          if (bp.vertieftePruefung) parts.push("vertiefte Prüfung erforderlich");
+          if (bp.vertieftePruefung) parts.push(bp.vertieftePruefungText ? `vertiefte Prüfung: ${bp.vertieftePruefungText}` : "vertiefte Prüfung erforderlich");
           return parts.join(" - ");
         })
         .join("; ");
@@ -1779,8 +1802,9 @@ export default function ProjectDetails() {
                                   mangel: entry.includes("Mangel"),
                                   gegenstand: gegenstandMatch?.[1]?.trim() || legacyMangelMatch?.[1]?.trim() || opt?.defaultGegenstand || "",
                                   vertieftePruefung: entry.includes("vertiefte Prüfung"),
+                                  vertieftePruefungText: (() => { const m = entry.match(/vertiefte Prüfung: (.+)$/); return m ? m[1].trim() : ""; })(),
                                 };
-                              }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean }[];
+                              }).filter(Boolean) as { name: string; ref: string; level: number; geprueft: boolean; mangel: boolean; gegenstand: string; vertieftePruefung: boolean; vertieftePruefungText: string }[];
                               if (entries.length === 0) return null;
                               const headerNames = new Set<string>();
                               for (let i = 0; i < BAUTEIL_OPTIONS.length; i++) {
@@ -1792,7 +1816,7 @@ export default function ProjectDetails() {
                                 if (headerNames.has(opt.label)) {
                                   const hasChildInEntries = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label) && BAUTEIL_OPTIONS.indexOf(o) > BAUTEIL_OPTIONS.indexOf(opt) && (BAUTEIL_OPTIONS.indexOf(o) === BAUTEIL_OPTIONS.indexOf(opt) + 1 || BAUTEIL_OPTIONS.slice(BAUTEIL_OPTIONS.indexOf(opt) + 1, BAUTEIL_OPTIONS.indexOf(o)).every(s => s.level === 1)));
                                   if (hasChildInEntries || entryMap.has(opt.label)) {
-                                    displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false });
+                                    displayEntries.push({ name: opt.label, ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, vertieftePruefungText: "" });
                                   }
                                 } else if (entryMap.has(opt.label)) {
                                   displayEntries.push(entryMap.get(opt.label)!);
@@ -1832,7 +1856,11 @@ export default function ProjectDetails() {
                                                 {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
                                               </td>
                                               <td className="px-3 py-2 text-center">
-                                                {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                                                {e.vertieftePruefung ? (
+                                                  <span className="text-blue-600 font-medium">{e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja"}</span>
+                                                ) : (
+                                                  <span className="text-muted-foreground">Nein</span>
+                                                )}
                                               </td>
                                             </tr>
                                           );
