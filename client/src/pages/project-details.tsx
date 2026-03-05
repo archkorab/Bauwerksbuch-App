@@ -103,6 +103,33 @@ interface BauteilPruefung {
   maengel: BauteilMangel[];
 }
 
+interface ParsedBauteilEntry {
+  bauteil: string;
+  gegenstand: string;
+  geprueft: boolean;
+  mangel: boolean;
+  vertieftePruefung: boolean;
+}
+
+function parseBauteilNotes(notes: string | null | undefined): ParsedBauteilEntry[] {
+  if (!notes || !notes.includes("| Bauteilprüfung: ")) return [];
+  const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
+  if (!bauteilPart) return [];
+  return bauteilPart.split("; ").map(entry => {
+    const bauteilMatch = entry.match(/^\[(.+?)\]/);
+    const bauteil = bauteilMatch ? bauteilMatch[1] : "";
+    const gegenstandMatch = entry.match(/Gegenstand: ([^-]+?)(?:\s*-\s*|$)/);
+    const gegenstand = gegenstandMatch ? gegenstandMatch[1].trim() : "";
+    return {
+      bauteil,
+      gegenstand,
+      geprueft: entry.includes("geprüft"),
+      mangel: entry.includes("Mangel"),
+      vertieftePruefung: entry.includes("vertiefte Prüfung erforderlich"),
+    };
+  }).filter(e => e.bauteil);
+}
+
 interface BauteilRowProps {
   bp: BauteilPruefung;
   index: number;
@@ -1583,6 +1610,45 @@ export default function ProjectDetails() {
                             </div>
                           </div>
                         </div>
+
+                        {isInsExpanded && (() => {
+                          const parsedBauteil = parseBauteilNotes(ins.notes);
+                          return parsedBauteil.length > 0 ? (
+                            <div className="px-5 pb-4 pt-1" data-testid={`bauteil-pruefung-display-${ins.id}`}>
+                              <h4 className="font-display font-bold text-sm mb-2">Bauteilprüfung</h4>
+                              <div className="overflow-x-auto rounded-lg border border-border">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                                      <th className="text-left px-4 py-2 font-semibold">Bauteil</th>
+                                      <th className="text-left px-4 py-2 font-semibold">Gegenstand</th>
+                                      <th className="text-center px-4 py-2 font-semibold">Geprüft</th>
+                                      <th className="text-center px-4 py-2 font-semibold">Mangel</th>
+                                      <th className="text-center px-4 py-2 font-semibold">Vertiefte Prüfung</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-border">
+                                    {parsedBauteil.map((bp, bpIdx) => (
+                                      <tr key={bpIdx} className="hover:bg-muted/40 transition-colors">
+                                        <td className="px-4 py-2 text-foreground font-medium">{bp.bauteil}</td>
+                                        <td className="px-4 py-2 text-foreground">{bp.gegenstand || "–"}</td>
+                                        <td className="px-4 py-2 text-center">
+                                          {bp.geprueft ? <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto" /> : <span className="text-muted-foreground">–</span>}
+                                        </td>
+                                        <td className="px-4 py-2 text-center">
+                                          {bp.mangel ? <AlertTriangle className="w-4 h-4 text-amber-500 mx-auto" /> : <span className="text-muted-foreground">–</span>}
+                                        </td>
+                                        <td className="px-4 py-2 text-center">
+                                          {bp.vertieftePruefung ? <AlertTriangle className="w-4 h-4 text-destructive mx-auto" /> : <span className="text-muted-foreground">–</span>}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
 
                         {isInsExpanded && ins.defects && ins.defects.length > 0 && (
                           <div className="overflow-x-auto">
