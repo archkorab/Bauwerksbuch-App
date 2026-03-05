@@ -36,7 +36,6 @@ const createProjectSchema = z.object({
   address: z.string().min(1, "Adresse ist erforderlich"),
   clientId: z.string().min(1, "User ist erforderlich"),
   verwaltungId: z.string().optional(),
-  eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
 });
 

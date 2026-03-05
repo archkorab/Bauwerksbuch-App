@@ -655,7 +655,7 @@ export default function ProjectDetails() {
       name: "",
       address: "",
       status: "active",
-      eigentuemer: "",
+      clientId: "",
       verwaltungId: "",
       nextInspectionDue: "",
     }
@@ -667,7 +667,7 @@ export default function ProjectDetails() {
       name: project.name,
       address: project.address,
       status: project.status,
-      eigentuemer: project.eigentuemer || "",
+      clientId: project.clientId || "",
       verwaltungId: project.verwaltungId || "",
       nextInspectionDue: project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd') : "",
     });
@@ -679,7 +679,7 @@ export default function ProjectDetails() {
       name: data.name,
       address: data.address,
       status: data.status,
-      eigentuemer: data.eigentuemer || null,
+      clientId: data.clientId || null,
       verwaltungId: data.verwaltungId || null,
     };
     if (data.nextInspectionDue) {
@@ -789,8 +789,19 @@ export default function ProjectDetails() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-eigentuemer">User</Label>
-                <Input id="edit-eigentuemer" {...editReg("eigentuemer")} placeholder="Name des Users" className="bg-background border-border" data-testid="input-edit-eigentuemer" />
+                <Label>User zuweisen</Label>
+                <Select defaultValue={project.clientId || ""} onValueChange={(val) => setEditValue("clientId", val)}>
+                  <SelectTrigger className="bg-background border-border" data-testid="select-edit-client">
+                    <SelectValue placeholder="User wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients?.map(client => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {displayName(client)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-nextInspection">Nächste Prüfung</Label>

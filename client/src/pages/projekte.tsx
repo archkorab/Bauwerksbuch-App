@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { displayName, displayInitials } from "@/lib/utils";
-import { useProjects, useCreateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
+import { useProjects, useCreateProject, useUpdateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
 import { Link, useLocation } from "wouter";
@@ -18,7 +18,8 @@ import {
   List,
   Search,
   ChevronRight,
-  Trash2
+  Trash2,
+  Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,6 @@ const createProjectSchema = z.object({
   address: z.string().min(1, "Adresse ist erforderlich"),
   clientId: z.string().min(1, "User ist erforderlich"),
   verwaltungId: z.string().optional(),
-  eigentuemer: z.string().optional(),
   status: z.enum(["active", "completed", "archived"]),
 });
 
@@ -56,12 +56,14 @@ export default function ProjektePage() {
   const { data: clients } = useClients();
   const { data: defectSummary } = useDefectSummary();
   const createProject = useCreateProject();
+  const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
   const { toast } = useToast();
 
   const [, navigate] = useLocation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editProjectId, setEditProjectId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [search, setSearch] = useState("");
 
@@ -74,6 +76,54 @@ export default function ProjektePage() {
   const onSubmit = (data: CreateProjectForm) => {
     createProject.mutate(data, {
       onSuccess: () => setIsDialogOpen(false)
+    });
+  };
+
+  const { setValue: setEditVal, handleSubmit: handleEditSubmit, reset: resetEditForm, watch: watchEdit } = useForm({
+    defaultValues: {
+      name: "",
+      address: "",
+      status: "active",
+      clientId: "",
+      verwaltungId: "",
+      nextInspectionDue: "",
+    }
+  });
+
+  const openEditProject = (project: any) => {
+    resetEditForm({
+      name: project.name,
+      address: project.address,
+      status: project.status,
+      clientId: project.clientId || "",
+      verwaltungId: project.verwaltungId || "",
+      nextInspectionDue: project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd') : "",
+    });
+    setEditProjectId(project.id);
+  };
+
+  const onEditSubmit = (data: any) => {
+    if (!editProjectId) return;
+    const updates: any = {
+      name: data.address,
+      address: data.address,
+      status: data.status,
+      clientId: data.clientId || null,
+      verwaltungId: data.verwaltungId || null,
+    };
+    if (data.nextInspectionDue) {
+      updates.nextInspectionDue = new Date(data.nextInspectionDue);
+    } else {
+      updates.nextInspectionDue = null;
+    }
+    updateProject.mutate({ id: editProjectId, updates }, {
+      onSuccess: () => {
+        setEditProjectId(null);
+        toast({ title: "Projekt aktualisiert", description: "Die Änderungen wurden gespeichert." });
+      },
+      onError: () => {
+        toast({ title: "Fehler", description: "Das Projekt konnte nicht aktualisiert werden.", variant: "destructive" });
+      },
     });
   };
 
@@ -269,6 +319,17 @@ export default function ProjektePage() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); openEditProject(project); }}
+                              data-testid={`button-edit-project-${project.id}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
                               data-testid={`button-delete-project-${project.id}`}
@@ -304,6 +365,17 @@ export default function ProjektePage() {
                         data-testid={`badge-mangel-grid-projekte-${project.id}`}>
                         {mangelLabels[mangel]}
                       </span>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditProject(project); }}
+                          data-testid={`button-edit-project-grid-${project.id}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       {isAdmin && (
                         <Button
                           variant="ghost"
@@ -347,6 +419,77 @@ export default function ProjektePage() {
           })}
         </div>
       )}
+
+      <Dialog open={editProjectId !== null} onOpenChange={(open) => { if (!open) setEditProjectId(null); }}>
+        <DialogContent className="sm:max-w-[500px] bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Projekt bearbeiten</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit(onEditSubmit)} className="space-y-5 mt-2">
+            <div className="space-y-2">
+              <Label>Adresse</Label>
+              <AddressAutocomplete
+                value={watchEdit("address")}
+                onChange={(val) => { setEditVal("address", val); setEditVal("name", val); }}
+                required
+                className="bg-background border-border"
+                data-testid="input-edit-address-projekte"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={watchEdit("status")} onValueChange={(val) => setEditVal("status", val)}>
+                <SelectTrigger className="bg-background border-border" data-testid="select-edit-status-projekte">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Aktiv</SelectItem>
+                  <SelectItem value="completed">Abgeschlossen</SelectItem>
+                  <SelectItem value="archived">Archiviert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>User zuweisen</Label>
+              <Select value={watchEdit("clientId")} onValueChange={(val) => setEditVal("clientId", val)}>
+                <SelectTrigger className="bg-background border-border" data-testid="select-edit-client-projekte">
+                  <SelectValue placeholder="User wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {displayName(client)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Verwaltung</Label>
+              <Select value={watchEdit("verwaltungId")} onValueChange={(val) => setEditVal("verwaltungId", val)}>
+                <SelectTrigger className="bg-background border-border" data-testid="select-edit-verwaltung-projekte">
+                  <SelectValue placeholder="Verwaltung wählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients?.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {displayName(client)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nächste Prüfung</Label>
+              <Input type="date" value={watchEdit("nextInspectionDue")} onChange={(e) => setEditVal("nextInspectionDue", e.target.value)} className="bg-background border-border" data-testid="input-edit-next-inspection-projekte" />
+            </div>
+            <Button type="submit" className="w-full" disabled={updateProject.isPending} data-testid="button-submit-edit-projekte">
+              {updateProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Änderungen speichern
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteConfirmId !== null} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
         <AlertDialogContent className="bg-card border-border">
