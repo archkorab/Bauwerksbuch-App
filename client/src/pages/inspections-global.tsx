@@ -275,13 +275,15 @@ async function generateInspectionPdf(inspection: any) {
         if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
         return [
           e.ref,
-          e.level === 1 ? `  ${e.name}` : e.name,
+          e.name,
           e.gegenstand,
           e.geprueft ? "Ja" : "Nein",
           e.mangel ? "Ja" : "Nein",
           e.vertieftePruefung ? "Ja" : "Nein",
         ];
       });
+
+      const levelFlags = displayEntries.map((e: any) => e.level === 1);
 
       autoTable(doc, {
         startY: y,
@@ -293,6 +295,9 @@ async function generateInspectionPdf(inspection: any) {
         alternateRowStyles: { fillColor: [248, 248, 252] },
         columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
         didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 1 && levelFlags[data.row.index]) {
+            data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
+          }
           if (data.section === "body") {
             if (data.column.index === 3 && data.cell.raw === "Ja") {
               data.cell.styles.textColor = PDF_COLORS.ok;
