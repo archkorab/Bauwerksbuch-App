@@ -1085,7 +1085,7 @@ export default function ProjectDetails() {
                 const due = new Date(project.nextInspectionDue);
                 const today = new Date(); today.setHours(0,0,0,0); due.setHours(0,0,0,0);
                 const days = Math.round((due.getTime() - today.getTime()) / 86400000);
-                const label = days === 0 ? "heute" : days > 0 ? `in ${days} Tag${days === 1 ? "" : "en"}` : `vor ${Math.abs(days)} Tag${Math.abs(days) === 1 ? "" : "en"}`;
+                const label = days === 0 ? "heute" : days > 0 ? `in ${days} Tag${days === 1 ? "" : "en"}` : `${Math.abs(days)} Tag${Math.abs(days) === 1 ? "" : "e"} überfällig`;
                 const color = days < 0 ? "text-destructive" : days <= 30 ? "text-amber-500" : "text-emerald-600";
                 return (
                   <div className="flex items-baseline gap-2">
