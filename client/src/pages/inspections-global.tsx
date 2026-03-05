@@ -1214,7 +1214,7 @@ export default function InspectionsGlobal() {
             <DialogHeader>
               <DialogTitle className="font-display text-xl">Neue Prüfung erfassen</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-5 mt-2">
+            <form onSubmit={handleInspSubmit(onInspSubmit)} className="space-y-6 mt-2">
               <div className="space-y-2">
                 <Label>Projekt</Label>
                 <Select onValueChange={(val) => setInspValue("projectId", val)}>
@@ -1476,7 +1476,7 @@ export default function InspectionsGlobal() {
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Prüfung bearbeiten</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditInspSubmit(onEditInspSubmit)} className="space-y-5 mt-2">
+          <form onSubmit={handleEditInspSubmit(onEditInspSubmit)} className="space-y-6 mt-2">
             {editingInspection && (
               <div className="text-sm text-muted-foreground flex items-center gap-2">
                 <Building className="w-4 h-4" />
@@ -1497,9 +1497,11 @@ export default function InspectionsGlobal() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Datum</Label>
-                <Input type="date" {...editInspReg("date")} className="bg-background border-border" data-testid="input-edit-inspection-date" />
+                <Label>Prüfdatum</Label>
+                <Input type="date" {...editInspReg("date")} required className="bg-background border-border" data-testid="input-edit-inspection-date" />
               </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={editInspStatus} onValueChange={(val) => setEditInspValue("status", val)}>
@@ -1513,7 +1515,7 @@ export default function InspectionsGlobal() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
                 <Label>Sachverständiger</Label>
                 <Select value={editInspEngineerId} onValueChange={(val) => setEditInspValue("engineerId", val)}>
                   <SelectTrigger className="bg-background border-border" data-testid="select-edit-inspection-engineer">
@@ -1526,13 +1528,13 @@ export default function InspectionsGlobal() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Anmerkungen</Label>
-              <Input {...editInspReg("notes")} placeholder="Anmerkungen zur Prüfung..." className="bg-background border-border" data-testid="input-edit-inspection-notes" />
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Anmerkungen</Label>
+                <Input {...editInspReg("notes")} placeholder="Kurze Notizen..." className="bg-background border-border" data-testid="input-edit-inspection-notes" />
+              </div>
             </div>
 
-            <div className="pt-2">
+            <div className="border-t border-border pt-5">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-display font-bold text-base">Bauteil Prüfung</h4>
                 <Button type="button" variant="outline" size="sm" onClick={addEditCustomBauteil} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-add-bauteil">
