@@ -226,7 +226,7 @@ export type UpdateProfileRequest = Partial<InsertProfile>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type CreateProjectRequest = InsertProject;
-export type UpdateProjectRequest = Partial<InsertProject>;
+export type UpdateProjectRequest = Partial<InsertProject> & { createdAt?: Date | null };
 export type ProjectResponse = Project & { client?: typeof users.$inferSelect & { profile?: Profile }, verwaltung?: typeof users.$inferSelect & { profile?: Profile }, assignedUsers?: (typeof users.$inferSelect & { profile?: Profile })[] };
 export type ProjectsListResponse = ProjectResponse[];
 

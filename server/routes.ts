@@ -533,12 +533,15 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Nur Administratoren können Projekte bearbeiten" });
       }
       const id = parseInt(req.params.id, 10);
-      const { assignedUserIds, ...rest } = req.body;
+      const { assignedUserIds, createdAt: rawCreatedAt, ...rest } = req.body;
       const body = { ...rest };
       if (body.nextInspectionDue && typeof body.nextInspectionDue === 'string') {
         body.nextInspectionDue = new Date(body.nextInspectionDue);
       }
-      const input = api.projects.update.input.parse(body);
+      const input: any = api.projects.update.input.parse(body);
+      if (rawCreatedAt) {
+        input.createdAt = new Date(rawCreatedAt);
+      }
       const project = await storage.updateProject(id, input);
       if (!project) return res.status(404).json({ message: "Project not found" });
       if (Array.isArray(assignedUserIds)) {

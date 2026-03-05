@@ -877,6 +877,7 @@ export default function ProjectDetails() {
       status: "active",
       verwaltungId: "",
       nextInspectionDue: "",
+      createdAt: "",
     }
   });
 
@@ -889,6 +890,7 @@ export default function ProjectDetails() {
       address: project.address,
       status: project.status,
       verwaltungId: project.verwaltungId || "",
+      createdAt: project.createdAt ? format(new Date(project.createdAt), 'yyyy-MM-dd') : "",
       nextInspectionDue: project.nextInspectionDue
         ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd')
         : project.createdAt
@@ -916,6 +918,9 @@ export default function ProjectDetails() {
       verwaltungId: data.verwaltungId || null,
       assignedUserIds,
     };
+    if (data.createdAt) {
+      updates.createdAt = data.createdAt;
+    }
     if (data.nextInspectionDue) {
       updates.nextInspectionDue = new Date(data.nextInspectionDue);
     } else {
@@ -1042,6 +1047,10 @@ export default function ProjectDetails() {
                 )}
               </div>
               <div className="space-y-2">
+                <Label htmlFor="edit-createdAt">Erstellt am</Label>
+                <Input id="edit-createdAt" type="date" {...editReg("createdAt")} className="bg-background border-border" data-testid="input-edit-created-at" />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="edit-nextInspection">Nächste Prüfung</Label>
                 <Input id="edit-nextInspection" type="date" {...editReg("nextInspectionDue")} className="bg-background border-border" data-testid="input-edit-next-inspection" />
               </div>
@@ -1068,7 +1077,7 @@ export default function ProjectDetails() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Erstellt am</p>
-              <p className="font-medium">{format(new Date(project.createdAt!), 'MMMM d, yyyy')}</p>
+              <p className="font-medium">{format(new Date(project.createdAt!), 'dd.MM.yyyy')}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
