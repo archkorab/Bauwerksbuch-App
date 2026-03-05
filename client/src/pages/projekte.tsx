@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
+import { displayName, displayInitials } from "@/lib/utils";
 import { useProjects, useCreateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
@@ -145,7 +146,7 @@ export default function ProjektePage() {
                     <SelectContent>
                       {clients?.map(client => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName} ({client.email})
+                          {displayName(client)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -263,7 +264,7 @@ export default function ProjektePage() {
                       </td>
                       {isAdmin && (
                         <td className="px-6 py-4 text-muted-foreground">
-                          {project.client ? `${project.client.firstName} ${project.client.lastName}` : '—'}
+                          {project.client ? displayName(project.client) : '—'}
                         </td>
                       )}
                       <td className="px-3 py-4">
@@ -335,11 +336,11 @@ export default function ProjektePage() {
                     {isAdmin && project.client && (
                       <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-primary">
-                          {project.client.firstName?.[0]}{project.client.lastName?.[0]}
+                          {displayInitials(project.client)}
                         </div>
                         <div className="text-xs">
                           <p className="text-muted-foreground font-medium uppercase tracking-wider">Eigentümer</p>
-                          <p className="text-foreground font-semibold">{project.client.firstName} {project.client.lastName}</p>
+                          <p className="text-foreground font-semibold">{displayName(project.client)}</p>
                         </div>
                       </div>
                     )}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
+import { displayName } from "@/lib/utils";
 import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection, useUpdateDefect } from "@/hooks/use-inspections";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
@@ -186,7 +187,7 @@ async function generateInspectionPdf(inspection: any) {
     ["Projekt", inspection.projectName || `Projekt #${inspection.projectId}`],
   ];
   if (inspection.projectAddress) details.push(["Adresse", inspection.projectAddress]);
-  if (inspection.engineer) details.push(["Sachverständiger", `${inspection.engineer.firstName} ${inspection.engineer.lastName}`]);
+  if (inspection.engineer) details.push(["Sachverständiger", displayName(inspection.engineer)]);
 
   for (const [label, value] of details) {
     doc.setFont("helvetica", "bold");
@@ -1274,7 +1275,7 @@ export default function InspectionsGlobal() {
                         {ins.engineer && (
                           <span className="flex items-center gap-1.5">
                             <User className="w-3.5 h-3.5" />
-                            {ins.engineer.firstName} {ins.engineer.lastName}
+                            {displayName(ins.engineer)}
                           </span>
                         )}
                         {ins.notes && (ins.notes.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : ins.notes) && (
@@ -1529,7 +1530,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             {inspection.engineer && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Sachverständiger</span>
-                <span className="font-medium text-foreground">{inspection.engineer.firstName} {inspection.engineer.lastName}</span>
+                <span className="font-medium text-foreground">{displayName(inspection.engineer)}</span>
               </div>
             )}
           </div>

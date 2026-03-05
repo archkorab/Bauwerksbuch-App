@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/layout";
+import { displayName, displayInitials } from "@/lib/utils";
 import { MapPlaceholder } from "@/components/map-placeholder";
 import { useProject, useUpdateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
@@ -781,7 +782,7 @@ export default function ProjectDetails() {
                   <SelectContent>
                     {clients?.map(client => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.firstName} {client.lastName}{client.profile?.company ? `, ${client.profile.company}` : ''}
+                        {displayName(client)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -816,7 +817,7 @@ export default function ProjectDetails() {
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
               <p className="font-medium" data-testid="text-verwaltung">
                 {project.verwaltung 
-                  ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? `, ${project.verwaltung.profile.company}` : ''}`
+                  ? displayName(project.verwaltung)
                   : '—'}
               </p>
             </div>
@@ -1468,7 +1469,7 @@ export default function ProjectDetails() {
                                 <p className="font-semibold text-foreground text-lg">{inspTypeLabels[(ins as any).type] || "Erstprüfung"} — {format(new Date(ins.date), 'dd.MM.yyyy')}</p>
                                 <p className="text-sm text-muted-foreground mt-1">{(ins.notes?.includes("| Bauteilprüfung: ") ? ins.notes.split("| Bauteilprüfung: ")[0].trim() : ins.notes) || 'Keine Anmerkungen.'}</p>
                                 {ins.engineer && (
-                                  <p className="text-xs text-muted-foreground mt-2 font-medium">Sachverständiger: {ins.engineer.firstName} {ins.engineer.lastName}</p>
+                                  <p className="text-xs text-muted-foreground mt-2 font-medium">Sachverständiger: {displayName(ins.engineer)}</p>
                                 )}
                               </div>
                             </div>

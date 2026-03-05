@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
+import { displayName } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import logoPath from "@assets/logo_1772006994795.png";
@@ -86,7 +87,7 @@ export function Layout({ children }: LayoutProps) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">
-                    {user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'Benutzer'}
+                    {user ? displayName(user, 'Benutzer') : 'Benutzer'}
                   </p>
                   <p className="text-xs text-primary font-medium uppercase tracking-wider">{roleLabels[role] || role}</p>
                 </div>
@@ -113,7 +114,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2 text-sm font-medium">
               <ArrowLeftRight className="w-4 h-4" />
               <span>
-                Sie sehen die Ansicht von <strong>{user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email}</strong> als {roleLabels[role] || role}
+                Sie sehen die Ansicht von <strong>{user ? displayName(user) : ''}</strong> als {roleLabels[role] || role}
               </span>
               <span className="text-amber-100 text-xs ml-1">(Angemeldet als {(user as any)?.adminName || 'Admin'})</span>
             </div>
