@@ -244,9 +244,9 @@ export async function registerRoutes(
   app.put("/api/account/update", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { firstName, lastName, phone, company, currentPassword, newPassword } = req.body;
+      const { title, firstName, lastName, phone, company, currentPassword, newPassword } = req.body;
 
-      await storage.updateUser(userId, { firstName, lastName }, { phone, company });
+      await storage.updateUser(userId, { title, firstName, lastName }, { phone, company });
 
       if (newPassword) {
         if (!currentPassword) {
@@ -390,6 +390,7 @@ export async function registerRoutes(
       const hashedPassword = await bcrypt.hash(passwordToHash, 12);
       const user = await storage.createUser({
         email: input.email,
+        title: input.title,
         firstName: input.firstName || "",
         lastName: input.lastName || "",
         password: hashedPassword,
@@ -420,10 +421,10 @@ export async function registerRoutes(
       }
       const targetUserId = req.params.userId;
       const input = api.users.update.input.parse(req.body);
-      const { firstName, lastName, email, role, company, phone, newPassword } = input;
+      const { title, firstName, lastName, email, role, company, phone, newPassword } = input;
       const updated = await storage.updateUser(
         targetUserId,
-        { firstName, lastName, email },
+        { title, firstName, lastName, email },
         { role, company, phone }
       );
       if (!updated) return res.status(404).json({ message: "User not found" });

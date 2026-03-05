@@ -42,8 +42,8 @@ export interface IStorage {
   updateProfile(userId: string, data: UpdateProfileRequest): Promise<Profile>;
   getUsersByRole(role: string): Promise<any[]>;
   getAllUsers(): Promise<any[]>;
-  createUser(data: { email: string; firstName: string; lastName: string }): Promise<any>;
-  updateUser(userId: string, userData: { firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any>;
+  createUser(data: { email: string; title?: string; firstName: string; lastName: string }): Promise<any>;
+  updateUser(userId: string, userData: { title?: string; firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any>;
   getUserWithProfile(userId: string): Promise<any>;
   deleteUser(userId: string, replacementUserId?: string): Promise<void>;
 
@@ -133,9 +133,10 @@ export class DatabaseStorage implements IStorage {
     return result.map(r => ({ ...r.users, profile: r.profiles || undefined }));
   }
 
-  async createUser(data: { email: string; firstName: string; lastName: string; password?: string }): Promise<any> {
+  async createUser(data: { email: string; title?: string; firstName: string; lastName: string; password?: string }): Promise<any> {
     const [user] = await db.insert(users).values({
       email: data.email,
+      title: data.title || null,
       firstName: data.firstName,
       lastName: data.lastName,
       password: data.password || null,
@@ -143,8 +144,9 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUser(userId: string, userData: { firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any> {
+  async updateUser(userId: string, userData: { title?: string; firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any> {
     const userUpdates: any = {};
+    if (userData.title !== undefined) userUpdates.title = userData.title;
     if (userData.firstName !== undefined) userUpdates.firstName = userData.firstName;
     if (userData.lastName !== undefined) userUpdates.lastName = userData.lastName;
     if (userData.email !== undefined) userUpdates.email = userData.email;

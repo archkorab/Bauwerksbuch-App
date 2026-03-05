@@ -119,6 +119,7 @@ export const api = {
       path: '/api/users' as const,
       input: z.object({
         email: z.string().email(),
+        title: z.string().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         role: z.enum(["admin", "hausverwaltung", "eigentuemer"]),
@@ -137,6 +138,7 @@ export const api = {
       method: 'PUT' as const,
       path: '/api/users/:userId' as const,
       input: z.object({
+        title: z.string().optional(),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         email: z.string().email().optional(),

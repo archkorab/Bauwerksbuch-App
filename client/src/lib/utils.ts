@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function displayName(user: { firstName?: string | null; lastName?: string | null; email?: string | null; profile?: { company?: string | null } | null }, fallback?: string): string {
-  const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
+export function displayName(user: { title?: string | null; firstName?: string | null; lastName?: string | null; email?: string | null; profile?: { company?: string | null } | null }, fallback?: string): string {
+  const name = [user.title, user.firstName, user.lastName].filter(Boolean).join(' ').trim();
   const company = user.profile?.company;
   if (name) return name;
   if (company) return company;

@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [title, setTitle] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -56,6 +57,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      setTitle((user as any).title || "");
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
     }
@@ -94,7 +96,7 @@ export default function ProfilePage() {
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    updateMutation.mutate({ firstName, lastName, phone, company });
+    updateMutation.mutate({ title, firstName, lastName, phone, company });
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -107,7 +109,7 @@ export default function ProfilePage() {
       toast({ title: "Fehler", description: "Neues Passwort muss mindestens 6 Zeichen lang sein", variant: "destructive" });
       return;
     }
-    updateMutation.mutate({ firstName, lastName, phone, company, currentPassword, newPassword });
+    updateMutation.mutate({ title, firstName, lastName, phone, company, currentPassword, newPassword });
   };
 
   const roleLabels: Record<string, string> = {
@@ -174,6 +176,17 @@ export default function ProfilePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Titel (z.B. Dr., Ing.)</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Dr., Mag., DI, ..."
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                data-testid="input-profile-title"
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vorname</label>
               <input

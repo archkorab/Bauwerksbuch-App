@@ -52,17 +52,18 @@ export default function UserManagement() {
   const [showEditPw, setShowEditPw] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", password: "" }
+    defaultValues: { title: "", firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", password: "" }
   });
   const selectedRole = watch("role");
 
   const { register: editReg, handleSubmit: handleEditSubmit, reset: resetEdit, setValue: setEditValue, watch: watchEdit } = useForm({
-    defaultValues: { firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", newPassword: "" }
+    defaultValues: { title: "", firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", newPassword: "" }
   });
   const editRole = watchEdit("role");
 
   const openEditDialog = (user: any) => {
     resetEdit({
+      title: user.title || "",
       firstName: user.firstName || "",
       lastName: user.lastName || "",
       email: user.email || "",
@@ -201,6 +202,10 @@ export default function UserManagement() {
             <DialogContent className="bg-card border-border">
               <DialogHeader><DialogTitle>Neuen Benutzer hinzufügen</DialogTitle></DialogHeader>
               <form onSubmit={handleSubmit(onAddUser)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Titel (optional)</Label>
+                  <Input {...register("title")} placeholder="Dr., Mag., DI, ..." className="bg-background" data-testid="input-user-title" />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Vorname {!watch("company") && <span className="text-destructive">*</span>}</Label>
@@ -422,6 +427,10 @@ export default function UserManagement() {
         <DialogContent className="bg-card border-border">
           <DialogHeader><DialogTitle>Benutzer bearbeiten</DialogTitle></DialogHeader>
           <form onSubmit={handleEditSubmit(onEditUser)} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Titel (optional)</Label>
+              <Input {...editReg("title")} placeholder="Dr., Mag., DI, ..." className="bg-background" data-testid="input-edit-user-title" />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Vorname {!watchEdit("company") && <span className="text-destructive">*</span>}</Label>
