@@ -71,8 +71,8 @@ interface BauteilMangel {
   dateFound: string;
   frist: string;
   repairDue: string;
-  imageFile?: File | null;
-  imageUrl?: string;
+  imageFiles: File[];
+  imageUrls: string[];
 }
 
 interface BauteilPruefung {
@@ -439,11 +439,13 @@ interface BauteilRowProps {
   onRemove: (index: number) => void;
   onAddMangel: (index: number) => void;
   onUpdateMangel: (bauteilIndex: number, mangelIndex: number, field: keyof BauteilMangel, value: string) => void;
-  onUpdateMangelFile: (bauteilIndex: number, mangelIndex: number, file: File | null) => void;
+  onAddMangelImages: (bauteilIndex: number, mangelIndex: number, files: File[]) => void;
+  onRemoveMangelFile: (bauteilIndex: number, mangelIndex: number, fileIndex: number) => void;
+  onRemoveMangelUrl: (bauteilIndex: number, mangelIndex: number, url: string) => void;
   onRemoveMangel: (bauteilIndex: number, mangelIndex: number) => void;
 }
 
-function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onUpdateMangelFile, onRemoveMangel }: BauteilRowProps) {
+function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddMangel, onUpdateMangel, onAddMangelImages, onRemoveMangelFile, onRemoveMangelUrl, onRemoveMangel }: BauteilRowProps) {
   const [expanded, setExpanded] = useState(bp.maengel.length > 0);
   const hasMaengel = bp.maengel.length > 0;
   const prevLenRef = useRef(bp.maengel.length);
@@ -648,44 +650,33 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                   </div>
                 )}
                 <div className="col-span-2">
-                  <Label className="text-xs">Foto</Label>
-                  <div className="flex items-center gap-3 mt-1">
-                    {(m.imageFile || m.imageUrl) ? (
-                      <div className="relative group">
+                  <Label className="text-xs">Fotos</Label>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {(m.imageUrls || []).map((url, ui) => (
+                      <div key={`url-${ui}`} className="relative group">
                         <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
-                          <img
-                            src={m.imageFile ? URL.createObjectURL(m.imageFile) : m.imageUrl}
-                            alt="Mangel"
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={url} alt="Mangel" className="w-full h-full object-cover" />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => onUpdateMangelFile(index, mi, null)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          data-testid={`button-remove-mangel-image-${index}-${mi}`}
-                        >
+                        <button type="button" onClick={() => onRemoveMangelUrl(index, mi, url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-url-${index}-${mi}-${ui}`}>
                           <X className="w-3 h-3" />
                         </button>
                       </div>
-                    ) : (
-                      <label
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-colors text-xs"
-                        data-testid={`button-add-mangel-image-${index}-${mi}`}
-                      >
-                        <ImagePlus className="w-4 h-4" />
-                        Foto hinzufügen
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] || null;
-                            if (file) onUpdateMangelFile(index, mi, file);
-                          }}
-                        />
-                      </label>
-                    )}
+                    ))}
+                    {(m.imageFiles || []).map((file, fi) => (
+                      <div key={`file-${fi}`} className="relative group">
+                        <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
+                          <img src={URL.createObjectURL(file)} alt="Mangel" className="w-full h-full object-cover" />
+                        </div>
+                        <button type="button" onClick={() => onRemoveMangelFile(index, mi, fi)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-file-${index}-${mi}-${fi}`}>
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-colors text-xs" data-testid={`button-add-mangel-image-${index}-${mi}`}>
+                      <ImagePlus className="w-4 h-4" />
+                      Foto hinzufügen
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = Array.from(e.target.files || []); if (files.length) onAddMangelImages(index, mi, files); }} />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -753,7 +744,7 @@ export default function InspectionsGlobal() {
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getInspValues("date") || new Date().toISOString().split("T")[0];
       return prev.map((b, i) => i === bauteilIndex
-        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "" }] }
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "", imageFiles: [], imageUrls: [] }] }
         : b
       );
     });
@@ -785,10 +776,26 @@ export default function InspectionsGlobal() {
     }));
   };
 
-  const updateMangelFile = (bauteilIndex: number, mangelIndex: number, file: File | null) => {
+  const addMangelImages = (bauteilIndex: number, mangelIndex: number, files: File[]) => {
     setBauteilPruefungen(prev => prev.map((bp, bi) => {
       if (bi !== bauteilIndex) return bp;
-      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFile: file, imageUrl: file ? undefined : m.imageUrl } : m);
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFiles: [...(m.imageFiles || []), ...files] } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeMangelFile = (bauteilIndex: number, mangelIndex: number, fileIndex: number) => {
+    setBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFiles: (m.imageFiles || []).filter((_, fi) => fi !== fileIndex) } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeMangelUrl = (bauteilIndex: number, mangelIndex: number, url: string) => {
+    setBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageUrls: (m.imageUrls || []).filter(u => u !== url) } : m);
       return { ...bp, maengel: updated };
     }));
   };
@@ -840,7 +847,7 @@ export default function InspectionsGlobal() {
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getEditInspValues("date") || new Date().toISOString().split("T")[0];
       return prev.map((b, i) => i === bauteilIndex
-        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "" }] }
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "", imageFiles: [], imageUrls: [] }] }
         : b
       );
     });
@@ -872,10 +879,26 @@ export default function InspectionsGlobal() {
     }));
   };
 
-  const updateEditMangelFile = (bauteilIndex: number, mangelIndex: number, file: File | null) => {
+  const addEditMangelImages = (bauteilIndex: number, mangelIndex: number, files: File[]) => {
     setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
       if (bi !== bauteilIndex) return bp;
-      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFile: file, imageUrl: file ? undefined : m.imageUrl } : m);
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFiles: [...(m.imageFiles || []), ...files] } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeEditMangelFile = (bauteilIndex: number, mangelIndex: number, fileIndex: number) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageFiles: (m.imageFiles || []).filter((_, fi) => fi !== fileIndex) } : m);
+      return { ...bp, maengel: updated };
+    }));
+  };
+
+  const removeEditMangelUrl = (bauteilIndex: number, mangelIndex: number, url: string) => {
+    setEditBauteilPruefungen(prev => prev.map((bp, bi) => {
+      if (bi !== bauteilIndex) return bp;
+      const updated = bp.maengel.map((m, mi) => mi === mangelIndex ? { ...m, imageUrls: (m.imageUrls || []).filter(u => u !== url) } : m);
       return { ...bp, maengel: updated };
     }));
   };
@@ -921,7 +944,8 @@ export default function InspectionsGlobal() {
         dateFound: d.dateFound ? format(new Date(d.dateFound), 'yyyy-MM-dd') : "",
         frist: d.frist || "",
         repairDue: d.repairDue ? format(new Date(d.repairDue), 'yyyy-MM-dd') : "",
-        imageUrl: d.imageUrl || "",
+        imageFiles: [],
+        imageUrls: d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []),
       });
     }
     return base;
@@ -996,9 +1020,9 @@ export default function InspectionsGlobal() {
                 },
               });
             }
-            if (m.imageFile) {
+            for (const imgFile of (m.imageFiles || [])) {
               const formData = new FormData();
-              formData.append('image', m.imageFile);
+              formData.append('image', imgFile);
               await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
             }
           } else {
@@ -1017,10 +1041,12 @@ export default function InspectionsGlobal() {
                 repairDue: m.repairDue ? new Date(m.repairDue) : null,
               }
             });
-            if (m.imageFile && defect?.id) {
-              const formData = new FormData();
-              formData.append('image', m.imageFile);
-              await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+            for (const imgFile of (m.imageFiles || [])) {
+              if (defect?.id) {
+                const formData = new FormData();
+                formData.append('image', imgFile);
+                await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+              }
             }
           }
         }
@@ -1094,10 +1120,12 @@ export default function InspectionsGlobal() {
               repairDue: m.repairDue ? new Date(m.repairDue) : null,
             }
           });
-          if (m.imageFile && defect?.id) {
-            const formData = new FormData();
-            formData.append('image', m.imageFile);
-            await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+          for (const imgFile of (m.imageFiles || [])) {
+            if (defect?.id) {
+              const formData = new FormData();
+              formData.append('image', imgFile);
+              await fetch(`/api/defects/${defect.id}/image`, { method: 'POST', body: formData, credentials: 'include' });
+            }
           }
         }
       }
@@ -1236,7 +1264,9 @@ export default function InspectionsGlobal() {
                             onRemove={removeBauteilPruefung}
                             onAddMangel={addMangelToBauteil}
                             onUpdateMangel={updateMangel}
-                            onUpdateMangelFile={updateMangelFile}
+                            onAddMangelImages={addMangelImages}
+                            onRemoveMangelFile={removeMangelFile}
+                            onRemoveMangelUrl={removeMangelUrl}
                             onRemoveMangel={removeMangel}
                           />
                         );
@@ -1498,7 +1528,9 @@ export default function InspectionsGlobal() {
                           onRemove={removeEditBauteilPruefung}
                           onAddMangel={addEditMangelToBauteil}
                           onUpdateMangel={updateEditMangel}
-                          onUpdateMangelFile={updateEditMangelFile}
+                          onAddMangelImages={addEditMangelImages}
+                          onRemoveMangelFile={removeEditMangelFile}
+                          onRemoveMangelUrl={removeEditMangelUrl}
                           onRemoveMangel={removeEditMangel}
                         />
                       );
