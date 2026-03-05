@@ -1767,20 +1767,34 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                           <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
                         </tr>
                       ) : (
-                        <tr key={i} className="hover:bg-muted/10">
-                          <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
-                          <td className={`px-3 py-2 ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
-                          <td className="px-3 py-2 text-muted-foreground">{e.gegenstand}</td>
-                          <td className="px-3 py-2 text-center">
-                            {e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            {e.vertieftePruefung ? <span className="text-blue-600 font-medium">{e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja"}</span> : <span className="text-muted-foreground">Nein</span>}
-                          </td>
-                        </tr>
+                        <>
+                          <tr key={i} className="hover:bg-muted/10">
+                            <td className="px-3 py-2 text-xs text-muted-foreground font-mono">{e.ref}</td>
+                            <td className={`px-3 py-2 ${e.level === 1 ? "pl-8" : ""}`}>{e.name}</td>
+                            <td className="px-3 py-2 text-muted-foreground">{e.gegenstand}</td>
+                            <td className="px-3 py-2 text-center">
+                              {e.geprueft ? <span className="text-emerald-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {e.mangel ? <span className="text-red-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {e.vertieftePruefung ? <span className="text-blue-600 font-medium">Ja</span> : <span className="text-muted-foreground">Nein</span>}
+                            </td>
+                          </tr>
+                          {e.vertieftePruefung && e.vertieftePruefungText && (
+                            <tr key={`vp-${i}`} className="border-b border-border bg-blue-50/20 dark:bg-blue-900/10">
+                              <td colSpan={6} className="px-3 py-3">
+                                <div className="ml-4 border-l-2 border-blue-500/40 pl-4">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Vertiefte Prüfung — {e.name}</span>
+                                  </div>
+                                  <p className="text-sm text-foreground">{e.vertieftePruefungText}</p>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       );
                     })}
                   </tbody>
