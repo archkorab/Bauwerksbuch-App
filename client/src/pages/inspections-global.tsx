@@ -239,6 +239,23 @@ async function generateInspectionPdf(inspection: any) {
     y += lines.length * 5 + 6;
   }
 
+  const allDefects: any[] = inspection.defects || [];
+  const primaryDefects = allDefects.filter((d: any) => !d.parentDefectId);
+  const followUps = allDefects.filter((d: any) => d.parentDefectId);
+  const defectImageMap: Map<number, string[]> = new Map();
+  for (const d of allDefects) {
+    const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+    const loaded: string[] = [];
+    for (const url of urls) {
+      try {
+        const blob = await (await fetch(url)).blob();
+        loaded.push(await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); }));
+      } catch {}
+    }
+    if (loaded.length) defectImageMap.set(d.id, loaded);
+  }
+  const shownDefectIds: Set<number> = new Set();
+
   if (notes.includes("| Bauteilprüfung: ")) {
     const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
     const entries = bauteilPart.split("; ").map((entry: string) => {
@@ -258,23 +275,6 @@ async function generateInspectionPdf(inspection: any) {
         vertieftePruefungText: (() => { const m = entry.match(/vertiefte Prüfung: (.+)$/); return m ? m[1].trim() : ""; })(),
       };
     }).filter(Boolean) as any[];
-
-    // Pre-load all defect images
-    const allDefects: any[] = inspection.defects || [];
-    const primaryDefects = allDefects.filter((d: any) => !d.parentDefectId);
-    const followUps = allDefects.filter((d: any) => d.parentDefectId);
-    const defectImageMap: Map<number, string[]> = new Map();
-    for (const d of allDefects) {
-      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
-      const loaded: string[] = [];
-      for (const url of urls) {
-        try {
-          const blob = await (await fetch(url)).blob();
-          loaded.push(await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); }));
-        } catch {}
-      }
-      if (loaded.length) defectImageMap.set(d.id, loaded);
-    }
 
     if (entries.length > 0) {
       const headerNames = new Set<string>();
@@ -320,25 +320,23 @@ async function generateInspectionPdf(inspection: any) {
           bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"]);
           rowMeta.push({ level: e.level, isDefect: false, isChild: false });
 
-          if (e.mangel) {
-            const matched = primaryDefects.filter((d: any) => d.bauteil?.includes(e.name));
-            for (const defect of matched) {
-              const statusLabel = defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
-              const frist = defect.frist ? fristLabels[defect.frist] || defect.frist : "";
-              const repairDue = defect.repairDue ? format(new Date(defect.repairDue), "dd.MM.yyyy") : "";
-              const parts = [`#${defect.defectId}`, statusLabel, defect.description || "", defect.location ? `Lage: ${defect.location}` : "", frist ? `Frist: ${frist}` : "", repairDue ? `Rep. bis: ${repairDue}` : ""].filter(Boolean);
-              bauteilRows.push([{ content: `\u2937  ${parts.join("   \u00B7   ")}`, colSpan: 6 }]);
-              rowMeta.push({ level: 1, isDefect: true, isChild: false, status: defect.status });
-
-              const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-              for (const child of children) {
-                const cStatus = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
-                const cFrist = child.frist ? fristLabels[child.frist] || child.frist : "";
-                const cRepair = child.repairDue ? format(new Date(child.repairDue), "dd.MM.yyyy") : "";
-                const cParts = [`#${child.defectId}`, cStatus, child.description || "", child.location ? `Lage: ${child.location}` : "", cFrist ? `Frist: ${cFrist}` : "", cRepair ? `Rep. bis: ${cRepair}` : ""].filter(Boolean);
-                bauteilRows.push([{ content: `      \u2937  ${cParts.join("   \u00B7   ")}`, colSpan: 6 }]);
-                rowMeta.push({ level: 1, isDefect: true, isChild: true, status: child.status });
-              }
+          const matched = primaryDefects.filter((d: any) => d.bauteil?.includes(e.name));
+          for (const defect of matched) {
+            shownDefectIds.add(defect.id);
+            const statusLabel = defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
+            const frist = defect.frist ? fristLabels[defect.frist] || defect.frist : "";
+            const repairDue = defect.repairDue ? format(new Date(defect.repairDue), "dd.MM.yyyy") : "";
+            const parts = [`#${defect.defectId}`, statusLabel, defect.description || "", defect.location ? `Lage: ${defect.location}` : "", frist ? `Frist: ${frist}` : "", repairDue ? `Rep. bis: ${repairDue}` : ""].filter(Boolean);
+            bauteilRows.push([{ content: `\u2937  ${parts.join("   \u00B7   ")}`, colSpan: 6 }]);
+            rowMeta.push({ level: 1, isDefect: true, isChild: false, status: defect.status });
+            const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+            for (const child of children) {
+              const cStatus = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
+              const cFrist = child.frist ? fristLabels[child.frist] || child.frist : "";
+              const cRepair = child.repairDue ? format(new Date(child.repairDue), "dd.MM.yyyy") : "";
+              const cParts = [`#${child.defectId}`, cStatus, child.description || "", child.location ? `Lage: ${child.location}` : "", cFrist ? `Frist: ${cFrist}` : "", cRepair ? `Rep. bis: ${cRepair}` : ""].filter(Boolean);
+              bauteilRows.push([{ content: `      \u2937  ${cParts.join("   \u00B7   ")}`, colSpan: 6 }]);
+              rowMeta.push({ level: 1, isDefect: true, isChild: true, status: child.status });
             }
           }
         }
@@ -403,6 +401,55 @@ async function generateInspectionPdf(inspection: any) {
           }
           y += rowCount * (IMG_H + gap) + 4;
         }
+      }
+    }
+  }
+
+  const orphanPrimary = primaryDefects.filter((d: any) => !shownDefectIds.has(d.id));
+  if (orphanPrimary.length > 0) {
+    if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PDF_COLORS.primary);
+    doc.text(notes.includes("| Bauteilprüfung: ") ? `Weitere Mängel (${orphanPrimary.length})` : `Mängel (${orphanPrimary.length})`, margin, y);
+    doc.setTextColor(...PDF_COLORS.foreground);
+    y += 2;
+    const orphanRows = orphanPrimary.map((d: any) => [d.defectId, d.bauteil?.join(", ") || "–", format(new Date(d.dateFound), "dd.MM.yyyy"), d.description || "–", d.location || "–", d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel", d.frist ? fristLabels[d.frist] || d.frist : "–", d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–"]);
+    autoTable(doc, {
+      startY: y,
+      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]],
+      body: orphanRows,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+      headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+      columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
+      didParseCell: (data: any) => {
+        if (data.section === "body" && data.column.index === 5) {
+          if (data.cell.raw === "Schwerer Mangel") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+          else if (data.cell.raw === "Leichter Mangel") { data.cell.styles.textColor = PDF_COLORS.amber; }
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+    const orphanWithImages = orphanPrimary.filter((d: any) => defectImageMap.has(d.id));
+    if (orphanWithImages.length > 0) {
+      const IMG_W = 80; const IMG_H = 60; const maxPerRow = 3; const gap = 4;
+      if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+      doc.setTextColor(...PDF_COLORS.primary);
+      doc.text("Fotos der Mängel", margin, y);
+      doc.setTextColor(...PDF_COLORS.foreground);
+      y += 5;
+      for (const d of orphanWithImages) {
+        const imgList = defectImageMap.get(d.id) || [];
+        const rowCount = Math.ceil(imgList.length / maxPerRow);
+        if (y + 6 + rowCount * (IMG_H + gap) > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+        const col3: [number,number,number] = d.status === "grober_mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...col3);
+        doc.text(`#${d.defectId}  \u2013  ${d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}${d.description ? "  \u00B7  " + d.description : ""}`, margin, y);
+        doc.setTextColor(...PDF_COLORS.foreground); y += 4;
+        for (let ii = 0; ii < imgList.length; ii++) doc.addImage(imgList[ii], "JPEG", margin + (ii % maxPerRow) * (IMG_W + gap), y + Math.floor(ii / maxPerRow) * (IMG_H + gap), IMG_W, IMG_H);
+        y += rowCount * (IMG_H + gap) + 4;
       }
     }
   }
@@ -1732,6 +1779,8 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
               displayEntries.push({ ...ce, level: 1 });
             }
           }
+          const displayedBauteilNames2 = new Set(displayEntries.filter(e => !(headerNames.has(e.name) || !!e.isCustomHeader)).map(e => e.name));
+          const orphanDefects2 = primaryDefects.filter((d: any) => !d.bauteil?.some((b: string) => displayedBauteilNames2.has(b)));
           return (
             <div className="bg-card rounded-xl border border-border p-4 space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Bauteil Prüfung</h4>
@@ -1782,7 +1831,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                               </td>
                             </tr>
                           )}
-                          {e.mangel && primaryDefects
+                          {primaryDefects
                             .filter((d: any) => d.bauteil?.includes(e.name))
                             .map((defect: any) => {
                               const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
@@ -1843,8 +1892,88 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                   </tbody>
                 </table>
               </div>
+              {orphanDefects2.length > 0 && (
+                <div className="pt-2 space-y-2">
+                  <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Weitere Mängel</h5>
+                  {orphanDefects2.map((defect: any) => {
+                    const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                    return (
+                      <Fragment key={`o2-${defect.id}`}>
+                        <div className={`rounded-lg border px-3 py-2.5 ${defect.status === 'grober_mangel' ? 'bg-red-50/20 border-red-500/20 dark:bg-red-900/10' : 'bg-amber-50/20 border-amber-500/20 dark:bg-amber-900/10'}`}>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1 ${defect.status === 'grober_mangel' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}><Hash className="w-3 h-3" />{defect.defectId}</span>
+                            <Badge variant={defect.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${defect.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>{defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}</Badge>
+                            {defect.bauteil?.length > 0 && <span className="text-xs text-muted-foreground">{defect.bauteil.join(", ")}</span>}
+                            <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
+                          </div>
+                          {defect.description && <p className="text-sm text-foreground mb-1">{defect.description}</p>}
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                            {defect.location && <span>Lage: {defect.location}</span>}
+                            {defect.frist && <span>Frist: {fristLabels[defect.frist] || defect.frist}</span>}
+                            {defect.repairDue && <span>Reparatur bis: {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
+                          </div>
+                        </div>
+                        {children.map((child: any) => (
+                          <div key={`o2c-${child.id}`} className="ml-6 rounded-lg border px-3 py-2 bg-amber-50/10 border-amber-500/20 dark:bg-amber-900/5">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1"><Hash className="w-3 h-3" />{child.defectId}</span>
+                              <Badge variant={child.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${child.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>{child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}</Badge>
+                            </div>
+                            {child.description && <p className="text-sm text-foreground mb-1">{child.description}</p>}
+                          </div>
+                        ))}
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
+      })()}
+      {(() => {
+        const notes = inspection.notes || "";
+        if (notes.includes("| Bauteilprüfung: ")) return null;
+        if (primaryDefects.length === 0) return null;
+        return (
+          <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mängel</h4>
+            <div className="space-y-2">
+              {primaryDefects.map((defect: any) => {
+                const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                return (
+                  <Fragment key={`fd2-${defect.id}`}>
+                    <div className={`rounded-lg border px-3 py-2.5 ${defect.status === 'grober_mangel' ? 'bg-red-50/20 border-red-500/20 dark:bg-red-900/10' : 'bg-amber-50/20 border-amber-500/20 dark:bg-amber-900/10'}`}>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1 ${defect.status === 'grober_mangel' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}><Hash className="w-3 h-3" />{defect.defectId}</span>
+                        <Badge variant={defect.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${defect.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>{defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}</Badge>
+                        {defect.bauteil?.length > 0 && <span className="text-xs text-muted-foreground">{defect.bauteil.join(", ")}</span>}
+                        <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
+                      </div>
+                      {defect.description && <p className="text-sm text-foreground mb-1">{defect.description}</p>}
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                        {defect.location && <span>Lage: {defect.location}</span>}
+                        {defect.frist && <span>Frist: {fristLabels[defect.frist] || defect.frist}</span>}
+                        {defect.repairDue && <span>Reparatur bis: {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
+                      </div>
+                      {(() => { const imgs: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []); return imgs.length > 0 ? <div className="flex flex-wrap gap-1.5 mt-1.5">{imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}</div> : null; })()}
+                    </div>
+                    {children.map((child: any) => (
+                      <div key={`fd2c-${child.id}`} className="ml-6 rounded-lg border px-3 py-2 bg-amber-50/10 border-amber-500/20 dark:bg-amber-900/5">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1"><Hash className="w-3 h-3" />{child.defectId}</span>
+                          <Badge variant={child.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${child.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>{child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}</Badge>
+                        </div>
+                        {child.description && <p className="text-sm text-foreground mb-1">{child.description}</p>}
+                      </div>
+                    ))}
+                  </Fragment>
+                );
+              })}
+            </div>
+          </div>
+        );
       })()}
     </div>
   );
