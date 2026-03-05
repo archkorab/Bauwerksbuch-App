@@ -6,7 +6,6 @@ import { MapPlaceholder } from "@/components/map-placeholder";
 import { useProject, useUpdateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useDocuments, useCreateDocument } from "@/hooks/use-documents";
-import { useEvents, useCreateEvent } from "@/hooks/use-events";
 import { useInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useUpdateDefect, useDeleteDefect, useDeleteInspection } from "@/hooks/use-inspections";
 import { useBauakte, useImportBauakt, useUploadBauaktFiles } from "@/hooks/use-bauakte";
 import { useProjectImages, useUploadProjectImages, useDeleteProjectImage } from "@/hooks/use-project-images";
@@ -297,7 +296,7 @@ export default function ProjectDetails() {
   
   const { data: project, isLoading: projectLoading } = useProject(projectId);
   const { data: documents } = useDocuments(projectId);
-  const { data: events } = useEvents(projectId);
+
   const { data: inspections } = useInspections(projectId);
   const { data: profile } = useProfile();
   
@@ -309,7 +308,7 @@ export default function ProjectDetails() {
   const deleteProjectImage = useDeleteProjectImage();
   const queryClient = useQueryClient();
   const createDocument = useCreateDocument();
-  const createEvent = useCreateEvent();
+
   const createInspection = useCreateInspection();
   const createDefect = useCreateDefect();
   const updateInspection = useUpdateInspection();
@@ -321,7 +320,7 @@ export default function ProjectDetails() {
   const uploadBauaktFiles = useUploadBauaktFiles();
   
   const [docDialogOpen, setDocDialogOpen] = useState(false);
-  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [imageViewMode, setImageViewMode] = useState<"grid" | "list">("grid");
@@ -451,19 +450,6 @@ export default function ProjectDetails() {
     });
   };
 
-  const { register: eventReg, handleSubmit: handleEventSubmit } = useForm({
-    defaultValues: { title: "", description: "", type: "inspection", date: "" }
-  });
-
-  const onEventSubmit = (data: any) => {
-    createEvent.mutate({ 
-      ...data, 
-      projectId, 
-      date: new Date(data.date).toISOString() 
-    }, {
-      onSuccess: () => setEventDialogOpen(false)
-    });
-  };
 
   const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
     defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
@@ -860,7 +846,6 @@ export default function ProjectDetails() {
               <TabsTrigger value="bauakt" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-bauakt">Digitaler Bauakt</TabsTrigger>
               <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Prüfungen</TabsTrigger>
               <TabsTrigger value="images" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-images">Bilder</TabsTrigger>
-              <TabsTrigger value="events" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Zeitleiste</TabsTrigger>
             </TabsList>
 
             {/* Documents Tab */}
@@ -1712,54 +1697,6 @@ export default function ProjectDetails() {
               </div>
             </TabsContent>
 
-            {/* Events Timeline */}
-            <TabsContent value="events" className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-display font-bold text-xl">Projektzeitleiste</h3>
-                {isAdmin && (
-                  <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="bg-card border-border hover:bg-muted/60">
-                        <Plus className="w-4 h-4 mr-2" /> Termin hinzufügen
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-card border-border">
-                      <DialogHeader><DialogTitle>Termin planen</DialogTitle></DialogHeader>
-                      <form onSubmit={handleEventSubmit(onEventSubmit)} className="space-y-4">
-                        <div className="space-y-2"><Label>Titel</Label><Input {...eventReg("title")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>Datum</Label><Input type="date" {...eventReg("date")} required className="bg-background"/></div>
-                        <div className="space-y-2"><Label>Beschreibung</Label><Input {...eventReg("description")} className="bg-background"/></div>
-                        <Button type="submit" className="w-full" disabled={createEvent.isPending}>Termin hinzufügen</Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                )}
-              </div>
-              
-              <div className="bg-card border border-border rounded-2xl p-6">
-                {events?.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">Keine anstehenden Termine.</div>
-                ) : (
-                  <div className="relative border-l-2 border-border ml-3 space-y-8 py-2">
-                    {events?.map(ev => (
-                      <div key={ev.id} className="relative pl-8">
-                        <div className="absolute -left-[11px] top-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-primary"></div>
-                        </div>
-                        <div className="bg-background border border-border rounded-xl p-4 shadow-sm hover-elevate">
-                          <div className="flex items-center gap-2 text-primary font-semibold text-sm mb-1">
-                            <Clock className="w-4 h-4" />
-                            {format(new Date(ev.date), 'MMMM d, yyyy')}
-                          </div>
-                          <h4 className="font-bold text-foreground text-lg">{ev.title}</h4>
-                          {ev.description && <p className="text-muted-foreground text-sm mt-2">{ev.description}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
           </Tabs>
       </div>
     </Layout>
