@@ -237,11 +237,51 @@ async function generateInspectionPdf(inspection: any) {
       doc.setTextColor(...PDF_COLORS.foreground);
       y += 2;
 
-      const bauteilRows = displayEntries.map((e: any) => {
-        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
-        return [e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"];
-      });
-      const levelFlags = displayEntries.map((e: any) => e.level === 1);
+      const pdfPrimary = (inspection.defects || []).filter((d: any) => !d.parentDefectId);
+      const pdfFollowUps = (inspection.defects || []).filter((d: any) => d.parentDefectId);
+      const defectsInOrder: any[] = [];
+      const bauteilRows: any[] = [];
+      const rowTypes: string[] = [];
+
+      for (const e of displayEntries) {
+        if (e.isHeader) {
+          bauteilRows.push([{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }]);
+          rowTypes.push("header");
+        } else {
+          bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"]);
+          rowTypes.push(e.level === 1 ? "bauteil-child" : "bauteil");
+
+          if (e.vertieftePruefung && e.vertieftePruefungText) {
+            bauteilRows.push([{ content: `Vertiefte Prüfung — ${e.name}: ${e.vertieftePruefungText}`, colSpan: 6 }]);
+            rowTypes.push("vp");
+          }
+
+          const bauteilPrimary = pdfPrimary.filter((d: any) => d.bauteil?.at(-1) === e.name);
+          const orphaned = pdfFollowUps.filter((f: any) => f.bauteil?.at(-1) === e.name && !pdfPrimary.some((p: any) => p.id === f.parentDefectId));
+          for (const defect of [...bauteilPrimary, ...orphaned]) {
+            const statusLabel = defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
+            let content = `${defect.defectId}   ${statusLabel}   ${format(new Date(defect.dateFound), "dd.MM.yyyy")}`;
+            if (defect.description) content += `\n${defect.description}`;
+            if (defect.location) content += `   |   Lage: ${defect.location}`;
+            if (defect.frist) content += `   |   Frist: ${fristLabels[defect.frist] || defect.frist}`;
+            if (defect.repairDue) content += `   |   bis: ${format(new Date(defect.repairDue), "dd.MM.yyyy")}`;
+            bauteilRows.push([{ content, colSpan: 6 }]);
+            rowTypes.push(defect.status === "grober_mangel" ? "defect-grober" : "defect-leichter");
+            defectsInOrder.push(defect);
+            for (const child of pdfFollowUps.filter((f: any) => f.parentDefectId === defect.id)) {
+              const cl = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
+              let cc = `\u21B3 ${child.defectId}   ${cl}   ${format(new Date(child.dateFound), "dd.MM.yyyy")}`;
+              if (child.description) cc += `\n${child.description}`;
+              if (child.location) cc += `   |   Lage: ${child.location}`;
+              if (child.frist) cc += `   |   Frist: ${fristLabels[child.frist] || child.frist}`;
+              if (child.repairDue) cc += `   |   bis: ${format(new Date(child.repairDue), "dd.MM.yyyy")}`;
+              bauteilRows.push([{ content: cc, colSpan: 6 }]);
+              rowTypes.push(child.status === "grober_mangel" ? "child-grober" : "child-leichter");
+              defectsInOrder.push(child);
+            }
+          }
+        }
+      }
 
       autoTable(doc, {
         startY: y,
@@ -250,116 +290,65 @@ async function generateInspectionPdf(inspection: any) {
         margin: { left: margin, right: margin },
         styles: { fontSize: 8, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
         headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
-        alternateRowStyles: { fillColor: [248, 248, 252] },
         columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
         didParseCell: (data: any) => {
-          if (data.section === "body" && data.column.index === 1 && levelFlags[data.row.index]) {
-            data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
+          if (data.section !== "body") return;
+          const rt = rowTypes[data.row.index];
+          if (rt === "bauteil-child" && data.column.index === 1) data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
+          if (rt === "bauteil" || rt === "bauteil-child") {
+            if (data.column.index === 3) { if (data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; } else data.cell.styles.textColor = PDF_COLORS.mutedFg; }
+            if (data.column.index === 4) { if (data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; } else data.cell.styles.textColor = PDF_COLORS.mutedFg; }
+            if (data.column.index === 5) { if (data.cell.raw === "Ja" || (typeof data.cell.raw === "string" && data.cell.raw.startsWith("Ja:"))) { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; } else data.cell.styles.textColor = PDF_COLORS.mutedFg; }
           }
-          if (data.section === "body") {
-            if (data.column.index === 3 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; }
-            if (data.column.index === 4 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
-            if (data.column.index === 5 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; }
-            if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
-            if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
-            if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
-          }
+          if (rt === "vp") { data.cell.styles.fillColor = [219, 234, 254]; data.cell.styles.textColor = [37, 99, 235]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 8, right: 2 }; data.cell.styles.fontStyle = "italic"; }
+          if (rt === "defect-grober") { data.cell.styles.fillColor = [254, 226, 226]; data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, left: 8, right: 2.5 }; }
+          if (rt === "defect-leichter") { data.cell.styles.fillColor = [254, 243, 199]; data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, left: 8, right: 2.5 }; }
+          if (rt === "child-grober") { data.cell.styles.fillColor = [255, 237, 237]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
+          if (rt === "child-leichter") { data.cell.styles.fillColor = [255, 250, 225]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
         },
       });
-      y = (doc as any).lastAutoTable.finalY + 8;
-    }
-  }
+      y = (doc as any).lastAutoTable.finalY + 4;
 
-  const defects = inspection.defects || [];
-  if (defects.length > 0) {
-    if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PDF_COLORS.primary);
-    doc.text(`Mängel (${defects.length})`, margin, y);
-    doc.setTextColor(...PDF_COLORS.foreground);
-    y += 2;
-
-    const defectImages: Map<number, string[]> = new Map();
-    for (let di = 0; di < defects.length; di++) {
-      const d = defects[di];
-      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
-      const loadedUrls: string[] = [];
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          loadedUrls.push(dataUrl);
-        } catch {}
-      }
-      if (loadedUrls.length) defectImages.set(di, loadedUrls);
-    }
-
-    const IMG_W = 80;
-    const IMG_H = 60;
-
-    for (let di = 0; di < defects.length; di++) {
-      const d = defects[di];
-      const imgList = defectImages.get(di) || [];
-      const hasImage = imgList.length > 0;
-      const estimatedRowHeight = di === 0 ? 22 : 14;
-      const imageBlockHeight = hasImage ? (IMG_H + 4) * Math.ceil(imgList.length / 3) : 0;
-      const totalNeeded = estimatedRowHeight + imageBlockHeight;
-
-      if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-
-      const defectRow = [[
-        d.defectId,
-        d.bauteil?.join(", ") || "–",
-        format(new Date(d.dateFound), "dd.MM.yyyy"),
-        d.description,
-        d.location,
-        d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
-        d.frist ? fristLabels[d.frist] || d.frist : "–",
-        d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
-      ]];
-
-      autoTable(doc, {
-        startY: y,
-        head: di === 0 ? [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]] : undefined,
-        body: defectRow,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
-        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
-        alternateRowStyles: { fillColor: [248, 248, 252] },
-        columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
-        showHead: di === 0 ? "firstPage" : false,
-        didParseCell: (data: any) => {
-          if (data.section === "body" && data.column.index === 5) {
-            if (data.cell.raw === "Schwerer Mangel") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
-            else if (data.cell.raw === "Leichter Mangel") { data.cell.styles.textColor = PDF_COLORS.amber; }
+      const IMG_W = 80;
+      const IMG_H = 60;
+      const defectsWithImgs = defectsInOrder.filter((d: any) => d.imageUrls?.length || d.imageUrl);
+      if (defectsWithImgs.length > 0) {
+        const defectImages: Map<number, string[]> = new Map();
+        for (let di = 0; di < defectsWithImgs.length; di++) {
+          const d = defectsWithImgs[di];
+          const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+          const loaded: string[] = [];
+          for (const url of urls) {
+            try {
+              const blob = await (await fetch(url)).blob();
+              const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
+              loaded.push(dataUrl);
+            } catch {}
           }
-        },
-      });
-      y = (doc as any).lastAutoTable.finalY;
-
-      if (hasImage) {
-        y += 3;
-        const maxPerRow = 3;
-        const gap = 4;
-        for (let ii = 0; ii < imgList.length; ii++) {
-          const col = ii % maxPerRow;
-          const row = Math.floor(ii / maxPerRow);
-          const xPos = margin + 2 + col * (IMG_W + gap);
-          const yPos = y + row * (IMG_H + gap);
-          doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+          if (loaded.length) defectImages.set(di, loaded);
         }
-        const rowCount = Math.ceil(imgList.length / maxPerRow);
-        y += rowCount * (IMG_H + gap);
+        for (let di = 0; di < defectsWithImgs.length; di++) {
+          const d = defectsWithImgs[di];
+          const imgList = defectImages.get(di) || [];
+          if (!imgList.length) continue;
+          const rowCount = Math.ceil(imgList.length / 3);
+          const needed = rowCount * (IMG_H + 4) + 10;
+          if (y + needed > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(7.5);
+          doc.setTextColor(...PDF_COLORS.mutedFg);
+          doc.text(`Fotos: ${d.defectId}`, margin + 2, y + 3);
+          y += 6;
+          for (let ii = 0; ii < imgList.length; ii++) {
+            const xPos = margin + 2 + (ii % 3) * (IMG_W + 4);
+            const yPos = y + Math.floor(ii / 3) * (IMG_H + 4);
+            doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+          }
+          y += rowCount * (IMG_H + 4) + 4;
+        }
       }
-      y += 2;
+      y += 4;
     }
-    y += 4;
   }
 
   const totalPages = doc.getNumberOfPages();
