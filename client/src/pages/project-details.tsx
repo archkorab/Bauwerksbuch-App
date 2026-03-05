@@ -282,7 +282,7 @@ async function generateInspectionPdf(inspection: any) {
           bauteilRows.push([{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }]);
           rowTypes.push("header");
         } else {
-          bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"]);
+          bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? "Ja" : "Nein"]);
           rowTypes.push(e.level === 1 ? "bauteil-child" : "bauteil");
 
           if (e.vertieftePruefung && e.vertieftePruefungText) {
