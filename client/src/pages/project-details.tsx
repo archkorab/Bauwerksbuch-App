@@ -185,23 +185,6 @@ async function generateInspectionPdf(inspection: any) {
     y += lines.length * 5 + 6;
   }
 
-  const allDefects: any[] = inspection.defects || [];
-  const primaryDefects = allDefects.filter((d: any) => !d.parentDefectId);
-  const followUps = allDefects.filter((d: any) => d.parentDefectId);
-  const defectImageMap: Map<number, string[]> = new Map();
-  for (const d of allDefects) {
-    const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
-    const loaded: string[] = [];
-    for (const url of urls) {
-      try {
-        const blob = await (await fetch(url)).blob();
-        loaded.push(await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); }));
-      } catch {}
-    }
-    if (loaded.length) defectImageMap.set(d.id, loaded);
-  }
-  const shownDefectIds = new Set<number>();
-
   if (notes.includes("| Bauteilprüfung: ")) {
     const bauteilPart = notes.split("| Bauteilprüfung: ")[1];
     const entries = bauteilPart.split("; ").map((entry: string) => {
@@ -254,39 +237,11 @@ async function generateInspectionPdf(inspection: any) {
       doc.setTextColor(...PDF_COLORS.foreground);
       y += 2;
 
-      // Build rows: bauteil rows with inline defect sub-rows
-      const bauteilRows: any[] = [];
-      const rowMeta: { level: number; isDefect: boolean; isChild: boolean; status?: string }[] = [];
-
-      for (const e of displayEntries) {
-        if (e.isHeader) {
-          bauteilRows.push([{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }]);
-          rowMeta.push({ level: 0, isDefect: false, isChild: false });
-        } else {
-          bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"]);
-          rowMeta.push({ level: e.level, isDefect: false, isChild: false });
-
-          const matched = primaryDefects.filter((d: any) => d.bauteil?.includes(e.name));
-          for (const defect of matched) {
-            shownDefectIds.add(defect.id);
-            const statusLabel = defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
-            const frist = defect.frist ? fristLabels[defect.frist] || defect.frist : "";
-            const repairDue = defect.repairDue ? format(new Date(defect.repairDue), "dd.MM.yyyy") : "";
-            const parts = [`#${defect.defectId}`, statusLabel, defect.description || "", defect.location ? `Lage: ${defect.location}` : "", frist ? `Frist: ${frist}` : "", repairDue ? `Rep. bis: ${repairDue}` : ""].filter(Boolean);
-            bauteilRows.push([{ content: `\u2937  ${parts.join("   \u00B7   ")}`, colSpan: 6 }]);
-            rowMeta.push({ level: 1, isDefect: true, isChild: false, status: defect.status });
-            const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-            for (const child of children) {
-              const cStatus = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
-              const cFrist = child.frist ? fristLabels[child.frist] || child.frist : "";
-              const cRepair = child.repairDue ? format(new Date(child.repairDue), "dd.MM.yyyy") : "";
-              const cParts = [`#${child.defectId}`, cStatus, child.description || "", child.location ? `Lage: ${child.location}` : "", cFrist ? `Frist: ${cFrist}` : "", cRepair ? `Rep. bis: ${cRepair}` : ""].filter(Boolean);
-              bauteilRows.push([{ content: `      \u2937  ${cParts.join("   \u00B7   ")}`, colSpan: 6 }]);
-              rowMeta.push({ level: 1, isDefect: true, isChild: true, status: child.status });
-            }
-          }
-        }
-      }
+      const bauteilRows = displayEntries.map((e: any) => {
+        if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
+        return [e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"];
+      });
+      const levelFlags = displayEntries.map((e: any) => e.level === 1);
 
       autoTable(doc, {
         startY: y,
@@ -298,108 +253,113 @@ async function generateInspectionPdf(inspection: any) {
         alternateRowStyles: { fillColor: [248, 248, 252] },
         columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" } },
         didParseCell: (data: any) => {
-          if (data.section !== "body") return;
-          const meta = rowMeta[data.row.index];
-          if (!meta) return;
-          if (meta.isDefect) {
-            data.cell.styles.fillColor = meta.isChild ? [255, 250, 240] as [number,number,number] : [255, 245, 245] as [number,number,number];
-            data.cell.styles.fontSize = 7.5;
-            data.cell.styles.textColor = meta.status === "grober_mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
-            data.cell.styles.cellPadding = { top: 2, bottom: 2, left: meta.isChild ? 10 : 6, right: 2.5 };
-            return;
-          }
-          if (meta.level === 1 && data.column.index === 1) {
+          if (data.section === "body" && data.column.index === 1 && levelFlags[data.row.index]) {
             data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
           }
-          if (data.column.index === 3 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; }
-          if (data.column.index === 4 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
-          if (data.column.index === 5 && String(data.cell.raw).startsWith("Ja")) { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; }
-          if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
-          if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
-          if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+          if (data.section === "body") {
+            if (data.column.index === 3 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 4 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 5 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+            if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+          }
         },
       });
       y = (doc as any).lastAutoTable.finalY + 8;
-
-      // Photos: one block per defect with images, in appearance order
-      const defectsWithImages = allDefects.filter((d: any) => defectImageMap.has(d.id));
-      if (defectsWithImages.length > 0) {
-        const IMG_W = 80; const IMG_H = 60; const maxPerRow = 3; const gap = 4;
-        if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(...PDF_COLORS.primary);
-        doc.text("Fotos der Mängel", margin, y);
-        doc.setTextColor(...PDF_COLORS.foreground);
-        y += 5;
-
-        for (const d of defectsWithImages) {
-          const imgList = defectImageMap.get(d.id) || [];
-          const rowCount = Math.ceil(imgList.length / maxPerRow);
-          if (y + 6 + rowCount * (IMG_H + gap) > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-          const statusLabel = d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
-          const col3: [number,number,number] = d.status === "grober_mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
-          doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...col3);
-          doc.text(`#${d.defectId}  \u2013  ${statusLabel}${d.description ? "  \u00B7  " + d.description : ""}`, margin, y);
-          doc.setTextColor(...PDF_COLORS.foreground);
-          y += 4;
-          for (let ii = 0; ii < imgList.length; ii++) {
-            doc.addImage(imgList[ii], "JPEG", margin + (ii % maxPerRow) * (IMG_W + gap), y + Math.floor(ii / maxPerRow) * (IMG_H + gap), IMG_W, IMG_H);
-          }
-          y += rowCount * (IMG_H + gap) + 4;
-        }
-      }
     }
   }
 
-  // Show orphan defects (not matched inline) and all defects if no bauteilprüfung
-  const orphanPrimary = primaryDefects.filter((d: any) => !shownDefectIds.has(d.id));
-  if (orphanPrimary.length > 0) {
+  const defects = inspection.defects || [];
+  if (defects.length > 0) {
     if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...PDF_COLORS.primary);
-    doc.text(notes.includes("| Bauteilprüfung: ") ? `Weitere Mängel (${orphanPrimary.length})` : `Mängel (${orphanPrimary.length})`, margin, y);
+    doc.text(`Mängel (${defects.length})`, margin, y);
     doc.setTextColor(...PDF_COLORS.foreground);
     y += 2;
-    const orphanRows = orphanPrimary.map((d: any) => [d.defectId, d.bauteil?.join(", ") || "–", format(new Date(d.dateFound), "dd.MM.yyyy"), d.description || "–", d.location || "–", d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel", d.frist ? fristLabels[d.frist] || d.frist : "–", d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–"]);
-    autoTable(doc, {
-      startY: y,
-      head: [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]],
-      body: orphanRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
-      headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
-      columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
-      didParseCell: (data: any) => {
-        if (data.section === "body" && data.column.index === 5) {
-          if (data.cell.raw === "Schwerer Mangel") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
-          else if (data.cell.raw === "Leichter Mangel") { data.cell.styles.textColor = PDF_COLORS.amber; }
-        }
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 8;
-    const orphanWithImages = orphanPrimary.filter((d: any) => defectImageMap.has(d.id));
-    if (orphanWithImages.length > 0) {
-      const IMG_W = 80; const IMG_H = 60; const maxPerRow = 3; const gap = 4;
-      if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
-      doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-      doc.setTextColor(...PDF_COLORS.primary);
-      doc.text("Fotos der Mängel", margin, y);
-      doc.setTextColor(...PDF_COLORS.foreground);
-      y += 5;
-      for (const d of orphanWithImages) {
-        const imgList = defectImageMap.get(d.id) || [];
-        const rowCount = Math.ceil(imgList.length / maxPerRow);
-        if (y + 6 + rowCount * (IMG_H + gap) > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-        const col3: [number,number,number] = d.status === "grober_mangel" ? PDF_COLORS.red : PDF_COLORS.amber;
-        doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(...col3);
-        doc.text(`#${d.defectId}  \u2013  ${d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}${d.description ? "  \u00B7  " + d.description : ""}`, margin, y);
-        doc.setTextColor(...PDF_COLORS.foreground); y += 4;
-        for (let ii = 0; ii < imgList.length; ii++) doc.addImage(imgList[ii], "JPEG", margin + (ii % maxPerRow) * (IMG_W + gap), y + Math.floor(ii / maxPerRow) * (IMG_H + gap), IMG_W, IMG_H);
-        y += rowCount * (IMG_H + gap) + 4;
+
+    const defectImages: Map<number, string[]> = new Map();
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+      const loadedUrls: string[] = [];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          loadedUrls.push(dataUrl);
+        } catch {}
       }
+      if (loadedUrls.length) defectImages.set(di, loadedUrls);
     }
+
+    const IMG_W = 80;
+    const IMG_H = 60;
+
+    for (let di = 0; di < defects.length; di++) {
+      const d = defects[di];
+      const imgList = defectImages.get(di) || [];
+      const hasImage = imgList.length > 0;
+      const estimatedRowHeight = di === 0 ? 22 : 14;
+      const imageBlockHeight = hasImage ? (IMG_H + 4) * Math.ceil(imgList.length / 3) : 0;
+      const totalNeeded = estimatedRowHeight + imageBlockHeight;
+
+      if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
+
+      const defectRow = [[
+        d.defectId,
+        d.bauteil?.join(", ") || "–",
+        format(new Date(d.dateFound), "dd.MM.yyyy"),
+        d.description,
+        d.location,
+        d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
+        d.frist ? fristLabels[d.frist] || d.frist : "–",
+        d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
+      ]];
+
+      autoTable(doc, {
+        startY: y,
+        head: di === 0 ? [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]] : undefined,
+        body: defectRow,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
+        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 248, 252] },
+        columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
+        showHead: di === 0 ? "firstPage" : false,
+        didParseCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 5) {
+            if (data.cell.raw === "Schwerer Mangel") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+            else if (data.cell.raw === "Leichter Mangel") { data.cell.styles.textColor = PDF_COLORS.amber; }
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY;
+
+      if (hasImage) {
+        y += 3;
+        const maxPerRow = 3;
+        const gap = 4;
+        for (let ii = 0; ii < imgList.length; ii++) {
+          const col = ii % maxPerRow;
+          const row = Math.floor(ii / maxPerRow);
+          const xPos = margin + 2 + col * (IMG_W + gap);
+          const yPos = y + row * (IMG_H + gap);
+          doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+        }
+        const rowCount = Math.ceil(imgList.length / maxPerRow);
+        y += rowCount * (IMG_H + gap);
+      }
+      y += 2;
+    }
+    y += 4;
   }
 
   const totalPages = doc.getNumberOfPages();
@@ -2164,27 +2124,6 @@ export default function ProjectDetails() {
                                       {inspStatusLabels[insEffectiveStatus] || insEffectiveStatus}
                                     </span>
                                   </div>
-                                  {(() => {
-                                    const allDefects = [...primaryDefects, ...followUps];
-                                    const leicht = allDefects.filter((d: any) => d.status === 'leichter_mangel').length;
-                                    const schwer = allDefects.filter((d: any) => d.status === 'grober_mangel').length;
-                                    return (leicht > 0 || schwer > 0) ? (
-                                      <>
-                                        {leicht > 0 && (
-                                          <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Leichte Mängel</span>
-                                            <span className="font-bold text-amber-600">{leicht}</span>
-                                          </div>
-                                        )}
-                                        {schwer > 0 && (
-                                          <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Schwere Mängel</span>
-                                            <span className="font-bold text-destructive">{schwer}</span>
-                                          </div>
-                                        )}
-                                      </>
-                                    ) : null;
-                                  })()}
                                 </div>
                               </div>
                               <div className="bg-card rounded-xl border border-border p-4 space-y-3">
@@ -2258,8 +2197,6 @@ export default function ProjectDetails() {
                                   displayEntries.push({ ...ce, level: 1 });
                                 }
                               }
-                              const displayedBauteilNames = new Set(displayEntries.filter(e => !(headerNames.has(e.name) || !!e.isCustomHeader)).map(e => e.name));
-                              const orphanDefects = primaryDefects.filter((d: any) => !d.bauteil?.some((b: string) => displayedBauteilNames.has(b)));
                               return (
                                 <div className="bg-card rounded-xl border border-border p-4 space-y-3">
                                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Bauteil Prüfung</h4>
@@ -2310,7 +2247,7 @@ export default function ProjectDetails() {
                                                   </td>
                                                 </tr>
                                               )}
-                                              {primaryDefects
+                                              {e.mangel && primaryDefects
                                                 .filter((d: any) => d.bauteil?.includes(e.name))
                                                 .map((defect: any) => {
                                                   const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
@@ -2370,86 +2307,6 @@ export default function ProjectDetails() {
                                         })}
                                       </tbody>
                                     </table>
-                                  </div>
-                                  {orphanDefects.length > 0 && (
-                                    <div className="pt-2 space-y-2">
-                                      <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Weitere Mängel</h5>
-                                      {orphanDefects.map((defect: any) => {
-                                        const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                                        return (
-                                          <Fragment key={`o-${defect.id}`}>
-                                            <div className={`rounded-lg border px-3 py-2.5 ${defect.status === 'grober_mangel' ? 'bg-red-50/20 border-red-500/20 dark:bg-red-900/10' : 'bg-amber-50/20 border-amber-500/20 dark:bg-amber-900/10'}`}>
-                                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <span className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1 ${defect.status === 'grober_mangel' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}><Hash className="w-3 h-3" />{defect.defectId}</span>
-                                                <span className={`px-2 py-0.5 text-xs font-bold rounded-full border uppercase ${defect.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>{defectStatusLabels[defect.status] || defect.status}</span>
-                                                {defect.bauteil?.length > 0 && <span className="text-xs text-muted-foreground">{defect.bauteil.join(", ")}</span>}
-                                                <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
-                                              </div>
-                                              {defect.description && <p className="text-sm text-foreground mb-1">{defect.description}</p>}
-                                              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                                                {defect.location && <span>Lage: {defect.location}</span>}
-                                                {defect.frist && <span>Frist: {fristLabels[defect.frist] || defect.frist}</span>}
-                                                {defect.repairDue && <span>Reparatur bis: {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
-                                              </div>
-                                            </div>
-                                            {children.map((child: any) => (
-                                              <div key={`oc-${child.id}`} className="ml-6 rounded-lg border px-3 py-2 bg-amber-50/10 border-amber-500/20 dark:bg-amber-900/5">
-                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                  <CornerDownRight className="w-3 h-3 text-muted-foreground" />
-                                                  <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1"><Hash className="w-3 h-3" />{child.defectId}</span>
-                                                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full border uppercase ${child.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>{defectStatusLabels[child.status] || child.status}</span>
-                                                </div>
-                                                {child.description && <p className="text-sm text-foreground mb-1">{child.description}</p>}
-                                              </div>
-                                            ))}
-                                          </Fragment>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            {(() => {
-                              const notes = ins.notes || "";
-                              if (notes.includes("| Bauteilprüfung: ")) return null;
-                              if (primaryDefects.length === 0) return null;
-                              return (
-                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-                                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mängel</h4>
-                                  <div className="space-y-2">
-                                    {primaryDefects.map((defect: any) => {
-                                      const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                                      return (
-                                        <Fragment key={`fd-${defect.id}`}>
-                                          <div className={`rounded-lg border px-3 py-2.5 ${defect.status === 'grober_mangel' ? 'bg-red-50/20 border-red-500/20 dark:bg-red-900/10' : 'bg-amber-50/20 border-amber-500/20 dark:bg-amber-900/10'}`}>
-                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                              <span className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1 ${defect.status === 'grober_mangel' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}><Hash className="w-3 h-3" />{defect.defectId}</span>
-                                              <span className={`px-2 py-0.5 text-xs font-bold rounded-full border uppercase ${defect.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>{defectStatusLabels[defect.status] || defect.status}</span>
-                                              {defect.bauteil?.length > 0 && <span className="text-xs text-muted-foreground">{defect.bauteil.join(", ")}</span>}
-                                              <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
-                                            </div>
-                                            {defect.description && <p className="text-sm text-foreground mb-1">{defect.description}</p>}
-                                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                                              {defect.location && <span>Lage: {defect.location}</span>}
-                                              {defect.frist && <span>Frist: {fristLabels[defect.frist] || defect.frist}</span>}
-                                              {defect.repairDue && <span>Reparatur bis: {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
-                                            </div>
-                                            {(() => { const imgs: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []); return imgs.length > 0 ? <div className="flex flex-wrap gap-1.5 mt-1.5">{imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" testId={`defect-image-${defect.defectId}-${ii}`} />)}</div> : null; })()}
-                                          </div>
-                                          {children.map((child: any) => (
-                                            <div key={`fdc-${child.id}`} className="ml-6 rounded-lg border px-3 py-2 bg-amber-50/10 border-amber-500/20 dark:bg-amber-900/5">
-                                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <CornerDownRight className="w-3 h-3 text-muted-foreground" />
-                                                <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1"><Hash className="w-3 h-3" />{child.defectId}</span>
-                                                <span className={`px-2 py-0.5 text-xs font-bold rounded-full border uppercase ${child.status === 'grober_mangel' ? 'text-red-500 border-red-500/30 bg-red-500/10' : 'text-amber-500 border-amber-500/30 bg-amber-500/10'}`}>{defectStatusLabels[child.status] || child.status}</span>
-                                              </div>
-                                              {child.description && <p className="text-sm text-foreground mb-1">{child.description}</p>}
-                                            </div>
-                                          ))}
-                                        </Fragment>
-                                      );
-                                    })}
                                   </div>
                                 </div>
                               );
