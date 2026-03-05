@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
 export function displayName(user: { firstName?: string | null; lastName?: string | null; email?: string | null; profile?: { company?: string | null } | null }, fallback?: string): string {
   const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
   const company = user.profile?.company;
-  if (name && company) return `${name}, ${company}`;
   if (name) return name;
   if (company) return company;
   return user.email || fallback || '—';
