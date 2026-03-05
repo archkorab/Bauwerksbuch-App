@@ -54,6 +54,11 @@ const inspTypeLabels: Record<string, string> = {
 const BAUTEIL_OPTIONS_SIMPLE = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
 
 const BAUTEIL_OPTIONS = [
+  { label: "Fassade/Gesimse", level: 0 },
+  { label: "Verputz", level: 1, ref: "1.1", defaultGegenstand: "Risse, lose Teile, Hohlstellen, Abplatzungen" },
+  { label: "Gesimse", level: 1, ref: "1.2", defaultGegenstand: "Risse, lose Teile, Hohlstellen, Abplatzungen" },
+  { label: "Fenster", level: 1, ref: "1.3" },
+  { label: "Sonderbauteile", level: 1, ref: "1.4" },
   { label: "Dach", level: 0 },
   { label: "Konstruktion", level: 1, ref: "2.1", defaultGegenstand: "Zustand" },
   { label: "Eindeckung, Schneefangeinrichtung", level: 1, ref: "2.2", defaultGegenstand: "lose Teile, Fehlstellen" },
