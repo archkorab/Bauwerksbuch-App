@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -324,6 +325,7 @@ export default function ProjectDetails() {
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [imageViewMode, setImageViewMode] = useState<"grid" | "list">("grid");
+  const [deleteInspectionId, setDeleteInspectionId] = useState<number | null>(null);
   const [bauaktSearch, setBauaktSearch] = useState("");
 
   const isAdmin = profile?.role === "admin";
@@ -1562,7 +1564,7 @@ export default function ProjectDetails() {
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); openEditInspection(ins); }} data-testid={`button-edit-inspection-${ins.id}`}>
                                     <Pencil className="w-4 h-4" />
                                   </Button>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm("Prüfung und alle zugehörigen Mängel wirklich löschen?")) deleteInspection.mutate({ id: ins.id, projectId }); }} data-testid={`button-delete-inspection-${ins.id}`}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteInspectionId(ins.id); }} data-testid={`button-delete-inspection-${ins.id}`}>
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </>
@@ -1699,6 +1701,35 @@ export default function ProjectDetails() {
 
           </Tabs>
       </div>
+
+      <AlertDialog open={deleteInspectionId !== null} onOpenChange={(open) => { if (!open) setDeleteInspectionId(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Prüfung löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie diese Prüfung wirklich löschen? Alle zugehörigen Mängel werden ebenfalls gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border" data-testid="button-cancel-delete-inspection">Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteInspection.isPending}
+              onClick={() => {
+                if (deleteInspectionId) {
+                  deleteInspection.mutate({ id: deleteInspectionId, projectId }, {
+                    onSuccess: () => setDeleteInspectionId(null),
+                  });
+                }
+              }}
+              data-testid="button-confirm-delete-inspection"
+            >
+              {deleteInspection.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }
