@@ -13,7 +13,7 @@ import { useProjectImages, useUploadProjectImages, useDeleteProjectImage } from 
 import { useProfile } from "@/hooks/use-profile";
 import { format } from "date-fns";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X
+  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -324,6 +324,7 @@ export default function ProjectDetails() {
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [imageViewMode, setImageViewMode] = useState<"grid" | "list">("grid");
   const [bauaktSearch, setBauaktSearch] = useState("");
 
   const isAdmin = profile?.role === "admin";
@@ -937,25 +938,49 @@ export default function ProjectDetails() {
             <TabsContent value="images" className="space-y-4" data-testid="tab-images">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-display font-bold text-xl">Projektbilder</h3>
-                {isAdmin && (
-                  <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-lg cursor-pointer hover:bg-muted/60 transition-colors" data-testid="button-upload-images">
-                    <ImagePlus className="w-4 h-4" />
-                    Bilder hochladen
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        if (files.length > 0) {
-                          uploadProjectImages.mutate({ projectId, files });
-                          e.target.value = "";
-                        }
-                      }}
-                    />
-                  </label>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+                    <Button
+                      variant={imageViewMode === "grid" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setImageViewMode("grid")}
+                      className="px-3 h-8"
+                      data-testid="button-images-view-grid"
+                    >
+                      <LayoutGrid className="w-4 h-4 mr-1.5" />
+                      <span className="text-xs">Kacheln</span>
+                    </Button>
+                    <Button
+                      variant={imageViewMode === "list" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setImageViewMode("list")}
+                      className="px-3 h-8"
+                      data-testid="button-images-view-list"
+                    >
+                      <List className="w-4 h-4 mr-1.5" />
+                      <span className="text-xs">Liste</span>
+                    </Button>
+                  </div>
+                  {isAdmin && (
+                    <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-card border border-border rounded-lg cursor-pointer hover:bg-muted/60 transition-colors" data-testid="button-upload-images">
+                      <ImagePlus className="w-4 h-4" />
+                      Bilder hochladen
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            uploadProjectImages.mutate({ projectId, files });
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
 
               {uploadProjectImages.isPending && (
@@ -969,7 +994,7 @@ export default function ProjectDetails() {
                 <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
                   Keine Bilder vorhanden.
                 </div>
-              ) : (
+              ) : imageViewMode === "grid" ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {projectImages.map((img: any) => (
                     <div key={img.id} className="group relative bg-card border border-border rounded-xl overflow-hidden shadow-sm" data-testid={`project-image-${img.id}`}>
@@ -1008,6 +1033,64 @@ export default function ProjectDetails() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs w-16">Bild</th>
+                        <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Dateiname</th>
+                        <th className="text-left px-6 py-3 font-semibold text-muted-foreground uppercase tracking-wider text-xs">Datum</th>
+                        <th className="w-24"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {projectImages.map((img: any) => (
+                        <tr key={img.id} className="hover:bg-muted/40 transition-colors group" data-testid={`project-image-row-${img.id}`}>
+                          <td className="px-6 py-3">
+                            <a href={img.url} target="_blank" rel="noopener noreferrer" className="block w-10 h-10 rounded-lg overflow-hidden border border-border">
+                              <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
+                            </a>
+                          </td>
+                          <td className="px-6 py-3">
+                            <a href={img.url} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground hover:text-primary transition-colors">
+                              {img.name}
+                            </a>
+                          </td>
+                          <td className="px-6 py-3 text-muted-foreground">
+                            {img.createdAt ? format(new Date(img.createdAt), 'dd.MM.yyyy') : '—'}
+                          </td>
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-1 justify-end">
+                              <a
+                                href={img.url}
+                                download={img.name}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`button-download-image-list-${img.id}`}
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                              {isAdmin && (
+                                <button
+                                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                                  onClick={() => {
+                                    if (confirm("Bild wirklich löschen?")) {
+                                      deleteProjectImage.mutate({ id: img.id, projectId });
+                                    }
+                                  }}
+                                  data-testid={`button-delete-image-list-${img.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </TabsContent>
