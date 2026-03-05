@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout";
 import { useProjects, useCreateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   Building,
   MapPin,
@@ -53,6 +53,7 @@ export default function ProjektePage() {
   const { data: defectSummary } = useDefectSummary();
   const createProject = useCreateProject();
 
+  const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [search, setSearch] = useState("");
@@ -231,8 +232,7 @@ export default function ProjektePage() {
               {filteredProjects?.map((project) => {
                 const mangel = getMangelStatus(project.id);
                 return (
-                  <Link key={project.id} href={`/projects/${project.id}`}>
-                    <tr className="hover:bg-muted/40 transition-colors cursor-pointer group" data-testid={`row-project-projekte-${project.id}`}>
+                    <tr key={project.id} className="hover:bg-muted/40 transition-colors cursor-pointer group" onClick={() => navigate(`/projects/${project.id}`)} data-testid={`row-project-projekte-${project.id}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center border border-border shrink-0">
@@ -263,7 +263,6 @@ export default function ProjektePage() {
                         <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </td>
                     </tr>
-                  </Link>
                 );
               })}
             </tbody>
