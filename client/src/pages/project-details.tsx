@@ -339,7 +339,7 @@ export default function ProjectDetails() {
   const [deletedDefectIds, setDeletedDefectIds] = useState<number[]>([]);
 
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }))
   );
 
   const updateBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
@@ -347,7 +347,7 @@ export default function ProjectDetails() {
   };
 
   const addBauteilPruefung = () => {
-    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] }]);
+    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }]);
   };
 
   const addBauteilMangel = (bauteilIndex: number) => {
@@ -400,7 +400,7 @@ export default function ProjectDetails() {
   };
 
   const resetBauteilPruefungen = () => {
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: false, mangel: false, vertieftePruefung: false, maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] })));
   };
 
   const addDefectEntry = () => {
