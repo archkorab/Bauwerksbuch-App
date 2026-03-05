@@ -1794,6 +1794,61 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                               </td>
                             </tr>
                           )}
+                          {e.mangel && primaryDefects
+                            .filter((d: any) => d.bauteil?.includes(e.name))
+                            .map((defect: any) => {
+                              const children = followUps.filter((f: any) => f.parentDefectId === defect.id);
+                              return (
+                                <Fragment key={`m-${defect.id}`}>
+                                  <tr className="border-b border-border bg-red-50/20 dark:bg-red-900/10">
+                                    <td colSpan={6} className="px-3 py-2.5">
+                                      <div className="ml-4 border-l-2 border-red-500/40 pl-4">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                          <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1">
+                                            <Hash className="w-3 h-3" />{defect.defectId}
+                                          </span>
+                                          <Badge variant={defect.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${defect.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>
+                                            {defect.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}
+                                          </Badge>
+                                          <span className="text-xs text-muted-foreground">{format(new Date(defect.dateFound), 'dd.MM.yyyy')}</span>
+                                        </div>
+                                        {defect.description && <p className="text-sm text-foreground mb-1">{defect.description}</p>}
+                                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                                          {defect.location && <span>Lage: {defect.location}</span>}
+                                          {defect.frist && <span>Frist: {fristLabels[defect.frist] || defect.frist}</span>}
+                                          {defect.repairDue && <span>Reparatur bis: {format(new Date(defect.repairDue), 'dd.MM.yyyy')}</span>}
+                                        </div>
+                                        {(() => { const imgs: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []); return imgs.length > 0 ? <div className="flex flex-wrap gap-1.5 mt-1.5">{imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}</div> : null; })()}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {children.map((child: any) => (
+                                    <tr key={`c-${child.id}`} className="border-b border-border bg-amber-50/10 dark:bg-amber-900/5">
+                                      <td colSpan={6} className="px-3 py-2">
+                                        <div className="ml-8 border-l-2 border-amber-500/30 pl-4">
+                                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1"><Hash className="w-3 h-3" />{child.defectId}</span>
+                                            <Badge variant={child.status === "grober_mangel" ? "destructive" : "outline"} className={`text-xs ${child.status === "leichter_mangel" ? "border-amber-500/30 text-amber-600" : ""}`}>
+                                              {child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel"}
+                                            </Badge>
+                                            <span className="text-xs text-muted-foreground">{format(new Date(child.dateFound), 'dd.MM.yyyy')}</span>
+                                          </div>
+                                          {child.description && <p className="text-sm text-foreground mb-1">{child.description}</p>}
+                                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                                            {child.location && <span>Lage: {child.location}</span>}
+                                            {child.frist && <span>Frist: {fristLabels[child.frist] || child.frist}</span>}
+                                            {child.repairDue && <span>Reparatur bis: {format(new Date(child.repairDue), 'dd.MM.yyyy')}</span>}
+                                          </div>
+                                          {(() => { const imgs: string[] = child.imageUrls?.length ? child.imageUrls : (child.imageUrl ? [child.imageUrl] : []); return imgs.length > 0 ? <div className="flex flex-wrap gap-1.5 mt-1.5">{imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}</div> : null; })()}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </Fragment>
+                              );
+                            })
+                          }
                         </Fragment>
                       );
                     })}
@@ -1803,47 +1858,6 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             </div>
           );
       })()}
-
-      <div>
-        <h4 className="font-display font-bold text-base mb-3">
-          Mängel ({inspection.defects?.length || 0})
-        </h4>
-
-        {(!inspection.defects || inspection.defects.length === 0) ? (
-          <div className="p-4 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm">
-            Keine Mängel bei dieser Prüfung erfasst.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full text-sm" data-testid={`detail-defects-table-${inspection.id}`}>
-              <thead>
-                <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
-                  <th className="text-left px-4 py-2.5 font-semibold">Mangel-Nr.</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Bauteil</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Datum</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Beschreibung</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Lage</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Status</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Frist</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Reparatur bis</th>
-                  <th className="text-left px-4 py-2.5 font-semibold">Foto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {primaryDefects.map((defect: any) => {
-                  const childDefects = followUps.filter((f: any) => f.parentDefectId === defect.id);
-                  return (
-                    <DefectRows key={defect.id} defect={defect} followUpDefects={childDefects} />
-                  );
-                })}
-                {followUps.filter((f: any) => !primaryDefects.some((p: any) => p.id === f.parentDefectId)).map((defect: any) => (
-                  <DefectRows key={defect.id} defect={defect} followUpDefects={[]} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
