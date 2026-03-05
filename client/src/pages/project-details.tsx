@@ -610,7 +610,7 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                     {(m.imageUrls || []).map((url, ui) => (
                       <div key={`url-${ui}`} className="relative group">
                         <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
-                          <img src={url} alt="Mangel" className="w-full h-full object-cover" />
+                          <img src={url} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
                         </div>
                         <button type="button" onClick={() => onRemoveMangelUrl(index, mi, url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-url-${index}-${mi}-${ui}`}>
                           <X className="w-3 h-3" />
@@ -620,7 +620,7 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                     {(m.imageFiles || []).map((file, fi) => (
                       <div key={`file-${fi}`} className="relative group">
                         <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
-                          <img src={URL.createObjectURL(file)} alt="Mangel" className="w-full h-full object-cover" />
+                          <img src={URL.createObjectURL(file)} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
                         </div>
                         <button type="button" onClick={() => onRemoveMangelFile(index, mi, fi)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-file-${index}-${mi}-${fi}`}>
                           <X className="w-3 h-3" />
@@ -2393,7 +2393,7 @@ function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testI
         className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all cursor-pointer"
         data-testid={testId}
       >
-        <img src={src} alt={alt} className="w-full h-full object-cover" />
+        <img src={src} alt={alt} className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
       </button>
       {expanded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpanded(false)}>
@@ -2401,6 +2401,7 @@ function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testI
             src={src}
             alt={alt}
             className="max-w-[90vw] max-h-[85vh] rounded-xl border-2 border-border shadow-2xl object-contain bg-card"
+            style={{ imageOrientation: "none" }}
             onClick={(e) => e.stopPropagation()}
             data-testid="img-expanded"
           />
