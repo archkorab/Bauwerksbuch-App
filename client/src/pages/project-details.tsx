@@ -747,7 +747,7 @@ export default function ProjectDetails() {
   const [editBauteilPruefungen, setEditBauteilPruefungen] = useState<BauteilPruefung[]>([]);
 
   const [bauteilPruefungen, setBauteilPruefungen] = useState<BauteilPruefung[]>(
-    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
+    BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: !b.label.startsWith("Sonderbauteil"), mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
 
   const updateBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
@@ -759,9 +759,9 @@ export default function ProjectDetails() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
@@ -834,7 +834,7 @@ export default function ProjectDetails() {
   };
 
   const resetBauteilPruefungen = () => {
-    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
+    setBauteilPruefungen(BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: (b as any).ref || "", artDesMangels: (b as any).defaultGegenstand || "", geprueft: !b.label.startsWith("Sonderbauteil"), mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] })));
   };
 
   const addDefectEntry = () => {
@@ -979,9 +979,9 @@ export default function ProjectDetails() {
       const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
       const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
       const nextRef = `5.${customCount + 1}`;
-      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
       if (!hasSonderbauteileHeader) {
-        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: false, mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] };
         return [...prev, header, newChild];
       }
       return [...prev, newChild];
