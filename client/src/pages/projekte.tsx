@@ -168,10 +168,6 @@ export default function ProjektePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="eigentuemer-projekte">User</Label>
-                  <Input id="eigentuemer-projekte" {...register("eigentuemer")} placeholder="Name des Users" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer-projekte" />
-                </div>
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>
                   {createProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Projekt erstellen

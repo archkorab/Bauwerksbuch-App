@@ -180,10 +180,6 @@ export default function Dashboard() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="eigentuemer">User</Label>
-                  <Input id="eigentuemer" {...register("eigentuemer")} placeholder="Name des Users" className="bg-background border-border focus:ring-primary/20" data-testid="input-eigentuemer" />
-                </div>
 
                 <Button type="submit" className="w-full" disabled={createProject.isPending}>
                   {createProject.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
