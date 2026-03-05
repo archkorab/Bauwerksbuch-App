@@ -1072,7 +1072,19 @@ export default function ProjectDetails() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Nächste Prüfung</p>
-              <p className="font-medium">{project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'MMMM d, yyyy') : 'Nicht geplant'}</p>
+              {project.nextInspectionDue ? (() => {
+                const due = new Date(project.nextInspectionDue);
+                const today = new Date(); today.setHours(0,0,0,0); due.setHours(0,0,0,0);
+                const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+                const label = days === 0 ? "heute" : days > 0 ? `in ${days} Tag${days === 1 ? "" : "en"}` : `vor ${Math.abs(days)} Tag${Math.abs(days) === 1 ? "" : "en"}`;
+                const color = days < 0 ? "text-destructive" : days <= 30 ? "text-amber-500" : "text-emerald-600";
+                return (
+                  <div className="flex items-baseline gap-2">
+                    <p className="font-medium">{format(new Date(project.nextInspectionDue), 'dd.MM.yyyy')}</p>
+                    <span className={`text-xs font-semibold ${color}`} data-testid="text-next-inspection-days">{label}</span>
+                  </div>
+                );
+              })() : <p className="font-medium text-muted-foreground">Nicht geplant</p>}
             </div>
             {isAdmin && (
               <div>
