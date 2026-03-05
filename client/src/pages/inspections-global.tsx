@@ -1055,6 +1055,11 @@ export default function InspectionsGlobal() {
                 },
               });
             }
+            const originalUrls: string[] = matchingDefect.imageUrls?.length ? matchingDefect.imageUrls : (matchingDefect.imageUrl ? [matchingDefect.imageUrl] : []);
+            const currentUrls: string[] = m.imageUrls || [];
+            for (const removedUrl of originalUrls.filter((u: string) => !currentUrls.includes(u))) {
+              await fetch(`/api/defects/${matchingDefect.id}/image`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageUrl: removedUrl }), credentials: 'include' });
+            }
             for (const imgFile of (m.imageFiles || [])) {
               const formData = new FormData();
               formData.append('image', imgFile);
