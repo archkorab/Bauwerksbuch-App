@@ -780,7 +780,7 @@ export default function InspectionsGlobal() {
     setBauteilPruefungen(prev => {
       const bp = prev[bauteilIndex];
       const opt = BAUTEIL_OPTIONS.find(o => o.label === bp.bauteil);
-      const ref = opt?.ref || "";
+      const ref = opt?.ref || bp.refNr || "";
       const nextNum = bp.maengel.length + 1;
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getInspValues("date") || new Date().toISOString().split("T")[0];
@@ -883,7 +883,7 @@ export default function InspectionsGlobal() {
     setEditBauteilPruefungen(prev => {
       const bp = prev[bauteilIndex];
       const opt = BAUTEIL_OPTIONS.find(o => o.label === bp.bauteil);
-      const ref = opt?.ref || "";
+      const ref = opt?.ref || bp.refNr || "";
       const nextNum = bp.maengel.length + 1;
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getEditInspValues("date") || new Date().toISOString().split("T")[0];
