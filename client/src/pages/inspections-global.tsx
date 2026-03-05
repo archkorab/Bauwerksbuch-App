@@ -285,6 +285,51 @@ async function generateInspectionPdf(inspection: any) {
         }
       }
 
+      const IMG_W = 80;
+      const IMG_H = 60;
+      const IMG_GAP = 4;
+      const IMG_MAX_PER_ROW = 3;
+
+      const allDefects = inspection.defects || [];
+      const defectImagesMap: Map<string, string[]> = new Map();
+      for (const d of allDefects) {
+        const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+        const loadedUrls: string[] = [];
+        for (const url of urls) {
+          try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+            loadedUrls.push(dataUrl);
+          } catch {}
+        }
+        if (loadedUrls.length) defectImagesMap.set(d.defectId || String(allDefects.indexOf(d)), loadedUrls);
+      }
+
+      const finalDisplayEntries: any[] = [];
+      for (const e of displayEntries) {
+        finalDisplayEntries.push(e);
+        if (!e.isHeader && e.mangel) {
+          const bauteilDefects = allDefects.filter((d: any) => (d.bauteil || [])[0] === e.name);
+          for (const d of bauteilDefects) {
+            const statusLabel = d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
+            const fristLabel = d.frist ? (fristLabels[d.frist] || d.frist) : "–";
+            const repairDueLabel = d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–";
+            const detail = [d.description, d.location, statusLabel, `Frist: ${fristLabel}`, repairDueLabel].filter(Boolean).join("  ·  ");
+            finalDisplayEntries.push({ isMangelRow: true, defectId: d.defectId || "", detail, status: statusLabel });
+            const imgs = defectImagesMap.get(d.defectId || "") || [];
+            if (imgs.length > 0) {
+              const imgRows = Math.ceil(imgs.length / IMG_MAX_PER_ROW);
+              finalDisplayEntries.push({ isImageRow: true, images: imgs, imageBlockH: imgRows * (IMG_H + IMG_GAP) + 4 });
+            }
+          }
+        }
+      }
+
       if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
@@ -293,19 +338,16 @@ async function generateInspectionPdf(inspection: any) {
       doc.setTextColor(...PDF_COLORS.foreground);
       y += 2;
 
-      const bauteilRows = displayEntries.map((e: any) => {
+      const levelFlags = finalDisplayEntries.map((e: any) => !e.isHeader && !e.isMangelRow && !e.isImageRow && e.level === 1);
+      const bauteilRows = finalDisplayEntries.map((e: any) => {
         if (e.isHeader) return [{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }];
-        return [
-          e.ref,
-          e.name,
-          e.gegenstand,
-          e.geprueft ? "Ja" : "Nein",
-          e.mangel ? "Ja" : "Nein",
-          e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein",
+        if (e.isMangelRow) return [
+          { content: e.defectId, styles: { fontStyle: "bold" as const, textColor: PDF_COLORS.red } },
+          { content: e.detail, colSpan: 5, styles: { textColor: PDF_COLORS.foreground, fontSize: 7.5 } },
         ];
+        if (e.isImageRow) return [{ content: "", colSpan: 6, styles: { minCellHeight: e.imageBlockH, cellPadding: 0 } }];
+        return [e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? (e.vertieftePruefungText ? `Ja: ${e.vertieftePruefungText}` : "Ja") : "Nein"];
       });
-
-      const levelFlags = displayEntries.map((e: any) => e.level === 1);
 
       autoTable(doc, {
         startY: y,
@@ -320,124 +362,41 @@ async function generateInspectionPdf(inspection: any) {
           if (data.section === "body" && data.column.index === 1 && levelFlags[data.row.index]) {
             data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, right: 2.5, left: 6 };
           }
-          if (data.section === "body") {
-            if (data.column.index === 3 && data.cell.raw === "Ja") {
-              data.cell.styles.textColor = PDF_COLORS.ok;
-              data.cell.styles.fontStyle = "bold";
-            }
-            if (data.column.index === 4 && data.cell.raw === "Ja") {
-              data.cell.styles.textColor = PDF_COLORS.red;
-              data.cell.styles.fontStyle = "bold";
-            }
-            if (data.column.index === 5 && data.cell.raw === "Ja") {
-              data.cell.styles.textColor = PDF_COLORS.primary;
-              data.cell.styles.fontStyle = "bold";
-            }
+          const e = finalDisplayEntries[data.row.index];
+          if (data.section === "body" && !e?.isMangelRow && !e?.isImageRow && !e?.isHeader) {
+            if (data.column.index === 3 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.ok; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 4 && data.cell.raw === "Ja") { data.cell.styles.textColor = PDF_COLORS.red; data.cell.styles.fontStyle = "bold"; }
+            if (data.column.index === 5 && data.cell.raw && String(data.cell.raw).startsWith("Ja")) { data.cell.styles.textColor = PDF_COLORS.primary; data.cell.styles.fontStyle = "bold"; }
             if (data.column.index === 3 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
             if (data.column.index === 4 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
             if (data.column.index === 5 && data.cell.raw === "Nein") data.cell.styles.textColor = PDF_COLORS.mutedFg;
+          }
+          if (data.section === "body" && e?.isMangelRow) {
+            data.cell.styles.fillColor = [255, 245, 245];
+          }
+          if (data.section === "body" && e?.isImageRow) {
+            data.cell.styles.fillColor = PDF_COLORS.white;
+            data.cell.styles.lineWidth = 0;
+          }
+        },
+        didDrawCell: (data: any) => {
+          if (data.section === "body" && data.column.index === 0) {
+            const e = finalDisplayEntries[data.row.index];
+            if (e?.isImageRow) {
+              const imgs: string[] = e.images;
+              for (let ii = 0; ii < imgs.length; ii++) {
+                const col = ii % IMG_MAX_PER_ROW;
+                const row = Math.floor(ii / IMG_MAX_PER_ROW);
+                const xPos = margin + 2 + col * (IMG_W + IMG_GAP);
+                const yPos = data.cell.y + 2 + row * (IMG_H + IMG_GAP);
+                try { doc.addImage(imgs[ii], "JPEG", xPos, yPos, IMG_W, IMG_H); } catch {}
+              }
+            }
           }
         },
       });
       y = (doc as any).lastAutoTable.finalY + 8;
     }
-  }
-
-  const defects = inspection.defects || [];
-  if (defects.length > 0) {
-    if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PDF_COLORS.primary);
-    doc.text(`Mängel (${defects.length})`, margin, y);
-    doc.setTextColor(...PDF_COLORS.foreground);
-    y += 2;
-
-    const defectImages: Map<number, string[]> = new Map();
-    for (let di = 0; di < defects.length; di++) {
-      const d = defects[di];
-      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
-      const loadedUrls: string[] = [];
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          loadedUrls.push(dataUrl);
-        } catch {}
-      }
-      if (loadedUrls.length) defectImages.set(di, loadedUrls);
-    }
-
-    const IMG_W = 80;
-    const IMG_H = 60;
-
-    for (let di = 0; di < defects.length; di++) {
-      const d = defects[di];
-      const imgList = defectImages.get(di) || [];
-      const hasImage = imgList.length > 0;
-      const estimatedRowHeight = di === 0 ? 22 : 14;
-      const imageBlockHeight = hasImage ? (IMG_H + 4) * Math.ceil(imgList.length / 3) : 0;
-      const totalNeeded = estimatedRowHeight + imageBlockHeight;
-
-      if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
-
-      const defectRow = [[
-        d.defectId,
-        d.bauteil?.join(", ") || "–",
-        format(new Date(d.dateFound), "dd.MM.yyyy"),
-        d.description,
-        d.location,
-        d.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel",
-        d.frist ? fristLabels[d.frist] || d.frist : "–",
-        d.repairDue ? format(new Date(d.repairDue), "dd.MM.yyyy") : "–",
-      ]];
-
-      autoTable(doc, {
-        startY: y,
-        head: di === 0 ? [["Mangel-Nr.", "Bauteil", "Datum", "Beschreibung", "Lage", "Status", "Frist", "Rep. bis"]] : undefined,
-        body: defectRow,
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: PDF_COLORS.foreground },
-        headStyles: { fillColor: PDF_COLORS.primary, textColor: PDF_COLORS.white, fontStyle: "bold" },
-        alternateRowStyles: { fillColor: [248, 248, 252] },
-        columnStyles: { 3: { cellWidth: 35 }, 5: { cellWidth: 22 } },
-        showHead: di === 0 ? "firstPage" : false,
-        didParseCell: (data: any) => {
-          if (data.section === "body" && data.column.index === 5) {
-            if (data.cell.raw === "Schwerer Mangel") {
-              data.cell.styles.textColor = PDF_COLORS.red;
-              data.cell.styles.fontStyle = "bold";
-            } else if (data.cell.raw === "Leichter Mangel") {
-              data.cell.styles.textColor = PDF_COLORS.amber;
-            }
-          }
-        },
-      });
-      y = (doc as any).lastAutoTable.finalY;
-
-      if (hasImage) {
-        y += 3;
-        const maxPerRow = 3;
-        const gap = 4;
-        for (let ii = 0; ii < imgList.length; ii++) {
-          const col = ii % maxPerRow;
-          const row = Math.floor(ii / maxPerRow);
-          const xPos = margin + 2 + col * (IMG_W + gap);
-          const yPos = y + row * (IMG_H + gap);
-          doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
-        }
-        const rowCount = Math.ceil(imgList.length / maxPerRow);
-        y += rowCount * (IMG_H + gap);
-      }
-
-      y += 2;
-    }
-    y += 4;
   }
 
   const totalPages = doc.getNumberOfPages();
