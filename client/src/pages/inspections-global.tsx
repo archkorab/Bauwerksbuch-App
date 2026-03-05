@@ -1075,7 +1075,7 @@ export default function InspectionsGlobal() {
     const defects = ins.defects || [];
     for (const d of defects) {
       const bauteilNames: string[] = d.bauteil || [];
-      const targetName = bauteilNames[0];
+      const targetName = bauteilNames.at(-1);
       if (!targetName) continue;
       const bp = base.find(b => b.bauteil === targetName);
       if (!bp) continue;
