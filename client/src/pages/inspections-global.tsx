@@ -331,28 +331,35 @@ async function generateInspectionPdf(inspection: any) {
     doc.setTextColor(...PDF_COLORS.foreground);
     y += 2;
 
-    const defectImages: Map<number, string> = new Map();
+    const defectImages: Map<number, string[]> = new Map();
     for (let di = 0; di < defects.length; di++) {
       const d = defects[di];
-      if (d.imageUrl) {
+      const urls: string[] = d.imageUrls?.length ? d.imageUrls : (d.imageUrl ? [d.imageUrl] : []);
+      const loadedUrls: string[] = [];
+      for (const url of urls) {
         try {
-          const response = await fetch(d.imageUrl);
+          const response = await fetch(url);
           const blob = await response.blob();
           const dataUrl = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
-          defectImages.set(di, dataUrl);
+          loadedUrls.push(dataUrl);
         } catch {}
       }
+      if (loadedUrls.length) defectImages.set(di, loadedUrls);
     }
+
+    const IMG_W = 80;
+    const IMG_H = 60;
 
     for (let di = 0; di < defects.length; di++) {
       const d = defects[di];
-      const hasImage = defectImages.has(di);
+      const imgList = defectImages.get(di) || [];
+      const hasImage = imgList.length > 0;
       const estimatedRowHeight = di === 0 ? 22 : 14;
-      const imageBlockHeight = hasImage ? 50 : 0;
+      const imageBlockHeight = hasImage ? (IMG_H + 4) * Math.ceil(imgList.length / 3) : 0;
       const totalNeeded = estimatedRowHeight + imageBlockHeight;
 
       if (y + totalNeeded > pageHeight - 20) { doc.addPage(); drawHeader(); y = 33; }
@@ -392,15 +399,18 @@ async function generateInspectionPdf(inspection: any) {
       y = (doc as any).lastAutoTable.finalY;
 
       if (hasImage) {
-        const dataUrl = defectImages.get(di)!;
         y += 3;
-        doc.addImage(dataUrl, "JPEG", margin + 2, y, 55, 40);
-        y += 42;
-        doc.setFontSize(7);
-        doc.setTextColor(...PDF_COLORS.mutedFg);
-        doc.text(`Foto M${d.defectId}`, margin + 2, y);
-        doc.setTextColor(...PDF_COLORS.foreground);
-        y += 5;
+        const maxPerRow = 3;
+        const gap = 4;
+        for (let ii = 0; ii < imgList.length; ii++) {
+          const col = ii % maxPerRow;
+          const row = Math.floor(ii / maxPerRow);
+          const xPos = margin + 2 + col * (IMG_W + gap);
+          const yPos = y + row * (IMG_H + gap);
+          doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
+        }
+        const rowCount = Math.ceil(imgList.length / maxPerRow);
+        y += rowCount * (IMG_H + gap);
       }
 
       y += 2;
@@ -1754,11 +1764,14 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
         <td className="px-4 py-2.5 text-foreground">{defect.frist ? fristLabels[defect.frist] || defect.frist : "–"}</td>
         <td className="px-4 py-2.5 text-foreground">{defect.repairDue ? format(new Date(defect.repairDue), 'dd.MM.yyyy') : "–"}</td>
         <td className="px-4 py-2.5">
-          {defect.imageUrl ? (
-            <ExpandableImage src={defect.imageUrl} alt="Mangel" />
-          ) : (
-            <span className="text-muted-foreground">–</span>
-          )}
+          {(() => {
+            const imgs: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
+            return imgs.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}
+              </div>
+            ) : <span className="text-muted-foreground">–</span>;
+          })()}
         </td>
       </tr>
       {followUpDefects.map((child: any) => (
@@ -1784,11 +1797,14 @@ function DefectRows({ defect, followUpDefects }: { defect: any; followUpDefects:
           <td className="px-4 py-2.5 text-foreground">{child.frist ? fristLabels[child.frist] || child.frist : "–"}</td>
           <td className="px-4 py-2.5 text-foreground">{child.repairDue ? format(new Date(child.repairDue), 'dd.MM.yyyy') : "–"}</td>
           <td className="px-4 py-2.5">
-            {child.imageUrl ? (
-              <ExpandableImage src={child.imageUrl} alt="Mangel" />
-            ) : (
-              <span className="text-muted-foreground">–</span>
-            )}
+            {(() => {
+              const imgs: string[] = child.imageUrls?.length ? child.imageUrls : (child.imageUrl ? [child.imageUrl] : []);
+              return imgs.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {imgs.map((src: string, ii: number) => <ExpandableImage key={ii} src={src} alt="Mangel" />)}
+                </div>
+              ) : <span className="text-muted-foreground">–</span>;
+            })()}
           </td>
         </tr>
       ))}

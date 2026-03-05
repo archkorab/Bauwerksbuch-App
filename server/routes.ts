@@ -986,11 +986,34 @@ export async function registerRoutes(
       fs.renameSync(req.file.path, finalPath);
       
       const imageUrl = `/api/defect-images/${defectId}/${encodeURIComponent(req.file.filename)}`;
-      await storage.updateDefect(defectId, { imageUrl });
+      const existing = await storage.getDefect(defectId);
+      const currentUrls: string[] = existing?.imageUrls ?? [];
+      await storage.updateDefect(defectId, { imageUrls: [...currentUrls, imageUrl] });
       
       res.json({ imageUrl });
     } catch (err) {
       res.status(500).json({ message: "Failed to upload defect image" });
+    }
+  });
+
+  app.delete('/api/defects/:defectId/image', isAuthenticated, async (req: any, res) => {
+    try {
+      const defectId = parseInt(req.params.defectId, 10);
+      const { imageUrl } = req.body as { imageUrl: string };
+      if (!imageUrl) return res.status(400).json({ message: "imageUrl required" });
+      const existing = await storage.getDefect(defectId);
+      if (!existing) return res.status(404).json({ message: "Defect not found" });
+      const updated = (existing.imageUrls ?? []).filter((u: string) => u !== imageUrl);
+      await storage.updateDefect(defectId, { imageUrls: updated });
+      const match = imageUrl.match(/\/api\/defect-images\/\d+\/(.+)$/);
+      if (match) {
+        const filename = decodeURIComponent(match[1]);
+        const filePath = path.join(defectImagesBaseDir, String(defectId), filename);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete defect image" });
     }
   });
 

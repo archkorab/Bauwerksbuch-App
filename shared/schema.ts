@@ -79,6 +79,7 @@ export const defects = pgTable("defects", {
   repairDue: timestamp("repair_due"),
   parentDefectId: integer("parent_defect_id"),
   imageUrl: text("image_url"),
+  imageUrls: text("image_urls").array(),
 });
 
 export const projectImages = pgTable("project_images", {
