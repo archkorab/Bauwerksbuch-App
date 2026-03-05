@@ -85,13 +85,6 @@ const projectImageUpload = multer({
     },
   }),
   limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (_req: any, file: any, cb: any) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Nur Bilddateien sind erlaubt.'));
-    }
-  },
 });
 
 const defectImagesBaseDir = path.join(process.cwd(), "uploads", "defect-images");
@@ -904,7 +897,15 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/projects/:projectId/images', isAuthenticated, projectImageUpload.array('images', 20), async (req: any, res) => {
+  app.post('/api/projects/:projectId/images', isAuthenticated, (req: any, res: any, next: any) => {
+    projectImageUpload.array('images', 20)(req, res, (err: any) => {
+      if (err) {
+        console.error("Multer image upload error:", err);
+        return res.status(400).json({ message: err.message || "Fehler beim Hochladen" });
+      }
+      next();
+    });
+  }, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.projectId, 10);
       const userId = req.user.claims.sub;
