@@ -889,7 +889,11 @@ export default function ProjectDetails() {
       status: project.status,
       clientId: project.clientId || "",
       verwaltungId: project.verwaltungId || "",
-      nextInspectionDue: project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd') : "",
+      nextInspectionDue: project.nextInspectionDue
+        ? format(new Date(project.nextInspectionDue), 'yyyy-MM-dd')
+        : project.createdAt
+          ? format(new Date(new Date(project.createdAt).setFullYear(new Date(project.createdAt).getFullYear() + 1)), 'yyyy-MM-dd')
+          : "",
     });
     setEditDialogOpen(true);
   };
