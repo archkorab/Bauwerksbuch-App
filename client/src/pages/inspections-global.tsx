@@ -1795,8 +1795,8 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                             </tr>
                           )}
                           {(() => {
-                            const bauteilPrimary = primaryDefects.filter((d: any) => d.bauteil?.[0] === e.name);
-                            const orphanedFollowUps = followUps.filter((f: any) => f.bauteil?.[0] === e.name && !primaryDefects.some((p: any) => p.id === f.parentDefectId));
+                            const bauteilPrimary = primaryDefects.filter((d: any) => d.bauteil?.at(-1) === e.name);
+                            const orphanedFollowUps = followUps.filter((f: any) => f.bauteil?.at(-1) === e.name && !primaryDefects.some((p: any) => p.id === f.parentDefectId));
                             const allForBauteil = [...bauteilPrimary, ...orphanedFollowUps];
                             if (allForBauteil.length === 0) return null;
                             return allForBauteil.map((defect: any) => {
