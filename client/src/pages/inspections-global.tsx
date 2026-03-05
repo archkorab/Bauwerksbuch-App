@@ -276,6 +276,14 @@ async function generateInspectionPdf(inspection: any) {
           displayEntries.push({ ...entryMap.get(opt.label), isHeader: false });
         }
       }
+      const standardLabels = new Set(BAUTEIL_OPTIONS.map(o => o.label));
+      const customEntries = entries.filter((e: any) => !standardLabels.has(e.name));
+      if (customEntries.length > 0) {
+        displayEntries.push({ name: "Sonderbauteile", ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, vertieftePruefungText: "", isHeader: true });
+        for (const ce of customEntries) {
+          displayEntries.push({ ...ce, level: 1, isHeader: false });
+        }
+      }
 
       if (y > 240) { doc.addPage(); drawHeader(); y = 33; }
       doc.setFont("helvetica", "bold");
@@ -1716,7 +1724,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             if (BAUTEIL_OPTIONS[i].level === 0 && BAUTEIL_OPTIONS[i + 1]?.level === 1) headerNames.add(BAUTEIL_OPTIONS[i].label);
           }
           const entryMap = new Map(entries.map(e => [e.name, e]));
-          const displayEntries: typeof entries = [];
+          const displayEntries: any[] = [];
           for (const opt of BAUTEIL_OPTIONS) {
             if (headerNames.has(opt.label)) {
               const hasChildInEntries = BAUTEIL_OPTIONS.some(o => o.level === 1 && entryMap.has(o.label) && BAUTEIL_OPTIONS.indexOf(o) > BAUTEIL_OPTIONS.indexOf(opt) && (BAUTEIL_OPTIONS.indexOf(o) === BAUTEIL_OPTIONS.indexOf(opt) + 1 || BAUTEIL_OPTIONS.slice(BAUTEIL_OPTIONS.indexOf(opt) + 1, BAUTEIL_OPTIONS.indexOf(o)).every(s => s.level === 1)));
@@ -1725,6 +1733,14 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
               }
             } else if (entryMap.has(opt.label)) {
               displayEntries.push(entryMap.get(opt.label)!);
+            }
+          }
+          const standardLabels2 = new Set(BAUTEIL_OPTIONS.map(o => o.label));
+          const customEntries2 = entries.filter(e => !standardLabels2.has(e.name));
+          if (customEntries2.length > 0) {
+            displayEntries.push({ name: "Sonderbauteile", ref: "", level: 0, geprueft: false, mangel: false, gegenstand: "", vertieftePruefung: false, isCustomHeader: true });
+            for (const ce of customEntries2) {
+              displayEntries.push({ ...ce, level: 1 });
             }
           }
           return (
@@ -1744,7 +1760,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
                   </thead>
                   <tbody className="divide-y divide-border">
                     {displayEntries.map((e, i) => {
-                      const isHeader = headerNames.has(e.name);
+                      const isHeader = headerNames.has(e.name) || !!e.isCustomHeader;
                       return isHeader ? (
                         <tr key={i} className="bg-muted/30">
                           <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
