@@ -781,7 +781,7 @@ export default function ProjectDetails() {
                   <SelectContent>
                     {clients?.map(client => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.firstName} {client.lastName} ({client.profile?.company || ""})
+                        {client.firstName} {client.lastName}{client.profile?.company ? `, ${client.profile.company}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -816,7 +816,7 @@ export default function ProjectDetails() {
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Verwaltung</p>
               <p className="font-medium" data-testid="text-verwaltung">
                 {project.verwaltung 
-                  ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? ` (${project.verwaltung.profile.company})` : ''}`
+                  ? `${project.verwaltung.firstName} ${project.verwaltung.lastName}${project.verwaltung.profile?.company ? `, ${project.verwaltung.profile.company}` : ''}`
                   : '—'}
               </p>
             </div>

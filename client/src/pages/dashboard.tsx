@@ -172,7 +172,7 @@ export default function Dashboard() {
                     <SelectContent>
                       {clients?.map(client => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName} ({client.profile?.company || ""})
+                          {client.firstName} {client.lastName}{client.profile?.company ? `, ${client.profile.company}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
