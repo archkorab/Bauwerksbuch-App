@@ -462,10 +462,14 @@ export async function registerRoutes(
       if (targetUserId === currentUserId) {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
-      await storage.deleteUser(targetUserId);
+      await storage.deleteUser(targetUserId, currentUserId);
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ message: "Failed to delete user" });
+    } catch (error: any) {
+      console.error("Delete user error:", error);
+      if (error.message && error.message.startsWith("CONSTRAINT:")) {
+        return res.status(409).json({ message: error.message.replace("CONSTRAINT:", "") });
+      }
+      res.status(500).json({ message: error.message || "Failed to delete user" });
     }
   });
 

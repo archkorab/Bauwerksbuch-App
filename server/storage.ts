@@ -45,7 +45,7 @@ export interface IStorage {
   createUser(data: { email: string; firstName: string; lastName: string }): Promise<any>;
   updateUser(userId: string, userData: { firstName?: string; lastName?: string; email?: string }, profileData: { role?: string; company?: string; phone?: string }): Promise<any>;
   getUserWithProfile(userId: string): Promise<any>;
-  deleteUser(userId: string): Promise<void>;
+  deleteUser(userId: string, replacementUserId?: string): Promise<void>;
 
   getProjects(clientId?: string): Promise<ProjectResponse[]>;
   getProject(id: number): Promise<ProjectResponse | undefined>;
@@ -175,9 +175,26 @@ export class DatabaseStorage implements IStorage {
     return { ...result[0].users, profile: result[0].profiles || undefined };
   }
 
-  async deleteUser(userId: string): Promise<void> {
-    await db.delete(profiles).where(eq(profiles.userId, userId));
-    await db.delete(users).where(eq(users.id, userId));
+  async deleteUser(userId: string, replacementUserId?: string): Promise<void> {
+    const ownedProjects = await db.select({ id: projects.id }).from(projects).where(eq(projects.clientId, userId));
+    if (ownedProjects.length > 0) {
+      throw new Error(`CONSTRAINT:Benutzer ist Eigentümer von ${ownedProjects.length} Projekt(en) und kann nicht gelöscht werden. Bitte übertragen oder löschen Sie zuerst die Projekte.`);
+    }
+
+    const assignedInspections = await db.select({ id: inspections.id }).from(inspections).where(eq(inspections.engineerId, userId));
+    if (assignedInspections.length > 0) {
+      throw new Error(`CONSTRAINT:Benutzer ist ${assignedInspections.length} Prüfung(en) zugeordnet und kann nicht gelöscht werden. Bitte weisen Sie die Prüfungen zuerst einem anderen Sachverständigen zu.`);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.update(projects).set({ verwaltungId: null }).where(eq(projects.verwaltungId, userId));
+      if (replacementUserId) {
+        await tx.update(documents).set({ uploadedBy: replacementUserId }).where(eq(documents.uploadedBy, userId));
+        await tx.update(projectImages).set({ uploadedBy: replacementUserId }).where(eq(projectImages.uploadedBy, userId));
+      }
+      await tx.delete(profiles).where(eq(profiles.userId, userId));
+      await tx.delete(users).where(eq(users.id, userId));
+    });
   }
 
   private async enrichProjectWithVerwaltung(project: any, clientUser: any): Promise<ProjectResponse> {
