@@ -360,11 +360,6 @@ async function generateInspectionPdf(inspection: any) {
             rowToDefectIndex.set(bauteilRows.length, di);
             bauteilRows.push([{ content, colSpan: 6 }]);
             rowTypes.push(defect.status === "grober_mangel" ? "defect-grober" : "defect-leichter");
-            if ((defectImagesList[di] || []).length > 0) {
-              rowToDefectIndex.set(bauteilRows.length, di);
-              bauteilRows.push([{ content: "", colSpan: 6 }]);
-              rowTypes.push(defect.status === "grober_mangel" ? "img-grober" : "img-leichter");
-            }
             for (const child of pdfFollowUps.filter((f: any) => f.parentDefectId === defect.id)) {
               const ci = defCounter++;
               const cl = child.status === "grober_mangel" ? "Schwerer Mangel" : "Leichter Mangel";
@@ -376,11 +371,6 @@ async function generateInspectionPdf(inspection: any) {
               rowToDefectIndex.set(bauteilRows.length, ci);
               bauteilRows.push([{ content: cc, colSpan: 6 }]);
               rowTypes.push(child.status === "grober_mangel" ? "child-grober" : "child-leichter");
-              if ((defectImagesList[ci] || []).length > 0) {
-                rowToDefectIndex.set(bauteilRows.length, ci);
-                bauteilRows.push([{ content: "", colSpan: 6 }]);
-                rowTypes.push(child.status === "grober_mangel" ? "img-grober" : "img-leichter");
-              }
             }
           }
         }
@@ -409,32 +399,42 @@ async function generateInspectionPdf(inspection: any) {
           if (rt === "defect-leichter") { data.cell.styles.fillColor = [254, 243, 199]; data.cell.styles.cellPadding = { top: 2.5, bottom: 2.5, left: 8, right: 2.5 }; }
           if (rt === "child-grober") { data.cell.styles.fillColor = [255, 237, 237]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
           if (rt === "child-leichter") { data.cell.styles.fillColor = [255, 250, 225]; data.cell.styles.cellPadding = { top: 2, bottom: 2, left: 14, right: 2.5 }; data.cell.styles.fontSize = 7.5; }
-          if (rt === "img-grober" || rt === "img-leichter") {
+          if ((rt === "defect-grober" || rt === "defect-leichter" || rt === "child-grober" || rt === "child-leichter") && data.column.index === 0) {
             const di = rowToDefectIndex.get(data.row.index);
-            if (di !== undefined) {
-              data.cell.styles.minCellHeight = getImgBlockH(di);
-              data.cell.styles.fillColor = rt === "img-grober" ? [254, 226, 226] : [254, 243, 199];
-              data.cell.styles.cellPadding = 0;
+            if (di !== undefined && (defectImagesList[di] || []).length > 0) {
+              const imgBlockH = getImgBlockH(di);
+              const isChild = rt === "child-grober" || rt === "child-leichter";
+              const padLeft = isChild ? 14 : 8;
+              const usableWidth = (pageWidth - 2 * margin) - padLeft - 2.5;
+              const fs = isChild ? 7.5 : 8;
+              data.doc.setFontSize(fs);
+              const rawContent = String((bauteilRows[data.row.index][0] as any).content || "");
+              const lines = data.doc.splitTextToSize(rawContent, usableWidth);
+              const lineHeightMm = fs * 0.3528 * 1.3;
+              const padV = isChild ? 4 : 5;
+              const textH = lines.length * lineHeightMm + padV;
+              data.cell.styles.minCellHeight = textH + imgBlockH + 4;
             }
           }
         },
         didDrawCell: (data: any) => {
           if (data.section !== "body") return;
           const rt = rowTypes[data.row.index];
-          if ((rt === "img-grober" || rt === "img-leichter") && data.column.index === 0) {
+          if ((rt === "defect-grober" || rt === "defect-leichter" || rt === "child-grober" || rt === "child-leichter") && data.column.index === 0) {
             const di = rowToDefectIndex.get(data.row.index);
             if (di === undefined) return;
             const imgList = defectImagesList[di] || [];
             if (!imgList.length) return;
+            const imgBlockH = getImgBlockH(di);
             const sx = data.cell.x + 8;
-            const sy = data.cell.y + 3;
+            const imgStartY = data.cell.y + data.cell.height - imgBlockH - 2;
             doc.setFont("helvetica", "italic");
             doc.setFontSize(7);
             doc.setTextColor(...PDF_COLORS.mutedFg);
-            doc.text(`Fotos: ${defectsInOrder[di].defectId}`, sx, sy + 3.5);
+            doc.text(`Fotos: ${defectsInOrder[di].defectId}`, sx, imgStartY + IMG_LABEL_H - 2);
             for (let ii = 0; ii < imgList.length; ii++) {
               const xPos = sx + (ii % IMGS_PER_ROW) * (IMG_W + IMG_GAP);
-              const yPos = sy + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
+              const yPos = imgStartY + IMG_LABEL_H + Math.floor(ii / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
               doc.addImage(imgList[ii], "JPEG", xPos, yPos, IMG_W, IMG_H);
             }
           }
