@@ -462,7 +462,7 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
         </td>
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-1.5" style={{ paddingLeft: bp.level > 0 ? `${bp.level * 8}px` : undefined }}>
-            {isDefault ? (
+            {isDefault || isHeader ? (
               <span className={bp.level > 0 ? "text-sm text-muted-foreground" : "font-medium text-foreground"}>{bp.bauteil}</span>
             ) : (
               <Input
@@ -1224,7 +1224,7 @@ export default function InspectionsGlobal() {
                     <tbody>
                       {bauteilPruefungen.map((bp, index) => {
                         const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
-                        const isHeader = isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1;
+                        const isHeader = (isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1) || (!isDefault && bp.level === 0);
                         return (
                           <BauteilRow
                             key={index}
@@ -1486,7 +1486,7 @@ export default function InspectionsGlobal() {
                   <tbody>
                     {editBauteilPruefungen.map((bp, index) => {
                       const isDefault = index < BAUTEIL_OPTIONS.length && bp.bauteil === BAUTEIL_OPTIONS[index].label;
-                      const isHeader = isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1;
+                      const isHeader = (isDefault && bp.level === 0 && index < BAUTEIL_OPTIONS.length - 1 && BAUTEIL_OPTIONS[index + 1]?.level === 1) || (!isDefault && bp.level === 0);
                       return (
                         <BauteilRow
                           key={index}
