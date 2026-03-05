@@ -2124,6 +2124,27 @@ export default function ProjectDetails() {
                                       {inspStatusLabels[insEffectiveStatus] || insEffectiveStatus}
                                     </span>
                                   </div>
+                                  {(() => {
+                                    const allDefects = [...primaryDefects, ...followUps];
+                                    const leicht = allDefects.filter((d: any) => d.status === 'leichter_mangel').length;
+                                    const schwer = allDefects.filter((d: any) => d.status === 'grober_mangel').length;
+                                    return (leicht > 0 || schwer > 0) ? (
+                                      <>
+                                        {leicht > 0 && (
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Leichte Mängel</span>
+                                            <span className="font-bold text-amber-600">{leicht}</span>
+                                          </div>
+                                        )}
+                                        {schwer > 0 && (
+                                          <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Schwere Mängel</span>
+                                            <span className="font-bold text-destructive">{schwer}</span>
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : null;
+                                  })()}
                                 </div>
                               </div>
                               <div className="bg-card rounded-xl border border-border p-4 space-y-3">
