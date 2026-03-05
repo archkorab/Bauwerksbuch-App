@@ -365,7 +365,17 @@ export default function ProjectDetails() {
   };
 
   const addBauteilPruefung = () => {
-    setBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }]);
+    setBauteilPruefungen(prev => {
+      const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
+      const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
+      const nextRef = `5.${customCount + 1}`;
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+      if (!hasSonderbauteileHeader) {
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+        return [...prev, header, newChild];
+      }
+      return [...prev, newChild];
+    });
   };
 
   const addBauteilMangel = (bauteilIndex: number) => {
@@ -575,7 +585,17 @@ export default function ProjectDetails() {
   };
 
   const addEditCustomBauteil = () => {
-    setEditBauteilPruefungen(prev => [...prev, { bauteil: "", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] }]);
+    setEditBauteilPruefungen(prev => {
+      const hasSonderbauteileHeader = prev.some(b => b.bauteil === "Sonderbauteile" && b.level === 0);
+      const customCount = prev.filter(b => b.refNr.startsWith("5.")).length;
+      const nextRef = `5.${customCount + 1}`;
+      const newChild = { bauteil: "", level: 1, refNr: nextRef, artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+      if (!hasSonderbauteileHeader) {
+        const header = { bauteil: "Sonderbauteile", level: 0, refNr: "", artDesMangels: "", geprueft: true, mangel: false, vertieftePruefung: false, maengel: [] };
+        return [...prev, header, newChild];
+      }
+      return [...prev, newChild];
+    });
   };
 
   const removeEditBauteilPruefung = (index: number) => {
