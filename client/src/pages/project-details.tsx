@@ -774,7 +774,7 @@ export default function ProjectDetails() {
       updated[bauteilIndex] = {
         ...updated[bauteilIndex],
         mangel: true,
-        maengel: [...updated[bauteilIndex].maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "", repairDue: "", imageFiles: [], imageUrls: [] }],
+        maengel: [...updated[bauteilIndex].maengel, { defectId: "", description: "", location: "", status: "leichter_mangel", dateFound: "", frist: "1_jahr", repairDue: "", imageFiles: [], imageUrls: [] }],
       };
       return updated;
     });
@@ -845,7 +845,7 @@ export default function ProjectDetails() {
       description: "",
       location: "",
       status: "leichter_mangel",
-      frist: "",
+      frist: "1_jahr",
       repairDue: "",
     }]);
   };
@@ -1001,7 +1001,7 @@ export default function ProjectDetails() {
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = watchEditInsp("date") || new Date().toISOString().split("T")[0];
       return prev.map((b, i) => i === bauteilIndex
-        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "", imageFiles: [], imageUrls: [] }] }
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "1_jahr", repairDue: "", imageFiles: [], imageUrls: [] }] }
         : b
       );
     });

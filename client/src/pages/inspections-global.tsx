@@ -819,7 +819,7 @@ export default function InspectionsGlobal() {
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getInspValues("date") || new Date().toISOString().split("T")[0];
       return prev.map((b, i) => i === bauteilIndex
-        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "", imageFiles: [], imageUrls: [] }] }
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "1_jahr", repairDue: "", imageFiles: [], imageUrls: [] }] }
         : b
       );
     });
@@ -950,7 +950,7 @@ export default function InspectionsGlobal() {
       const autoId = ref ? `M ${ref}.${nextNum}` : `M-${nextNum}`;
       const inspDate = getEditInspValues("date") || new Date().toISOString().split("T")[0];
       return prev.map((b, i) => i === bauteilIndex
-        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "", repairDue: "", imageFiles: [], imageUrls: [] }] }
+        ? { ...b, mangel: true, maengel: [...b.maengel, { defectId: autoId, description: "", location: "", status: "leichter_mangel", dateFound: inspDate, frist: "1_jahr", repairDue: "", imageFiles: [], imageUrls: [] }] }
         : b
       );
     });
