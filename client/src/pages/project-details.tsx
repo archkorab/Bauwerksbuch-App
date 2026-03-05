@@ -252,7 +252,7 @@ async function generateInspectionPdf(inspection: any) {
         }
       }
 
-      const IMG_W = 80, IMG_H = 60, IMG_GAP = 4, IMGS_PER_ROW = 3, IMG_LABEL_H = 7;
+      const IMG_W = 80, IMG_H = 60, IMG_GAP = 4, IMGS_PER_ROW = 2, IMG_LABEL_H = 7;
       const defectImagesList: string[][] = [];
       for (const defect of defectsInOrder) {
         const urls: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
