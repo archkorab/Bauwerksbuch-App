@@ -370,7 +370,7 @@ async function generateInspectionPdf(inspection: any) {
   doc.setTextColor(0);
 
   const addressForFilename = (inspection.projectAddress || inspection.projectName || `Projekt_${inspection.projectId}`).replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, "_").trim();
-  doc.save(`BWB Prüfbericht ${addressForFilename}.pdf`);
+  doc.save(`BWB Prüfbericht ${addressForFilename} ${new Date().getFullYear()}.pdf`);
 }
 
 const BAUTEIL_OPTIONS_SIMPLE = ["Dach", "Fassade/Gesimse", "Decken", "Treppen", "Wände"] as const;
