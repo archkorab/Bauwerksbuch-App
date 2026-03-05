@@ -69,7 +69,8 @@ export function AddressAutocomplete({
   };
 
   const handleSelect = (description: string) => {
-    onChange(description);
+    const cleaned = description.replace(/,\s*Österreich$/i, "").replace(/,\s*Austria$/i, "");
+    onChange(cleaned);
     setIsOpen(false);
     setSuggestions([]);
   };
