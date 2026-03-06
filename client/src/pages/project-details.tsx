@@ -2377,11 +2377,12 @@ export default function ProjectDetails() {
                                         </tr>
                                       </thead>
                                       <tbody className="divide-y divide-border">
-                                        {displayEntries.map((e, i) => {
+                                        {(() => { let gNum = 0; return displayEntries.map((e, i) => {
                                           const isHeader = headerNames.has(e.name) || !!e.isCustomHeader;
+                                          if (isHeader) gNum++;
                                           return isHeader ? (
                                             <tr key={i} className="bg-muted/30">
-                                              <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{e.name}</td>
+                                              <td colSpan={6} className="px-3 py-2 font-bold text-foreground">{gNum}. {e.name}</td>
                                             </tr>
                                           ) : (
                                             <Fragment key={i}>
@@ -2471,7 +2472,7 @@ export default function ProjectDetails() {
                                               })()}
                                             </Fragment>
                                           );
-                                        })}
+                                        }); })()}
                                       </tbody>
                                     </table>
                                   </div>
