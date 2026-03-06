@@ -363,10 +363,12 @@ async function generateInspectionPdf(inspection: any) {
       const rowTypes: string[] = [];
       const rowToDefectIndex: Map<number, number> = new Map();
       let defCounter = 0;
+      let groupNum = 0;
 
       for (const e of displayEntries) {
         if (e.isHeader) {
-          bauteilRows.push([{ content: e.name, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }]);
+          groupNum++;
+          bauteilRows.push([{ content: `${groupNum}. ${e.name}`, colSpan: 6, styles: { fontStyle: "bold" as const, fillColor: PDF_COLORS.muted } }]);
           rowTypes.push("header");
         } else {
           bauteilRows.push([e.ref, e.name, e.gegenstand, e.geprueft ? "Ja" : "Nein", e.mangel ? "Ja" : "Nein", e.vertieftePruefung ? "Ja" : "Nein"]);
