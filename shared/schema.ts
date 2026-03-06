@@ -75,7 +75,7 @@ export const defects = pgTable("defects", {
   description: text("description").notNull(),
   location: text("location").notNull(),
   status: text("status", { enum: ["leichter_mangel", "grober_mangel"] }).notNull().default("leichter_mangel"),
-  frist: text("frist", { enum: ["umgehend", "6_monate", "1_jahr"] }),
+  frist: text("frist", { enum: ["umgehend", "6_monate", "1_jahr", "kein_handlungsbedarf"] }),
   repairDue: timestamp("repair_due"),
   parentDefectId: integer("parent_defect_id"),
   imageUrl: text("image_url"),

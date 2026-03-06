@@ -89,7 +89,7 @@ interface BauteilPruefung {
 }
 
 function calcRepairDue(dateFound: string, frist: string): string {
-  if (!dateFound || !frist) return "";
+  if (!dateFound || !frist || frist === "kein_handlungsbedarf") return "";
   const d = new Date(dateFound);
   switch (frist) {
     case "umgehend": break;
@@ -114,6 +114,7 @@ const fristLabels: Record<string, string> = {
   "umgehend": "Umgehend",
   "6_monate": "6 Monate",
   "1_jahr": "1 Jahr",
+  "kein_handlungsbedarf": "Kein aktueller Handlungsbedarf",
 };
 
 const PDF_COLORS = {
