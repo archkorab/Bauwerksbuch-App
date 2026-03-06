@@ -1022,7 +1022,7 @@ export default function ProjectDetails() {
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/inspections"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/inspections`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects/:projectId/inspections", projectId] });
       queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
       setInspDialogOpen(false);
       resetInspForm();
@@ -1337,6 +1337,9 @@ export default function ProjectDetails() {
         }
       }
 
+      queryClient.invalidateQueries({ queryKey: ["/api/projects/:projectId/inspections", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inspections"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/defects/summary"] });
       setEditInspDialogOpen(false);
       setEditingInspection(null);
       setEditDefectEntries([]);
