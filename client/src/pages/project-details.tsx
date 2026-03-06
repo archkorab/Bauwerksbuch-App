@@ -15,7 +15,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoPath from "@assets/logo_1772640036077.png";
 import { 
-  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List, RotateCw
+  Building, MapPin, Calendar, FileText, ChevronRight, ChevronDown, Download, Clock, CheckCircle2, AlertTriangle, Plus, Upload, Loader2, CornerDownRight, Hash, MapPinned, Pencil, Archive, ExternalLink, FileUp, Trash2, ImagePlus, Image, X, LayoutGrid, List, RotateCw, ZoomIn
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -658,30 +658,26 @@ function BauteilRow({ bp, index, isDefault, isHeader, onUpdate, onRemove, onAddM
                   <Label className="text-xs">Fotos</Label>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     {(m.imageUrls || []).map((url, ui) => (
-                      <div key={`url-${ui}`} className="relative group">
-                        <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
-                          <img src={url} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
-                        </div>
-                        <button type="button" onClick={() => onRotateMangelUrl(index, mi, url)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-rotate-mangel-url-${index}-${mi}-${ui}`}>
-                          <RotateCw className="w-3 h-3" />
-                        </button>
-                        <button type="button" onClick={() => onRemoveMangelUrl(index, mi, url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-url-${index}-${mi}-${ui}`}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <EditThumb
+                        key={`url-${ui}`}
+                        src={url}
+                        alt="Mangel"
+                        onRotate={() => onRotateMangelUrl(index, mi, url)}
+                        onRemove={() => onRemoveMangelUrl(index, mi, url)}
+                        testIdRotate={`button-rotate-mangel-url-${index}-${mi}-${ui}`}
+                        testIdRemove={`button-remove-mangel-url-${index}-${mi}-${ui}`}
+                      />
                     ))}
                     {(m.imageFiles || []).map((file, fi) => (
-                      <div key={`file-${fi}`} className="relative group">
-                        <div className="w-16 h-16 rounded-lg border border-border overflow-hidden">
-                          <img src={URL.createObjectURL(file)} alt="Mangel" className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
-                        </div>
-                        <button type="button" onClick={() => onRotateMangelFile(index, mi, fi)} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-rotate-mangel-file-${index}-${mi}-${fi}`}>
-                          <RotateCw className="w-3 h-3" />
-                        </button>
-                        <button type="button" onClick={() => onRemoveMangelFile(index, mi, fi)} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-remove-mangel-file-${index}-${mi}-${fi}`}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <EditThumb
+                        key={`file-${fi}`}
+                        src={URL.createObjectURL(file)}
+                        alt="Mangel"
+                        onRotate={() => onRotateMangelFile(index, mi, fi)}
+                        onRemove={() => onRemoveMangelFile(index, mi, fi)}
+                        testIdRotate={`button-rotate-mangel-file-${index}-${mi}-${fi}`}
+                        testIdRemove={`button-remove-mangel-file-${index}-${mi}-${fi}`}
+                      />
                     ))}
                     <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary cursor-pointer transition-colors text-xs" data-testid={`button-add-mangel-image-${index}-${mi}`}>
                       <ImagePlus className="w-4 h-4" />
@@ -2480,6 +2476,40 @@ export default function ProjectDetails() {
         </AlertDialogContent>
       </AlertDialog>
     </Layout>
+  );
+}
+
+function EditThumb({ src, alt, onRotate, onRemove, testIdRotate, testIdRemove }: {
+  src: string; alt: string;
+  onRotate: () => void; onRemove: () => void;
+  testIdRotate?: string; testIdRemove?: string;
+}) {
+  const [zoomed, setZoomed] = useState(false);
+  return (
+    <>
+      <div className="relative group">
+        <button type="button" onClick={() => setZoomed(true)} className="w-16 h-16 rounded-lg border border-border overflow-hidden block cursor-zoom-in">
+          <img src={src} alt={alt} className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
+        </button>
+        <button type="button" onClick={onRotate} className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={testIdRotate}>
+          <RotateCw className="w-3 h-3" />
+        </button>
+        <button type="button" onClick={onRemove} className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" data-testid={testIdRemove}>
+          <X className="w-3 h-3" />
+        </button>
+        <button type="button" onClick={() => setZoomed(true)} className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-5 bg-card border border-border text-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <ZoomIn className="w-3 h-3" />
+        </button>
+      </div>
+      {zoomed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setZoomed(false)}>
+          <img src={src} alt={alt} className="max-w-[90vw] max-h-[85vh] rounded-xl border-2 border-border shadow-2xl object-contain bg-card" style={{ imageOrientation: "none" }} onClick={(e) => e.stopPropagation()} data-testid="img-expanded" />
+          <button type="button" onClick={() => setZoomed(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors" data-testid="button-close-image">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
