@@ -93,6 +93,10 @@ async function generateInspectionPdf(inspection: any) {
   let logoDataUrl: string | null = null;
   try { logoDataUrl = await loadLogoDataUrl(); } catch {}
 
+  if (inspection.projectAddress) {
+    inspection = { ...inspection, projectAddress: inspection.projectAddress.replace(/,?\s*[ÖO]sterreich\s*$/i, "").replace(/,?\s*Austria\s*$/i, "").trim() };
+  }
+
   function drawHeader() {
     if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 8, 65, 16);
     doc.setDrawColor(...PDF_COLORS.primary);

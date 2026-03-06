@@ -141,6 +141,9 @@ async function loadLogoDataUrl(): Promise<string> {
 }
 
 async function generateInspectionPdf(inspection: any) {
+  if (inspection.projectAddress) {
+    inspection = { ...inspection, projectAddress: inspection.projectAddress.replace(/,?\s*[ÖO]sterreich\s*$/i, "").replace(/,?\s*Austria\s*$/i, "").trim() };
+  }
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
