@@ -809,9 +809,10 @@ export default function InspectionsGlobal() {
     BAUTEIL_OPTIONS.map(b => ({ bauteil: b.label, level: b.level, refNr: b.ref || "", artDesMangels: b.defaultGegenstand || "", geprueft: !b.label.startsWith("Sonderbauteil"), mangel: false, vertieftePruefung: false, vertieftePruefungText: "", maengel: [] }))
   );
 
-  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, getValues: getInspValues } = useForm({
-    defaultValues: { projectId: "", date: "", status: "OK", type: "erstpruefung", notes: "" }
+  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, getValues: getInspValues, watch: watchInsp } = useForm({
+    defaultValues: { projectId: "", date: "", status: "OK", type: "erstpruefung", notes: "", engineerId: "" }
   });
+  const newInspEngineerId = watchInsp("engineerId");
 
   const updateBauteilPruefung = (index: number, field: keyof BauteilPruefung, value: any) => {
     setBauteilPruefungen(prev => prev.map((bp, i) => i === index ? { ...bp, [field]: value } : bp));
@@ -1285,7 +1286,7 @@ export default function InspectionsGlobal() {
         projectId,
         data: {
           projectId,
-          engineerId: profile.userId,
+          engineerId: data.engineerId || profile.userId,
           date: new Date(data.date),
           status: autoStatus,
           type: data.type,
@@ -1401,15 +1402,15 @@ export default function InspectionsGlobal() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
-                    <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status-global">
-                      <SelectValue />
+                  <Label>Sachverständiger</Label>
+                  <Select value={newInspEngineerId} onValueChange={(val) => setInspValue("engineerId", val)}>
+                    <SelectTrigger className="bg-background border-border" data-testid="select-inspection-engineer-global">
+                      <SelectValue placeholder="Sachverständigen wählen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="OK">OK</SelectItem>
-                      <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
-                      <SelectItem value="urgent">Schwerer Mangel</SelectItem>
+                      {(clients || []).map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{displayName(c)}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

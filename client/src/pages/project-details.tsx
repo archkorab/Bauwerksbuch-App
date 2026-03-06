@@ -910,9 +910,10 @@ export default function ProjectDetails() {
   };
 
 
-  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm } = useForm({
-    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "" }
+  const { register: inspReg, handleSubmit: handleInspSubmit, setValue: setInspValue, reset: resetInspForm, watch: watchInsp } = useForm({
+    defaultValues: { date: "", status: "OK", type: "erstpruefung", notes: "", engineerId: "" }
   });
+  const newInspEngineerId = watchInsp("engineerId");
 
   const [inspSubmitting, setInspSubmitting] = useState(false);
 
@@ -941,7 +942,7 @@ export default function ProjectDetails() {
         projectId, 
         data: { 
           projectId,
-          engineerId: profile!.userId,
+          engineerId: data.engineerId || profile!.userId,
           date: new Date(data.date), 
           status: autoStatus,
           type: data.type,
@@ -1971,15 +1972,15 @@ export default function ProjectDetails() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select defaultValue="OK" onValueChange={(val) => setInspValue("status", val)}>
-                              <SelectTrigger className="bg-background border-border" data-testid="select-inspection-status">
-                                <SelectValue />
+                            <Label>Sachverständiger</Label>
+                            <Select value={newInspEngineerId} onValueChange={(val) => setInspValue("engineerId", val)}>
+                              <SelectTrigger className="bg-background border-border" data-testid="select-inspection-engineer">
+                                <SelectValue placeholder="Sachverständigen wählen" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="OK">OK</SelectItem>
-                                <SelectItem value="needs_repair">Leichter Mangel</SelectItem>
-                                <SelectItem value="urgent">Schwerer Mangel</SelectItem>
+                                {(clients || []).map((c: any) => (
+                                  <SelectItem key={c.id} value={c.id}>{displayName(c)}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
