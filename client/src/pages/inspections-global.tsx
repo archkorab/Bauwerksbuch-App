@@ -8,7 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useClients } from "@/hooks/use-users";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download, CornerDownRight, RotateCw, ZoomIn
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download, CornerDownRight, RotateCw, ZoomIn, Search
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -840,6 +840,7 @@ export default function InspectionsGlobal() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingInspection, setEditingInspection] = useState<any>(null);
@@ -1390,6 +1391,15 @@ export default function InspectionsGlobal() {
     setExpandedId(prev => prev === id ? null : id);
   };
 
+  const _q = searchQuery.trim().toLowerCase();
+  const filteredInspections: any[] = _q ? (allInspections || []).filter((ins: any) => {
+    const projectName = (ins.projectName || "").toLowerCase();
+    const dateStr = format(new Date(ins.date), 'dd.MM.yyyy');
+    const typeLabel = (inspTypeLabels[ins.type] || ins.type || "").toLowerCase();
+    const engineer = ins.engineer ? displayName(ins.engineer).toLowerCase() : "";
+    return projectName.includes(_q) || dateStr.includes(_q) || typeLabel.includes(_q) || engineer.includes(_q);
+  }) : (allInspections || []);
+
   return (
     <Layout>
       <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -1547,15 +1557,37 @@ export default function InspectionsGlobal() {
       )}
 
       <div>
-        <h2 className="font-display text-xl font-bold text-foreground mb-6">Alle Prüfungen</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <h2 className="font-display text-xl font-bold text-foreground">Alle Prüfungen</h2>
+          <div className="relative sm:ml-auto sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Suche nach Projekt, Datum, Typ…"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              data-testid="input-inspection-search"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" data-testid="button-clear-search">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
 
         {(!allInspections || allInspections.length === 0) ? (
           <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">
             Keine Prüfungen im Verzeichnis vorhanden.
           </div>
+        ) : filteredInspections.length === 0 ? (
+          <div className="p-8 text-center border-2 border-dashed border-border rounded-2xl text-muted-foreground">
+            Keine Prüfungen gefunden für „{searchQuery}".
+          </div>
         ) : (
           <div className="space-y-3">
-            {allInspections.map((ins: any) => {
+            {filteredInspections.map((ins: any) => {
               const defectCount = ins.defects?.length || 0;
               const groberCount = ins.defects?.filter((d: any) => d.status === "grober_mangel").length || 0;
               const leichterCount = ins.defects?.filter((d: any) => d.status === "leichter_mangel").length || 0;
