@@ -256,6 +256,21 @@ async function generateInspectionPdf(inspection: any) {
       const IMG_W = 80, IMG_H = 60, IMG_GAP = 4, IMGS_PER_ROW = 2, IMG_LABEL_H = 7;
       const defectImagesList: string[][] = [];
       const defectImageDims: {w: number, h: number}[][] = [];
+      const compressImg = (src: string, maxW: number, maxH: number): Promise<{data: string, w: number, h: number}> =>
+        new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const natW = img.naturalWidth, natH = img.naturalHeight;
+            const scale = Math.min(maxW / natW, maxH / natH, 1);
+            const cw = Math.round(natW * scale), ch = Math.round(natH * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = cw; canvas.height = ch;
+            canvas.getContext("2d")!.drawImage(img, 0, 0, cw, ch);
+            resolve({ data: canvas.toDataURL("image/jpeg", 0.75), w: natW, h: natH });
+          };
+          img.onerror = () => resolve({ data: src, w: 4, h: 3 });
+          img.src = src;
+        });
       for (const defect of defectsInOrder) {
         const urls: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
         const loaded: string[] = [];
@@ -263,10 +278,10 @@ async function generateInspectionPdf(inspection: any) {
         for (const url of urls) {
           try {
             const blob = await (await fetch(url)).blob();
-            const dataUrl = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
-            const dim = await new Promise<{w: number, h: number}>((res) => { const img = new Image(); img.onload = () => res({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = () => res({ w: 4, h: 3 }); img.src = dataUrl; });
-            loaded.push(dataUrl);
-            dims.push(dim);
+            const raw = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
+            const { data, w, h } = await compressImg(raw, 473, 355);
+            loaded.push(data);
+            dims.push({ w, h });
           } catch { dims.push({ w: 4, h: 3 }); }
         }
         defectImagesList.push(loaded);
