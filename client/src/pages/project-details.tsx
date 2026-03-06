@@ -2479,6 +2479,80 @@ export default function ProjectDetails() {
   );
 }
 
+function ZoomableLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const [zoom, setZoom] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragOrigin = useRef({ x: 0, y: 0 });
+  const posAtDrag = useRef({ x: 0, y: 0 });
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const factor = e.deltaY < 0 ? 1.15 : 0.87;
+    setZoom(z => Math.min(Math.max(z * factor, 0.5), 10));
+  };
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragging(true);
+    dragOrigin.current = { x: e.clientX, y: e.clientY };
+    posAtDrag.current = pos;
+  };
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragging) return;
+    setPos({ x: posAtDrag.current.x + (e.clientX - dragOrigin.current.x), y: posAtDrag.current.y + (e.clientY - dragOrigin.current.y) });
+  };
+  const handleMouseUp = () => setDragging(false);
+  const reset = () => { setZoom(1); setPos({ x: 0, y: 0 }); };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center" onClick={onClose}>
+      <div
+        className="relative overflow-hidden rounded-xl select-none"
+        style={{ width: "90vw", height: "85vh", cursor: dragging ? "grabbing" : "grab" }}
+        onClick={(e) => e.stopPropagation()}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <img
+          src={src}
+          alt={alt}
+          draggable={false}
+          data-testid="img-expanded"
+          style={{
+            imageOrientation: "none",
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(${zoom})`,
+            transition: dragging ? "none" : "transform 0.12s ease",
+            userSelect: "none",
+          }}
+        />
+      </div>
+      <button type="button" onClick={onClose} className="absolute top-5 right-5 w-10 h-10 rounded-full bg-card/90 border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors z-10" data-testid="button-close-image">
+        <X className="w-5 h-5" />
+      </button>
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-card/90 border border-border rounded-full px-3 py-1.5 z-10 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={() => setZoom(z => Math.max(z * 0.8, 0.5))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-foreground font-semibold text-lg leading-none">−</button>
+        <span className="text-xs text-foreground w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+        <button type="button" onClick={() => setZoom(z => Math.min(z * 1.25, 10))} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-foreground font-semibold text-lg leading-none">+</button>
+        <div className="w-px h-4 bg-border mx-1" />
+        <button type="button" onClick={reset} className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors" title="Zurücksetzen">
+          <ZoomIn className="w-3.5 h-3.5 text-foreground" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EditThumb({ src, alt, onRotate, onRemove, testIdRotate, testIdRemove }: {
   src: string; alt: string;
   onRotate: () => void; onRemove: () => void;
@@ -2501,14 +2575,7 @@ function EditThumb({ src, alt, onRotate, onRemove, testIdRotate, testIdRemove }:
           <ZoomIn className="w-3 h-3" />
         </button>
       </div>
-      {zoomed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setZoomed(false)}>
-          <img src={src} alt={alt} className="max-w-[90vw] max-h-[85vh] rounded-xl border-2 border-border shadow-2xl object-contain bg-card" style={{ imageOrientation: "none" }} onClick={(e) => e.stopPropagation()} data-testid="img-expanded" />
-          <button type="button" onClick={() => setZoomed(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors" data-testid="button-close-image">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+      {zoomed && <ZoomableLightbox src={src} alt={alt} onClose={() => setZoomed(false)} />}
     </>
   );
 }
@@ -2519,32 +2586,13 @@ function ExpandableImage({ src, alt, testId }: { src: string; alt: string; testI
     <>
       <button
         type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-        data-testid={testId}
+        onClick={() => setExpanded(true)}
+        className="block w-10 h-10 rounded border border-border overflow-hidden hover:ring-2 hover:ring-primary transition-all cursor-zoom-in"
+        data-testid={testId ?? "button-expand-image"}
       >
         <img src={src} alt={alt} className="w-full h-full object-cover" style={{ imageOrientation: "none" }} />
       </button>
-      {expanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setExpanded(false)}>
-          <img
-            src={src}
-            alt={alt}
-            className="max-w-[90vw] max-h-[85vh] rounded-xl border-2 border-border shadow-2xl object-contain bg-card"
-            style={{ imageOrientation: "none" }}
-            onClick={(e) => e.stopPropagation()}
-            data-testid="img-expanded"
-          />
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="absolute top-6 right-6 w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-muted transition-colors"
-            data-testid="button-close-image"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
+      {expanded && <ZoomableLightbox src={src} alt={alt} onClose={() => setExpanded(false)} />}
     </>
   );
 }
