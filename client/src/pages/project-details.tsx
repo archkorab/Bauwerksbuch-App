@@ -277,10 +277,11 @@ async function generateInspectionPdf(inspection: any) {
         const imgs = defectImagesList[di] || [];
         if (!imgs.length) return 0;
         const dims = defectImageDims[di] || [];
-        const hasLandscape = dims.some(d => (d.w || 1) >= (d.h || 1));
-        const hasPortrait = dims.some(d => (d.h || 1) > (d.w || 1));
-        const rows = (hasLandscape ? 1 : 0) + (hasPortrait ? 1 : 0);
-        return rows * (IMG_H + IMG_GAP) + IMG_LABEL_H + 4;
+        const landscapeCount = dims.filter(d => (d.w || 1) >= (d.h || 1)).length;
+        const portraitCount = dims.filter(d => (d.h || 1) > (d.w || 1)).length;
+        const landscapeRows = landscapeCount > 0 ? Math.ceil(landscapeCount / IMGS_PER_ROW) : 0;
+        const portraitRows = portraitCount > 0 ? Math.ceil(portraitCount / IMGS_PER_ROW) : 0;
+        return (landscapeRows + portraitRows) * (IMG_H + IMG_GAP) + IMG_LABEL_H + 4;
       };
 
       const bauteilRows: any[] = [];
@@ -393,18 +394,24 @@ async function generateInspectionPdf(inspection: any) {
               const dim = imgDims[ii] || { w: 4, h: 3 };
               (dim.h > dim.w ? portrait : landscape).push({ img: imgList[ii], dim });
             }
-            const drawRow = (group: {img: string, dim: {w: number, h: number}}[], rowY: number) => {
+            const drawGroup = (group: {img: string, dim: {w: number, h: number}}[], startY: number) => {
               group.forEach(({ img, dim }, ii) => {
+                const col = ii % IMGS_PER_ROW;
+                const row = Math.floor(ii / IMGS_PER_ROW);
                 const ratio = dim.w / (dim.h || 1);
                 let drawW = IMG_W, drawH = IMG_W / ratio;
                 if (drawH > IMG_H) { drawH = IMG_H; drawW = IMG_H * ratio; }
-                const cellX = sx + ii * (IMG_W + IMG_GAP);
-                doc.addImage(img, "JPEG", cellX + (IMG_W - drawW) / 2, rowY + (IMG_H - drawH) / 2, drawW, drawH);
+                const cellX = sx + col * (IMG_W + IMG_GAP);
+                const cellY = startY + row * (IMG_H + IMG_GAP);
+                doc.addImage(img, "JPEG", cellX + (IMG_W - drawW) / 2, cellY + (IMG_H - drawH) / 2, drawW, drawH);
               });
             };
             let rowY = imgStartY + IMG_LABEL_H;
-            if (landscape.length) { drawRow(landscape, rowY); rowY += IMG_H + IMG_GAP; }
-            if (portrait.length) { drawRow(portrait, rowY); }
+            if (landscape.length) {
+              drawGroup(landscape, rowY);
+              rowY += Math.ceil(landscape.length / IMGS_PER_ROW) * (IMG_H + IMG_GAP);
+            }
+            if (portrait.length) { drawGroup(portrait, rowY); }
           }
         },
       });
