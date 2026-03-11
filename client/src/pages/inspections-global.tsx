@@ -114,7 +114,7 @@ const fristLabels: Record<string, string> = {
   "umgehend": "Umgehend",
   "6_monate": "6 Monate",
   "1_jahr": "1 Jahr",
-  "kein_handlungsbedarf": "Hinweis",
+  "kein_handlungsbedarf": "Information",
 };
 
 const PDF_COLORS = {
