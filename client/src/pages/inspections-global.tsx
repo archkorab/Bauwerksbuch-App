@@ -1402,12 +1402,24 @@ export default function InspectionsGlobal() {
       const engineer = ins.engineer ? displayName(ins.engineer).toLowerCase() : "";
       return projectName.includes(_q) || dateStr.includes(_q) || typeLabel.includes(_q) || engineer.includes(_q);
     }) : [...(allInspections || [])];
+    const extractPlz = (addr: string): number => {
+      const m = addr.match(/\b(\d{4})\b/);
+      return m ? parseInt(m[1]) : 9999;
+    };
     base.sort((a: any, b: any) => {
       let cmp = 0;
       if (sortBy === "date") {
         cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
       } else {
-        cmp = (a.projectName || "").localeCompare(b.projectName || "", "de");
+        const aAddr = a.projectName || "";
+        const bAddr = b.projectName || "";
+        const aPlz = extractPlz(aAddr);
+        const bPlz = extractPlz(bAddr);
+        if (aPlz !== bPlz) {
+          cmp = aPlz - bPlz;
+        } else {
+          cmp = aAddr.localeCompare(bAddr, "de");
+        }
       }
       return sortDir === "asc" ? cmp : -cmp;
     });

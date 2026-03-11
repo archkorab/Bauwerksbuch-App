@@ -158,10 +158,22 @@ export default function ProjektePage() {
       const s = search.toLowerCase();
       return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
     });
+    const extractPlz = (addr: string): number => {
+      const m = addr.match(/\b(\d{4})\b/);
+      return m ? parseInt(m[1]) : 9999;
+    };
     base.sort((a, b) => {
       let cmp = 0;
       if (sortBy === "address") {
-        cmp = (a.address || a.name || "").localeCompare(b.address || b.name || "", "de");
+        const aAddr = a.address || a.name || "";
+        const bAddr = b.address || b.name || "";
+        const aPlz = extractPlz(aAddr);
+        const bPlz = extractPlz(bAddr);
+        if (aPlz !== bPlz) {
+          cmp = aPlz - bPlz;
+        } else {
+          cmp = aAddr.localeCompare(bAddr, "de");
+        }
       } else {
         const aDate = a.nextInspectionDue ? new Date(a.nextInspectionDue).getTime() : Infinity;
         const bDate = b.nextInspectionDue ? new Date(b.nextInspectionDue).getTime() : Infinity;
