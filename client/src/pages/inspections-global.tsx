@@ -8,7 +8,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useClients } from "@/hooks/use-users";
 import {
   ClipboardCheck, Building, Calendar, AlertTriangle, ArrowRight, Loader2,
-  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download, CornerDownRight, RotateCw, ZoomIn, Search
+  ChevronRight, ChevronDown, CheckCircle2, Hash, Eye, User, FileText, Plus, Trash2, Pencil, ImagePlus, X, Download, CornerDownRight, RotateCw, ZoomIn, Search, ArrowUpDown, ArrowUp, ArrowDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
@@ -841,6 +841,8 @@ export default function InspectionsGlobal() {
   const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "address">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [inspDialogOpen, setInspDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingInspection, setEditingInspection] = useState<any>(null);
@@ -1392,13 +1394,25 @@ export default function InspectionsGlobal() {
   };
 
   const _q = searchQuery.trim().toLowerCase();
-  const filteredInspections: any[] = _q ? (allInspections || []).filter((ins: any) => {
-    const projectName = (ins.projectName || "").toLowerCase();
-    const dateStr = format(new Date(ins.date), 'dd.MM.yyyy');
-    const typeLabel = (inspTypeLabels[ins.type] || ins.type || "").toLowerCase();
-    const engineer = ins.engineer ? displayName(ins.engineer).toLowerCase() : "";
-    return projectName.includes(_q) || dateStr.includes(_q) || typeLabel.includes(_q) || engineer.includes(_q);
-  }) : (allInspections || []);
+  const filteredInspections: any[] = (() => {
+    const base = _q ? (allInspections || []).filter((ins: any) => {
+      const projectName = (ins.projectName || "").toLowerCase();
+      const dateStr = format(new Date(ins.date), 'dd.MM.yyyy');
+      const typeLabel = (inspTypeLabels[ins.type] || ins.type || "").toLowerCase();
+      const engineer = ins.engineer ? displayName(ins.engineer).toLowerCase() : "";
+      return projectName.includes(_q) || dateStr.includes(_q) || typeLabel.includes(_q) || engineer.includes(_q);
+    }) : [...(allInspections || [])];
+    base.sort((a: any, b: any) => {
+      let cmp = 0;
+      if (sortBy === "date") {
+        cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else {
+        cmp = (a.projectName || "").localeCompare(b.projectName || "", "de");
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return base;
+  })();
 
   return (
     <Layout>
@@ -1559,21 +1573,59 @@ export default function InspectionsGlobal() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <h2 className="font-display text-xl font-bold text-foreground">Alle Prüfungen</h2>
-          <div className="relative sm:ml-auto sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Suche nach Projekt, Datum, Typ…"
-              className="w-full pl-9 pr-8 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              data-testid="input-inspection-search"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" data-testid="button-clear-search">
-                <X className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <div className="flex items-center gap-1 bg-background border border-border rounded-lg p-1">
+              <button
+                onClick={() => {
+                  if (sortBy === "date") {
+                    setSortDir(d => d === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy("date");
+                    setSortDir("desc");
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors ${sortBy === "date" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                data-testid="button-sort-date"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Datum
+                {sortBy === "date" && (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                {sortBy !== "date" && <ArrowUpDown className="w-3 h-3 opacity-40" />}
               </button>
-            )}
+              <button
+                onClick={() => {
+                  if (sortBy === "address") {
+                    setSortDir(d => d === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy("address");
+                    setSortDir("asc");
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors ${sortBy === "address" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                data-testid="button-sort-address"
+              >
+                <Building className="w-3.5 h-3.5" />
+                Adresse
+                {sortBy === "address" && (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                {sortBy !== "address" && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+              </button>
+            </div>
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Suche nach Projekt, Datum, Typ…"
+                className="w-full pl-9 pr-8 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                data-testid="input-inspection-search"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" data-testid="button-clear-search">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
