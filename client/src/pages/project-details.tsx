@@ -166,7 +166,7 @@ async function generateInspectionPdf(inspection: any) {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
   doc.setTextColor(...PDF_COLORS.mutedFg);
-  const hinweisText = "Hinweis: Weitere bei der Besichtigung gemachte Fotos sind dem zur Verfügung gestellten Ordner zu entnehmen.";
+  const hinweisText = "Weitere bei der Besichtigung gemachte Fotos und die Fotos der Mängel in Originalgröße sind dem zur Verfügung gestellten Ordner zu entnehmen.";
   const hinweisLines = doc.splitTextToSize(hinweisText, pageWidth - 2 * margin);
   doc.text(hinweisLines, margin, y);
   doc.setFont("helvetica", "normal");
