@@ -19,7 +19,11 @@ import {
   Search,
   ChevronRight,
   Trash2,
-  Pencil
+  Pencil,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -66,6 +70,8 @@ export default function ProjektePage() {
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "address">("address");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
@@ -146,11 +152,25 @@ export default function ProjektePage() {
     );
   }
 
-  const filteredProjects = projects?.filter(p => {
-    if (!search.trim()) return true;
-    const s = search.toLowerCase();
-    return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
-  });
+  const filteredProjects = (() => {
+    const base = (projects || []).filter(p => {
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
+    });
+    base.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === "address") {
+        cmp = (a.address || a.name || "").localeCompare(b.address || b.name || "", "de");
+      } else {
+        const aDate = a.nextInspectionDue ? new Date(a.nextInspectionDue).getTime() : Infinity;
+        const bDate = b.nextInspectionDue ? new Date(b.nextInspectionDue).getTime() : Infinity;
+        cmp = aDate - bDate;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return base;
+  })();
   const deleteConfirmProject = projects?.find(p => p.id === deleteConfirmId);
 
   return (
@@ -228,17 +248,59 @@ export default function ProjektePage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-6 gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Projekt suchen..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card border-border"
+            className="pl-9 pr-8 bg-card border-border"
             data-testid="input-search-projekte"
           />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" data-testid="button-clear-search-projekte">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
+            <button
+              onClick={() => {
+                if (sortBy === "address") {
+                  setSortDir(d => d === "asc" ? "desc" : "asc");
+                } else {
+                  setSortBy("address");
+                  setSortDir("asc");
+                }
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors ${sortBy === "address" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+              data-testid="button-sort-address-projekte"
+            >
+              <Building className="w-3.5 h-3.5" />
+              Adresse
+              {sortBy === "address" && (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+              {sortBy !== "address" && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+            </button>
+            <button
+              onClick={() => {
+                if (sortBy === "date") {
+                  setSortDir(d => d === "asc" ? "desc" : "asc");
+                } else {
+                  setSortBy("date");
+                  setSortDir("asc");
+                }
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors ${sortBy === "date" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+              data-testid="button-sort-date-projekte"
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              Datum
+              {sortBy === "date" && (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+              {sortBy !== "date" && <ArrowUpDown className="w-3 h-3 opacity-40" />}
+            </button>
+          </div>
         <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-1">
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
@@ -260,6 +322,7 @@ export default function ProjektePage() {
             <LayoutGrid className="w-4 h-4 mr-1.5" />
             <span className="text-xs">Kacheln</span>
           </Button>
+        </div>
         </div>
       </div>
 
