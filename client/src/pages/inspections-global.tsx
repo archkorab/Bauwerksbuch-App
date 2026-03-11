@@ -388,7 +388,7 @@ async function generateInspectionPdf(inspection: any) {
             if (defect.description) content += `\n${defect.description}`;
             if (defect.location) content += `   |   Lage: ${defect.location}`;
             if (defect.frist) content += `   |   Frist: ${fristLabels[defect.frist] || defect.frist}`;
-            if (defect.repairDue) content += `   |   bis: ${format(new Date(defect.repairDue), "dd.MM.yyyy")}`;
+            if (defect.repairDue && defect.frist !== "umgehend") content += `   |   bis: ${format(new Date(defect.repairDue), "dd.MM.yyyy")}`;
             rowToDefectIndex.set(bauteilRows.length, di);
             bauteilRows.push([{ content, colSpan: 6 }]);
             rowTypes.push(defect.status === "grober_mangel" ? "defect-grober" : "defect-leichter");
@@ -399,7 +399,7 @@ async function generateInspectionPdf(inspection: any) {
               if (child.description) cc += `\n${child.description}`;
               if (child.location) cc += `   |   Lage: ${child.location}`;
               if (child.frist) cc += `   |   Frist: ${fristLabels[child.frist] || child.frist}`;
-              if (child.repairDue) cc += `   |   bis: ${format(new Date(child.repairDue), "dd.MM.yyyy")}`;
+              if (child.repairDue && child.frist !== "umgehend") cc += `   |   bis: ${format(new Date(child.repairDue), "dd.MM.yyyy")}`;
               rowToDefectIndex.set(bauteilRows.length, ci);
               bauteilRows.push([{ content: cc, colSpan: 6 }]);
               rowTypes.push(child.status === "grober_mangel" ? "child-grober" : "child-leichter");
