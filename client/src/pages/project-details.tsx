@@ -2353,7 +2353,7 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {(ins as any).type === "erstpruefung" && (
+                              {(!(ins as any).type || (ins as any).type === "erstpruefung") && (
                                 <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-primary px-2" onClick={(e) => { e.stopPropagation(); generateBestaetigungEP(ins, project?.address || ""); }} title="Bestätigung Erstprüfung" data-testid={`button-best-ep-${ins.id}`}>
                                   <Download className="w-3.5 h-3.5 mr-1" /> Best. EP
                                 </Button>
