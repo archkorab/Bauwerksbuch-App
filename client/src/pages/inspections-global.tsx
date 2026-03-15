@@ -150,6 +150,7 @@ function cleanAddr(addr: string): string {
 async function generateBestaetigungEP(inspection: any) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
 
   let logoDataUrl: string | null = null;
@@ -195,6 +196,15 @@ async function generateBestaetigungEP(inspection: any) {
 
   doc.setFont("helvetica", "bold");
   doc.text("Arch.DI.Vera Korab", margin, y);
+
+  const footerY = pageHeight - 10;
+  doc.setDrawColor(...PDF_COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
+  doc.setFontSize(7);
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  doc.text(`Bauwerksbuch - ${address}`, margin, footerY);
+  doc.text("Seite 1 von 1", pageWidth - margin, footerY, { align: "right" });
 
   const safeName = address.replace(/[^a-zA-Z0-9äöüÄÖÜß\-]/g, "_").replace(/_+/g, "_");
   doc.save(`Best.EP_${safeName}.pdf`);
