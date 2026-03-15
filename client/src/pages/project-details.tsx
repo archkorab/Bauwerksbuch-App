@@ -83,6 +83,111 @@ async function loadLogoDataUrl(): Promise<string> {
   });
 }
 
+function cleanAddr(addr: string): string {
+  return (addr || "")
+    .replace(/,?\s*[ÖO]sterreich\s*$/i, "")
+    .replace(/,?\s*Austria\s*$/i, "")
+    .trim();
+}
+
+async function generateBestaetigungBWB(project: any) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+
+  let logoDataUrl: string | null = null;
+  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+
+  const address = cleanAddr(project.address || project.name || "");
+
+  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  doc.text("Arch. Dipl.-Ing. Vera Korab ZT GmbH", pageWidth - margin, 13, { align: "right" });
+  doc.text("www.bauwerksbuch-archkorab.at", pageWidth - margin, 18, { align: "right" });
+  doc.setDrawColor(...PDF_COLORS.primary);
+  doc.setLineWidth(0.5);
+  doc.line(margin, 28, pageWidth - margin, 28);
+
+  let y = 60;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PDF_COLORS.foreground);
+  doc.text("Betrifft:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(address, margin + 24, y);
+  y += 22;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  const body = "Ich bestätige hiermit, dass von mir für obige Liegenschaft ein Erstprüfung Bauwerksbuch angelegt wurde.";
+  const bodyLines = doc.splitTextToSize(body, pageWidth - 2 * margin);
+  doc.text(bodyLines, margin, y);
+  y += bodyLines.length * 7 + 22;
+
+  const dateStr = project.createdAt ? format(new Date(project.createdAt), "dd.MM.yyyy") : format(new Date(), "dd.MM.yyyy");
+  doc.setFont("helvetica", "normal");
+  doc.text(`Datum der Erstellung :   ${dateStr}`, margin, y);
+  y += 28;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Arch.DI.Vera Korab", margin, y);
+
+  const safeName = address.replace(/[^a-zA-Z0-9äöüÄÖÜß\-]/g, "_").replace(/_+/g, "_");
+  doc.save(`Best.BWB_${safeName}.pdf`);
+}
+
+async function generateBestaetigungEP(inspection: any, projectAddress: string) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+
+  let logoDataUrl: string | null = null;
+  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+
+  const address = cleanAddr(projectAddress);
+
+  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...PDF_COLORS.mutedFg);
+  doc.text("Arch. Dipl.-Ing. Vera Korab ZT GmbH", pageWidth - margin, 13, { align: "right" });
+  doc.text("www.bauwerksbuch-archkorab.at", pageWidth - margin, 18, { align: "right" });
+  doc.setDrawColor(...PDF_COLORS.primary);
+  doc.setLineWidth(0.5);
+  doc.line(margin, 28, pageWidth - margin, 28);
+
+  let y = 60;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...PDF_COLORS.foreground);
+  doc.text("Betrifft:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(address, margin + 24, y);
+  y += 22;
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  const body = "Ich bestätige hiermit, dass von mir für obige Liegenschaft eine Erstprüfung für das Bauwerksbuch durchgeführt wurde.";
+  const bodyLines = doc.splitTextToSize(body, pageWidth - 2 * margin);
+  doc.text(bodyLines, margin, y);
+  y += bodyLines.length * 7 + 22;
+
+  const dateStr = format(new Date(inspection.date), "dd.MM.yyyy");
+  doc.setFont("helvetica", "normal");
+  doc.text(`Datum der Überprüfung :   ${dateStr}`, margin, y);
+  y += 28;
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Arch.DI.Vera Korab", margin, y);
+
+  const safeName = address.replace(/[^a-zA-Z0-9äöüÄÖÜß\-]/g, "_").replace(/_+/g, "_");
+  doc.save(`Best.EP_${safeName}.pdf`);
+}
+
 async function generateInspectionPdf(inspection: any) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -1454,11 +1559,16 @@ export default function ProjectDetails() {
               <span>{project.address}</span>
             </div>
           </div>
-          {isAdmin && (
-            <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
-              <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => generateBestaetigungBWB(project)} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-bwb">
+              <Download className="w-4 h-4 mr-2" /> Best. BWB
             </Button>
-          )}
+            {isAdmin && (
+              <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
+                <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Edit Project Dialog */}
@@ -2243,6 +2353,11 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              {(ins as any).type === "erstpruefung" && (
+                                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-primary px-2" onClick={(e) => { e.stopPropagation(); generateBestaetigungEP(ins, project?.address || ""); }} title="Bestätigung Erstprüfung" data-testid={`button-best-ep-${ins.id}`}>
+                                  <Download className="w-3.5 h-3.5 mr-1" /> Best. EP
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); generateInspectionPdf({ ...ins, projectAddress: project?.address, projectName: project?.name }); }} title="PDF herunterladen" data-testid={`button-pdf-inspection-${ins.id}`}>
                                 <Download className="w-4 h-4" />
                               </Button>
