@@ -127,7 +127,7 @@ async function generateBestaetigungBWB(project: any) {
 
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
-  const body = "Ich bestätige hiermit, dass von mir für obige Liegenschaft ein Erstprüfung Bauwerksbuch angelegt wurde.";
+  const body = "Ich bestätige hiermit, dass von mir für obige Liegenschaft ein Bauwerksbuch angelegt wurde.";
   const bodyLines = doc.splitTextToSize(body, pageWidth - 2 * margin);
   doc.text(bodyLines, margin, y);
   y += bodyLines.length * 7 + 22;
