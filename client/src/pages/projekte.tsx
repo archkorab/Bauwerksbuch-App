@@ -23,7 +23,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  X
+  X,
+  SlidersHorizontal
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,8 @@ export default function ProjektePage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "address">("address");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [filterClientId, setFilterClientId] = useState<string>("all");
+  const [filterPlz, setFilterPlz] = useState<string>("all");
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
@@ -152,11 +155,22 @@ export default function ProjektePage() {
     );
   }
 
+  const getPlzStr = (addr: string): string => {
+    const m = (addr || "").match(/\b(\d{4})\b/);
+    return m ? m[1] : "";
+  };
+
+  const availablePlzs = Array.from(
+    new Set((projects || []).map(p => getPlzStr(p.address || p.name || "")).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
   const filteredProjects = (() => {
     const base = (projects || []).filter(p => {
-      if (!search.trim()) return true;
-      const s = search.toLowerCase();
-      return p.name.toLowerCase().includes(s) || p.address.toLowerCase().includes(s);
+      const s = search.toLowerCase().trim();
+      if (s && !p.name.toLowerCase().includes(s) && !(p.address || "").toLowerCase().includes(s)) return false;
+      if (filterClientId !== "all" && p.clientId !== filterClientId) return false;
+      if (filterPlz !== "all" && getPlzStr(p.address || p.name || "") !== filterPlz) return false;
+      return true;
     });
     const extractPlz = (addr: string): number => {
       const m = addr.match(/\b(\d{4})\b/);
@@ -337,6 +351,53 @@ export default function ProjektePage() {
         </div>
         </div>
       </div>
+
+      {/* Filter Row */}
+      {(filterClientId !== "all" || filterPlz !== "all" || clients?.length > 0 || availablePlzs.length > 0) && (
+        <div className="flex flex-wrap items-center gap-3 mb-5 px-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Filter:
+          </div>
+          {clients && clients.length > 0 && (
+            <Select value={filterClientId} onValueChange={setFilterClientId}>
+              <SelectTrigger className="h-8 w-52 text-xs bg-card border-border" data-testid="select-filter-client">
+                <SelectValue placeholder="Alle Eigentümer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Eigentümer</SelectItem>
+                {clients.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {displayName(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {availablePlzs.length > 0 && (
+            <Select value={filterPlz} onValueChange={setFilterPlz}>
+              <SelectTrigger className="h-8 w-40 text-xs bg-card border-border" data-testid="select-filter-plz">
+                <SelectValue placeholder="Alle PLZ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle PLZ</SelectItem>
+                {availablePlzs.map(plz => (
+                  <SelectItem key={plz} value={plz}>{plz}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(filterClientId !== "all" || filterPlz !== "all") && (
+            <button
+              onClick={() => { setFilterClientId("all"); setFilterPlz("all"); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-clear-filters"
+            >
+              <X className="w-3.5 h-3.5" /> Filter zurücksetzen
+            </button>
+          )}
+        </div>
+      )}
 
       {filteredProjects?.length === 0 ? (
         <div className="py-16 text-center border-2 border-dashed border-border rounded-2xl bg-card/30">
