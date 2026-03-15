@@ -179,7 +179,6 @@ async function generateBestaetigungEP(inspection: any) {
 
   doc.setFont("helvetica", "bold");
   doc.text("Betrifft:", margin, y);
-  doc.setFont("helvetica", "normal");
   doc.text(address, margin + 24, y);
   y += 22;
 

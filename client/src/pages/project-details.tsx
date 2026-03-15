@@ -122,7 +122,6 @@ async function generateBestaetigungBWB(project: any) {
 
   doc.setFont("helvetica", "bold");
   doc.text("Betrifft:", margin, y);
-  doc.setFont("helvetica", "normal");
   doc.text(address, margin + 24, y);
   y += 22;
 
@@ -177,7 +176,6 @@ async function generateBestaetigungEP(inspection: any, projectAddress: string) {
 
   doc.setFont("helvetica", "bold");
   doc.text("Betrifft:", margin, y);
-  doc.setFont("helvetica", "normal");
   doc.text(address, margin + 24, y);
   y += 22;
 
