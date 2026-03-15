@@ -1559,15 +1559,25 @@ export default function ProjectDetails() {
               <span>{project.address}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => generateBestaetigungBWB(project)} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-bwb">
-              <Download className="w-4 h-4 mr-2" /> Best. BWB
-            </Button>
-            {isAdmin && (
-              <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
-                <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => generateBestaetigungBWB(project)} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-bwb">
+                <Download className="w-4 h-4 mr-2" /> Best. BWB
               </Button>
-            )}
+              {(() => {
+                const ep = inspections?.find((ins: any) => !ins.type || ins.type === "erstpruefung");
+                return ep ? (
+                  <Button variant="outline" onClick={() => generateBestaetigungEP(ep, project?.address || "")} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-ep">
+                    <Download className="w-4 h-4 mr-2" /> Best. EP
+                  </Button>
+                ) : null;
+              })()}
+              {isAdmin && (
+                <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
+                  <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2353,11 +2363,6 @@ export default function ProjectDetails() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {(!(ins as any).type || (ins as any).type === "erstpruefung") && (
-                                <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-primary px-2" onClick={(e) => { e.stopPropagation(); generateBestaetigungEP(ins, project?.address || ""); }} title="Bestätigung Erstprüfung" data-testid={`button-best-ep-${ins.id}`}>
-                                  <Download className="w-3.5 h-3.5 mr-1" /> Best. EP
-                                </Button>
-                              )}
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); generateInspectionPdf({ ...ins, projectAddress: project?.address, projectName: project?.name }); }} title="PDF herunterladen" data-testid={`button-pdf-inspection-${ins.id}`}>
                                 <Download className="w-4 h-4" />
                               </Button>
