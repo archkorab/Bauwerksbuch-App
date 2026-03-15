@@ -935,6 +935,7 @@ export default function ProjectDetails() {
   const [bauaktSearch, setBauaktSearch] = useState("");
 
   const isAdmin = profile?.role === "admin";
+  const epInspection = inspections?.find((ins: any) => !ins.type || ins.type === "erstpruefung");
 
   const [defectEntries, setDefectEntries] = useState<DefectEntry[]>([]);
   const [editInspDialogOpen, setEditInspDialogOpen] = useState(false);
@@ -1591,17 +1592,6 @@ export default function ProjectDetails() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => generateBestaetigungBWB(project)} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-bwb">
-                <Download className="w-4 h-4 mr-2" /> Best. BWB
-              </Button>
-              {(() => {
-                const ep = inspections?.find((ins: any) => !ins.type || ins.type === "erstpruefung");
-                return ep ? (
-                  <Button variant="outline" onClick={() => generateBestaetigungEP(ep, project?.address || "")} className="bg-card border-border hover:bg-muted/60" data-testid="button-best-ep">
-                    <Download className="w-4 h-4 mr-2" /> Best. EP
-                  </Button>
-                ) : null;
-              })()}
               {isAdmin && (
                 <Button variant="outline" onClick={openEditDialog} className="bg-card border-border hover:bg-muted/60" data-testid="button-edit-project">
                   <Pencil className="w-4 h-4 mr-2" /> Projekt bearbeiten
@@ -1758,6 +1748,7 @@ export default function ProjectDetails() {
               <TabsTrigger value="bauakt" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-bauakt">Digitaler Bauakt</TabsTrigger>
               <TabsTrigger value="inspections" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Prüfungen</TabsTrigger>
               <TabsTrigger value="images" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-images">Bilder</TabsTrigger>
+              <TabsTrigger value="bestaetigungen" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground" data-testid="tab-trigger-bestaetigungen">Bestätigungen</TabsTrigger>
             </TabsList>
 
             {/* Documents Tab */}
@@ -2639,6 +2630,30 @@ export default function ProjectDetails() {
                     );
                   })
                 )}
+              </div>
+            </TabsContent>
+
+            {/* Bestätigungen Tab */}
+            <TabsContent value="bestaetigungen" className="space-y-4" data-testid="tab-bestaetigungen">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3">
+                  <div className="font-semibold text-sm">Bestätigung Bauwerksbuch</div>
+                  <div className="text-xs text-muted-foreground">Bestätigung, dass ein Bauwerksbuch für diese Liegenschaft angelegt wurde.</div>
+                  <Button variant="outline" onClick={() => generateBestaetigungBWB(project)} className="w-full bg-card border-border hover:bg-muted/60" data-testid="button-best-bwb">
+                    <Download className="w-4 h-4 mr-2" /> Best. BWB herunterladen
+                  </Button>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-5 flex flex-col gap-3">
+                  <div className="font-semibold text-sm">Bestätigung Erstprüfung</div>
+                  <div className="text-xs text-muted-foreground">Bestätigung, dass eine Erstprüfung für diese Liegenschaft durchgeführt wurde.</div>
+                  {epInspection ? (
+                    <Button variant="outline" onClick={() => generateBestaetigungEP(epInspection, project?.address || "")} className="w-full bg-card border-border hover:bg-muted/60" data-testid="button-best-ep">
+                      <Download className="w-4 h-4 mr-2" /> Best. EP herunterladen
+                    </Button>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic">Keine Erstprüfung vorhanden.</div>
+                  )}
+                </div>
               </div>
             </TabsContent>
 
