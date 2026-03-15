@@ -1767,19 +1767,6 @@ export default function InspectionsGlobal() {
                           'text-amber-600 border-amber-500/30'}`}>
                         {inspStatusLabels[effectiveStatus] || effectiveStatus}
                       </span>
-                      {(!ins.type || ins.type === "erstpruefung") && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs text-muted-foreground hover:text-primary px-2"
-                          onClick={(e) => { e.stopPropagation(); generateBestaetigungEP(ins); }}
-                          title="Bestätigung Erstprüfung"
-                          data-testid={`button-best-ep-${ins.id}`}
-                        >
-                          <Download className="w-3.5 h-3.5 mr-1" /> Best. EP
-                        </Button>
-                      )}
                       <Button
                         type="button"
                         variant="ghost"
