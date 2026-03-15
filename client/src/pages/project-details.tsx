@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, Fragment } from "react";
 import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/layout";
-import { displayName, displayInitials } from "@/lib/utils";
+import { displayName, displayInitials, formatAddr } from "@/lib/utils";
 import { MapPlaceholder } from "@/components/map-placeholder";
 import { useProject, useUpdateProject, useDefectSummary } from "@/hooks/use-projects";
 import { useClients } from "@/hooks/use-users";
@@ -1587,7 +1587,7 @@ export default function ProjectDetails() {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4" />
-              <span>{project.address}</span>
+              <span>{formatAddr(project.address)}</span>
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Layout } from "@/components/layout";
-import { displayName } from "@/lib/utils";
+import { displayName, formatAddr } from "@/lib/utils";
 import { useAllInspections, useCreateInspection, useCreateDefect, useUpdateInspection, useDeleteInspection, useUpdateDefect, useDeleteDefect } from "@/hooks/use-inspections";
 import { useQueryClient } from "@tanstack/react-query";
 import { useProjects } from "@/hooks/use-projects";
@@ -2034,7 +2034,7 @@ function InspectionDetailPanel({ inspection }: { inspection: any }) {
             {inspection.projectAddress && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Adresse</span>
-                <span className="font-medium text-foreground text-right max-w-[180px] text-xs">{inspection.projectAddress}</span>
+                <span className="font-medium text-foreground text-right max-w-[180px] text-xs">{formatAddr(inspection.projectAddress)}</span>
               </div>
             )}
             {inspection.engineer && (
