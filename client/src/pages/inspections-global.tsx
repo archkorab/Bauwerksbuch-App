@@ -167,11 +167,17 @@ async function generateBestaetigungEP(inspection: any) {
   doc.setLineWidth(0.5);
   doc.line(margin, 28, pageWidth - margin, 28);
 
-  let y = 60;
+  let y = 45;
 
   doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...PDF_COLORS.foreground);
+  doc.text("An das Magistrat der Stadt Wien", margin, y);
+  y += 6;
+  doc.text("Baupolizei", margin, y);
+  y += 18;
+
+  doc.setFont("helvetica", "bold");
   doc.text("Betrifft:", margin, y);
   doc.setFont("helvetica", "normal");
   doc.text(address, margin + 24, y);
