@@ -219,6 +219,10 @@ async function generateBestaetigungEP(inspection: any, projectAddress: string) {
 }
 
 async function generateInspectionPdf(inspection: any) {
+  try {
+    const freshDefects = await fetch(`/api/inspections/${inspection.id}/defects`, { credentials: "include" }).then(r => r.ok ? r.json() : null);
+    if (freshDefects) inspection = { ...inspection, defects: freshDefects };
+  } catch {}
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
