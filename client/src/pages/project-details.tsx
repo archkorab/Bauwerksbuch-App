@@ -83,6 +83,28 @@ async function loadLogoDataUrl(): Promise<string> {
   });
 }
 
+async function loadLogoCompressed(maxW = 260, quality = 0.7): Promise<string> {
+  const response = await fetch(logoPath);
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  return new Promise<string>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(maxW / img.naturalWidth, 1);
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(blobUrl);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); resolve(""); };
+    img.src = blobUrl;
+  });
+}
+
 function cleanAddr(addr: string): string {
   return (addr || "")
     .replace(/,?\s*[ÖO]sterreich\s*$/i, "")
@@ -97,11 +119,11 @@ async function generateBestaetigungBWB(project: any) {
   const margin = 20;
 
   let logoDataUrl: string | null = null;
-  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+  try { logoDataUrl = await loadLogoCompressed(260, 0.7); } catch {}
 
   const address = cleanAddr(project.address || project.name || "");
 
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  if (logoDataUrl) doc.addImage(logoDataUrl, "JPEG", margin, 10, 65, 16);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...PDF_COLORS.mutedFg);
@@ -161,11 +183,11 @@ async function generateBestaetigungEP(inspection: any, projectAddress: string) {
   const margin = 20;
 
   let logoDataUrl: string | null = null;
-  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+  try { logoDataUrl = await loadLogoCompressed(260, 0.7); } catch {}
 
   const address = cleanAddr(projectAddress);
 
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  if (logoDataUrl) doc.addImage(logoDataUrl, "JPEG", margin, 10, 65, 16);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...PDF_COLORS.mutedFg);
