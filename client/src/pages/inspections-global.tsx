@@ -150,7 +150,10 @@ async function loadLogoCompressed(maxW = 260, quality = 0.6): Promise<{ data: st
       const ch = Math.round(img.naturalHeight * scale);
       const canvas = document.createElement("canvas");
       canvas.width = cw; canvas.height = ch;
-      canvas.getContext("2d")!.drawImage(img, 0, 0, cw, ch);
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, 0, 0, cw, ch);
       resolve({ data: canvas.toDataURL("image/jpeg", quality), w: cw, h: ch });
     };
     img.onerror = () => resolve({ data: dataUrl, w: 260, h: 64 });
