@@ -83,6 +83,24 @@ async function loadLogoDataUrl(): Promise<string> {
   });
 }
 
+async function loadLogoCompressed(maxW = 260, quality = 0.6): Promise<{ data: string; w: number; h: number }> {
+  const dataUrl = await loadLogoDataUrl();
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(maxW / img.naturalWidth, 1);
+      const cw = Math.round(img.naturalWidth * scale);
+      const ch = Math.round(img.naturalHeight * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = cw; canvas.height = ch;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, cw, ch);
+      resolve({ data: canvas.toDataURL("image/jpeg", quality), w: cw, h: ch });
+    };
+    img.onerror = () => resolve({ data: dataUrl, w: 260, h: 64 });
+    img.src = dataUrl;
+  });
+}
+
 function cleanAddr(addr: string): string {
   return (addr || "")
     .replace(/,?\s*[ÖO]sterreich\s*$/i, "")
@@ -91,17 +109,17 @@ function cleanAddr(addr: string): string {
 }
 
 async function generateBestaetigungBWB(project: any) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
 
-  let logoDataUrl: string | null = null;
-  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+  let logo: { data: string; w: number; h: number } | null = null;
+  try { logo = await loadLogoCompressed(260, 0.5); } catch {}
 
   const address = cleanAddr(project.address || project.name || "");
 
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  if (logo) doc.addImage(logo.data, "JPEG", margin, 10, 65, 16);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...PDF_COLORS.mutedFg);
@@ -155,17 +173,17 @@ async function generateBestaetigungBWB(project: any) {
 }
 
 async function generateBestaetigungEP(inspection: any, projectAddress: string) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
 
-  let logoDataUrl: string | null = null;
-  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
+  let logo: { data: string; w: number; h: number } | null = null;
+  try { logo = await loadLogoCompressed(260, 0.5); } catch {}
 
   const address = cleanAddr(projectAddress);
 
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
+  if (logo) doc.addImage(logo.data, "JPEG", margin, 10, 65, 16);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...PDF_COLORS.mutedFg);
