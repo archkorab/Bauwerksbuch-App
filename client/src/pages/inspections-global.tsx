@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import logoPath from "@assets/logo_1772640036077.png";
 
 interface BauteilOption {
@@ -147,67 +148,79 @@ function cleanAddr(addr: string): string {
     .trim();
 }
 
+async function loadBriefpapierBytes(): Promise<ArrayBuffer> {
+  const resp = await fetch("/briefpapier.pdf");
+  return resp.arrayBuffer();
+}
+
+function pdfLibColor(r: number, g: number, b: number) {
+  return rgb(r / 255, g / 255, b / 255);
+}
+
 async function generateBestaetigungEP(inspection: any) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-
-  let logoDataUrl: string | null = null;
-  try { logoDataUrl = await loadLogoDataUrl(); } catch {}
-
   const address = cleanAddr(inspection.projectAddress || inspection.projectName || "");
-
-  if (logoDataUrl) doc.addImage(logoDataUrl, "PNG", margin, 10, 65, 16);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...PDF_COLORS.mutedFg);
-  doc.text("Arch. Dipl.-Ing. Vera Korab ZT GmbH", pageWidth - margin, 13, { align: "right" });
-  doc.text("www.bauwerksbuch-archkorab.at", pageWidth - margin, 18, { align: "right" });
-  doc.setDrawColor(...PDF_COLORS.primary);
-  doc.setLineWidth(0.5);
-  doc.line(margin, 28, pageWidth - margin, 28);
-
-  let y = 45;
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...PDF_COLORS.foreground);
-  doc.text("An das Magistrat der Stadt Wien", margin, y);
-  y += 6;
-  doc.text("Baupolizei", margin, y);
-  y += 18;
-
-  doc.setFont("helvetica", "bold");
-  doc.text("Betrifft:", margin, y);
-  doc.text(address, margin + 24, y);
-  y += 22;
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  const body = "Ich bestätige hiermit, dass von mir für obige Liegenschaft eine Erstprüfung für das Bauwerksbuch durchgeführt wurde.";
-  const bodyLines = doc.splitTextToSize(body, pageWidth - 2 * margin);
-  doc.text(bodyLines, margin, y);
-  y += bodyLines.length * 7 + 22;
-
   const dateStr = format(new Date(inspection.date), "dd.MM.yyyy");
-  doc.text(`Datum der Überprüfung :   ${dateStr}`, margin, y);
-  y += 28;
-
-  doc.setFont("helvetica", "bold");
-  doc.text("Arch.DI.Vera Korab", margin, y);
-
-  const footerY = pageHeight - 10;
-  doc.setDrawColor(...PDF_COLORS.border);
-  doc.setLineWidth(0.3);
-  doc.line(margin, footerY - 3, pageWidth - margin, footerY - 3);
-  doc.setFontSize(7);
-  doc.setTextColor(...PDF_COLORS.mutedFg);
-  doc.text(`Bauwerksbuch - ${address}`, margin, footerY);
-  doc.text("Seite 1 von 1", pageWidth - margin, footerY, { align: "right" });
-
   const safeName = address.replace(/[^a-zA-Z0-9äöüÄÖÜß\-]/g, "_").replace(/_+/g, "_");
-  doc.save(`Best.EP_${safeName}.pdf`);
+
+  const templateBytes = await loadBriefpapierBytes();
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const page = pdfDoc.getPage(0);
+  const { width, height } = page.getSize();
+  const margin = 57;
+  const black = pdfLibColor(30, 30, 30);
+  const muted = pdfLibColor(120, 120, 120);
+  const lineHeight = 15;
+
+  let y = height - 175;
+
+  page.drawText("An das Magistrat der Stadt Wien", { x: margin, y, font: helvetica, size: 11, color: black });
+  y -= lineHeight;
+  page.drawText("Baupolizei", { x: margin, y, font: helvetica, size: 11, color: black });
+  y -= lineHeight * 2;
+
+  page.drawText("Betrifft:", { x: margin, y, font: helveticaBold, size: 11, color: black });
+  page.drawText(address, { x: margin + 68, y, font: helveticaBold, size: 11, color: black });
+  y -= lineHeight * 2.2;
+
+  const bodyText = "Ich bestätige hiermit, dass von mir für obige Liegenschaft eine Erstprüfung für das Bauwerksbuch durchgeführt wurde.";
+  const maxWidth = width - 2 * margin;
+  const words = bodyText.split(" ");
+  let line = "";
+  const bodyLines: string[] = [];
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (helvetica.widthOfTextAtSize(test, 11) > maxWidth) { bodyLines.push(line); line = word; }
+    else { line = test; }
+  }
+  if (line) bodyLines.push(line);
+  for (const bl of bodyLines) {
+    page.drawText(bl, { x: margin, y, font: helvetica, size: 11, color: black });
+    y -= lineHeight;
+  }
+  y -= lineHeight * 1.5;
+
+  page.drawText(`Datum der Überprüfung :   ${dateStr}`, { x: margin, y, font: helvetica, size: 11, color: black });
+  y -= lineHeight * 2.5;
+  page.drawText("Arch.DI.Vera Korab", { x: margin, y, font: helveticaBold, size: 11, color: black });
+
+  const footerY = 20;
+  page.drawLine({ start: { x: margin, y: footerY + 6 }, end: { x: width - margin, y: footerY + 6 }, thickness: 0.3, color: muted });
+  page.drawText(`Bauwerksbuch - ${address}`, { x: margin, y: footerY, font: helvetica, size: 7, color: muted });
+  const pageLabel = "Seite 1 von 1";
+  const labelWidth = helvetica.widthOfTextAtSize(pageLabel, 7);
+  page.drawText(pageLabel, { x: width - margin - labelWidth, y: footerY, font: helvetica, size: 7, color: muted });
+
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Best.EP_${safeName}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 async function generateInspectionPdf(inspection: any) {
