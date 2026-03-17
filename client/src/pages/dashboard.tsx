@@ -22,7 +22,7 @@ import {
   Search,
   Clock,
   ChevronRight,
-  ClipboardCheck
+  FolderPlus
 } from "lucide-react";
 import { format, isFuture, isToday, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
@@ -291,49 +291,43 @@ export default function Dashboard() {
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
-              <ClipboardCheck className="w-5 h-5 text-primary" /> Letzte Prüfungen
+              <FolderPlus className="w-5 h-5 text-primary" /> Zuletzt hinzugefügt
             </h2>
-            <Link href="/calendar">
-              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-all-past-inspections">
-                Alle anzeigen <ChevronRight className="w-3 h-3" />
+            <Link href="/projekte">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-all-projects">
+                Alle Projekte <ChevronRight className="w-3 h-3" />
               </span>
             </Link>
           </div>
           {(() => {
-            const pastInspections = [...(allInspections || [])]
-              .filter((ins: any) => !isFuture(new Date(ins.date)))
-              .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            const recentProjects = [...(projects || [])]
+              .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
               .slice(0, 5);
-            const projectMap = new Map((projects || []).map((p: any) => [p.id, p]));
-            if (pastInspections.length === 0) {
-              return <p className="text-sm text-muted-foreground text-center py-6">Keine Prüfungen durchgeführt.</p>;
+            if (recentProjects.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-6">Keine Projekte vorhanden.</p>;
             }
-            const inspTypeMap: Record<string, string> = { erstpruefung: "Erstprüfung", folgepruefung: "Folgeprüfung" };
-            const inspStatusMap: Record<string, { label: string; cls: string }> = {
-              OK: { label: "OK", cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-              needs_repair: { label: "Leichter Mangel", cls: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-              urgent: { label: "Schwerer Mangel", cls: "bg-red-500/10 text-red-600 border-red-500/20" },
-            };
             return (
               <div className="space-y-3">
-                {pastInspections.map((ins: any) => {
-                  const proj = projectMap.get(ins.projectId);
-                  const st = inspStatusMap[ins.status] || { label: ins.status, cls: "bg-muted text-muted-foreground border-border" };
-                  const d = new Date(ins.date);
+                {recentProjects.map((p) => {
+                  const mangel = getMangelStatus(p.id);
                   return (
-                    <Link key={ins.id} href={`/projects/${ins.projectId}`}>
-                      <div className="flex items-center gap-4 rounded-xl p-3 hover:bg-muted/50 cursor-pointer transition-colors" data-testid={`preview-past-inspection-${ins.id}`}>
-                        <div className="w-11 h-11 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0 text-center">
-                          <span className="text-[10px] font-bold text-primary uppercase leading-none">{format(d, 'MMM', { locale: de })}</span>
-                          <span className="text-base font-bold text-primary leading-tight">{format(d, 'd')}</span>
+                    <Link key={p.id} href={`/projects/${p.id}`}>
+                      <div className="flex items-center gap-4 rounded-xl p-3 hover:bg-muted/50 cursor-pointer transition-colors" data-testid={`preview-recent-${p.id}`}>
+                        <div className="w-11 h-11 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-border">
+                          <Building className="w-5 h-5 text-primary" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground line-clamp-1">{proj?.name || `Projekt #${ins.projectId}`}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{inspTypeMap[ins.type] || ins.type}{proj ? ` · ${formatAddr(proj.address)}` : ""}</p>
+                          <p className="text-sm font-semibold text-foreground line-clamp-1">{p.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{formatAddr(p.address)}</p>
                         </div>
-                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${st.cls}`}>
-                          {st.label}
-                        </span>
+                        <div className="flex flex-col items-end shrink-0 gap-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' : mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
+                            {mangelLabels[mangel]}
+                          </span>
+                          {p.createdAt && (
+                            <span className="text-[10px] text-muted-foreground">{format(new Date(p.createdAt), 'dd.MM.yyyy', { locale: de })}</span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   );
