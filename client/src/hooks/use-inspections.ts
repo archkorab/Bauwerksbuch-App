@@ -147,6 +147,7 @@ export function useDeleteDefect() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: [api.inspections.listAll.path] });
       queryClient.invalidateQueries({ queryKey: [api.defects.summary.path] });
     },
   });
