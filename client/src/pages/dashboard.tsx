@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { displayName, displayInitials } from "@/lib/utils";
+import { displayName, displayInitials, formatAddr } from "@/lib/utils";
 import { useProjects, useCreateProject, useDefectSummary } from "@/hooks/use-projects";
+import { useAllInspections } from "@/hooks/use-inspections";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,9 +19,13 @@ import {
   Loader2,
   LayoutGrid,
   List,
-  Search
+  Search,
+  Clock,
+  ChevronRight,
+  FolderPlus
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isFuture, isToday, differenceInDays } from "date-fns";
+import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -55,6 +60,7 @@ const mangelLabels: Record<string, string> = {
 
 export default function Dashboard() {
   const { data: projects, isLoading } = useProjects();
+  const { data: allInspections } = useAllInspections();
   const { data: profile } = useProfile();
   const { user } = useAuth();
   const { data: clients } = useClients();
@@ -218,6 +224,117 @@ export default function Dashboard() {
             <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-grober-label">Schwerer Mangel</p>
             <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-grober-count">{groberCount}</h3>
           </div>
+        </div>
+      </div>
+
+      {/* Preview Columns: Upcoming Inspections & Recent Projects */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+              <Clock className="w-5 h-5 text-primary" /> Anstehende Prüfungen
+            </h2>
+            <Link href="/calendar">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-all-inspections">
+                Alle anzeigen <ChevronRight className="w-3 h-3" />
+              </span>
+            </Link>
+          </div>
+          {(() => {
+            const upcomingProjects = (projects || [])
+              .filter((p) => p.nextInspectionDue && (isFuture(new Date(p.nextInspectionDue)) || isToday(new Date(p.nextInspectionDue))))
+              .sort((a, b) => new Date(a.nextInspectionDue!).getTime() - new Date(b.nextInspectionDue!).getTime())
+              .slice(0, 5);
+            const overdueProjects = (projects || [])
+              .filter((p) => p.nextInspectionDue && !isFuture(new Date(p.nextInspectionDue)) && !isToday(new Date(p.nextInspectionDue)))
+              .sort((a, b) => new Date(a.nextInspectionDue!).getTime() - new Date(b.nextInspectionDue!).getTime())
+              .slice(0, 3);
+            const combined = [...overdueProjects, ...upcomingProjects];
+            if (combined.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-6">Keine anstehenden Prüfungen.</p>;
+            }
+            return (
+              <div className="space-y-3">
+                {combined.map((p) => {
+                  const due = new Date(p.nextInspectionDue!);
+                  const days = differenceInDays(due, new Date());
+                  const isOverdue = days < 0;
+                  return (
+                    <Link key={p.id} href={`/projects/${p.id}`}>
+                      <div className={`flex items-center gap-4 rounded-xl p-3 cursor-pointer transition-colors ${isOverdue ? "bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30" : "hover:bg-muted/50"}`} data-testid={`preview-upcoming-${p.id}`}>
+                        <div className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center shrink-0 text-center ${isOverdue ? "bg-red-100 dark:bg-red-900/40" : "bg-primary/10"}`}>
+                          <span className={`text-[10px] font-bold uppercase leading-none ${isOverdue ? "text-red-500" : "text-primary"}`}>{format(due, 'MMM', { locale: de })}</span>
+                          <span className={`text-base font-bold leading-tight ${isOverdue ? "text-red-600 dark:text-red-400" : "text-primary"}`}>{format(due, 'd')}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground line-clamp-1">{p.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{formatAddr(p.address)}</p>
+                        </div>
+                        {isOverdue ? (
+                          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            {Math.abs(days)}d überfällig
+                          </span>
+                        ) : (
+                          <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${days <= 30 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}`}>
+                            {days === 0 ? "Heute" : `In ${days}d`}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
+              <FolderPlus className="w-5 h-5 text-primary" /> Zuletzt hinzugefügt
+            </h2>
+            <Link href="/projekte">
+              <span className="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-all-projects">
+                Alle Projekte <ChevronRight className="w-3 h-3" />
+              </span>
+            </Link>
+          </div>
+          {(() => {
+            const recentProjects = [...(projects || [])]
+              .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+              .slice(0, 5);
+            if (recentProjects.length === 0) {
+              return <p className="text-sm text-muted-foreground text-center py-6">Keine Projekte vorhanden.</p>;
+            }
+            return (
+              <div className="space-y-3">
+                {recentProjects.map((p) => {
+                  const mangel = getMangelStatus(p.id);
+                  return (
+                    <Link key={p.id} href={`/projects/${p.id}`}>
+                      <div className="flex items-center gap-4 rounded-xl p-3 hover:bg-muted/50 cursor-pointer transition-colors" data-testid={`preview-recent-${p.id}`}>
+                        <div className="w-11 h-11 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-border">
+                          <Building className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground line-clamp-1">{p.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{formatAddr(p.address)}</p>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 gap-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' : mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
+                            {mangelLabels[mangel]}
+                          </span>
+                          {p.createdAt && (
+                            <span className="text-[10px] text-muted-foreground">{format(new Date(p.createdAt), 'dd.MM.yyyy', { locale: de })}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
