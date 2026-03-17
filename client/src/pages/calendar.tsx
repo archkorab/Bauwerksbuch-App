@@ -3,8 +3,9 @@ import { useProjects } from "@/hooks/use-projects";
 import { useAllInspections } from "@/hooks/use-inspections";
 import { format, isFuture, differenceInDays, isToday } from "date-fns";
 import { de } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Building, ChevronRight, Loader2, AlertTriangle, CheckCircle2, ClipboardCheck } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Building, ChevronRight, Loader2, AlertTriangle, CheckCircle2, ClipboardCheck, Search, X } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
 import { formatAddr } from "@/lib/utils";
 import type { Project, Inspection } from "@shared/schema";
 
@@ -67,9 +68,20 @@ function dueBadge(dueDate: Date) {
   );
 }
 
+function matchesSearch(query: string, project: Project): boolean {
+  const q = query.toLowerCase();
+  return (
+    project.name.toLowerCase().includes(q) ||
+    (project.address || "").toLowerCase().includes(q) ||
+    formatAddr(project.address).toLowerCase().includes(q) ||
+    (project.eigentuemer || "").toLowerCase().includes(q)
+  );
+}
+
 export default function CalendarPage() {
   const { data: projects, isLoading: projLoading } = useProjects();
   const { data: allInspections, isLoading: inspLoading } = useAllInspections();
+  const [search, setSearch] = useState("");
 
   const isLoading = projLoading || inspLoading;
 
@@ -83,6 +95,10 @@ export default function CalendarPage() {
 
   const projectList: Project[] = projects || [];
   const inspections: Inspection[] = allInspections || [];
+  const q = search.trim();
+
+  const filteredProjects = q ? projectList.filter((p) => matchesSearch(q, p)) : projectList;
+  const filteredProjectIds = new Set(filteredProjects.map((p) => p.id));
 
   const inspByProject = new Map<number, Inspection[]>();
   for (const ins of inspections) {
@@ -91,11 +107,11 @@ export default function CalendarPage() {
     inspByProject.set(ins.projectId, list);
   }
 
-  for (const [key, list] of inspByProject) {
+  for (const [, list] of inspByProject) {
     list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
-  const projectsWithUpcoming = projectList
+  const projectsWithUpcoming = filteredProjects
     .filter((p) => p.nextInspectionDue)
     .map((p) => ({
       project: p,
@@ -107,7 +123,7 @@ export default function CalendarPage() {
   const overdue = projectsWithUpcoming.filter((e) => !isFuture(e.dueDate) && !isToday(e.dueDate));
   const upcoming = projectsWithUpcoming.filter((e) => isFuture(e.dueDate) || isToday(e.dueDate));
 
-  const projectsWithoutUpcoming = projectList
+  const projectsWithoutUpcoming = filteredProjects
     .filter((p) => !p.nextInspectionDue)
     .map((p) => ({
       project: p,
@@ -116,7 +132,7 @@ export default function CalendarPage() {
     .filter((e) => e.pastInspections.length > 0);
 
   const allPastInspections = [...inspections]
-    .filter((ins) => !isFuture(new Date(ins.date)))
+    .filter((ins) => !isFuture(new Date(ins.date)) && filteredProjectIds.has(ins.projectId))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const projectMap = new Map(projectList.map((p) => [p.id, p]));
@@ -126,6 +142,29 @@ export default function CalendarPage() {
       <div className="mb-10">
         <h1 className="text-3xl font-display font-bold text-foreground tracking-tight mb-2" data-testid="text-calendar-title">Kalender</h1>
         <p className="text-muted-foreground">Übersicht aller Projekte mit anstehenden und durchgeführten Prüfungen.</p>
+      </div>
+
+      <div className="mb-8">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Projekt, Adresse oder PLZ suchen…"
+            className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+            data-testid="input-calendar-search"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+              data-testid="button-clear-search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {overdue.length > 0 && (
