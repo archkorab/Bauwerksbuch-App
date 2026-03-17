@@ -44,6 +44,7 @@ export function useCreateInspection() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: [api.inspections.listAll.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
     },
   });
 }
@@ -64,6 +65,7 @@ export function useDeleteInspection() {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: [api.inspections.listAll.path] });
       queryClient.invalidateQueries({ queryKey: [api.defects.summary.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
     },
   });
 }
@@ -85,6 +87,7 @@ export function useUpdateInspection() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.inspections.list.path, variables.projectId] });
       queryClient.invalidateQueries({ queryKey: [api.inspections.listAll.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
     },
   });
 }
