@@ -68,32 +68,31 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
     setLoading(true);
 
     try {
-      const res = await fetch("/api/maps-key", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch maps key");
-      const { key } = await res.json();
+      const L = (await import("leaflet")).default;
 
-      if (!(window as any).google?.maps) {
-        await new Promise<void>((resolve, reject) => {
-          if ((window as any).google?.maps) return resolve();
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker`;
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load Google Maps"));
-          document.head.appendChild(script);
-        });
+      if (!document.getElementById("leaflet-css")) {
+        const link = document.createElement("link");
+        link.id = "leaflet-css";
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+        await new Promise((r) => setTimeout(r, 200));
       }
 
-      const google = (window as any).google;
-      const map = new google.maps.Map(mapRef.current, {
-        center: { lat: 48.2082, lng: 16.3738 },
-        zoom: 12,
-        mapId: "project-map",
-        styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
-      });
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+
+      const map = L.map(mapRef.current).setView([48.2082, 16.3738], 12);
       mapInstanceRef.current = map;
 
-      const bounds = new google.maps.LatLngBounds();
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const bounds = L.latLngBounds([]);
       let markersPlaced = 0;
 
       const geocodeQueue: Project[] = [];
@@ -103,8 +102,8 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
           const lat = parseFloat(p.latitude);
           const lng = parseFloat(p.longitude);
           if (!isNaN(lat) && !isNaN(lng)) {
-            addMarker(google, map, lat, lng, p, navigate, onOpenChange);
-            bounds.extend({ lat, lng });
+            addLeafletMarker(L, map, lat, lng, p, navigate, onOpenChange);
+            bounds.extend([lat, lng]);
             markersPlaced++;
             continue;
           }
@@ -114,23 +113,30 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
 
       for (const p of geocodeQueue) {
         try {
-          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(p.address)}`, { credentials: "include" });
-          const geo = await geoRes.json();
-          if (geo.lat && geo.lng) {
-            addMarker(google, map, geo.lat, geo.lng, p, navigate, onOpenChange);
-            bounds.extend({ lat: geo.lat, lng: geo.lng });
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.address)}&limit=1`,
+            { headers: { "Accept-Language": "de" } }
+          );
+          const results = await geoRes.json();
+          if (results.length > 0) {
+            const lat = parseFloat(results[0].lat);
+            const lng = parseFloat(results[0].lon);
+            addLeafletMarker(L, map, lat, lng, p, navigate, onOpenChange);
+            bounds.extend([lat, lng]);
             markersPlaced++;
           }
         } catch {
         }
       }
 
-      if (markersPlaced > 1) {
-        map.fitBounds(bounds, 60);
-      } else if (markersPlaced === 1) {
-        map.setCenter(bounds.getCenter());
-        map.setZoom(15);
-      }
+      setTimeout(() => {
+        map.invalidateSize();
+        if (markersPlaced > 1) {
+          map.fitBounds(bounds, { padding: [40, 40] });
+        } else if (markersPlaced === 1) {
+          map.setView(bounds.getCenter(), 15);
+        }
+      }, 200);
     } catch (err) {
       console.error("Map init error:", err);
     } finally {
@@ -140,9 +146,15 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
 
   useEffect(() => {
     if (open) {
-      const t = setTimeout(initMap, 100);
+      const t = setTimeout(initMap, 150);
       return () => clearTimeout(t);
     }
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
   }, [open, initMap]);
 
   return (
@@ -166,35 +178,37 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
   );
 }
 
-function addMarker(google: any, map: any, lat: number, lng: number, project: Project, navigate: (path: string) => void, closeDialog: (open: boolean) => void) {
-  const marker = new google.maps.Marker({
-    position: { lat, lng },
-    map,
-    title: project.name,
+function addLeafletMarker(L: any, map: any, lat: number, lng: number, project: Project, navigate: (path: string) => void, closeDialog: (open: boolean) => void) {
+  const icon = L.divIcon({
+    className: "custom-map-pin",
+    html: `<div style="background:#61619e;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><div style="transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700">🏠</div></div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -28],
   });
 
-  const infoContent = `
+  const popup = `
     <div style="font-family:sans-serif;max-width:250px;padding:4px 0">
       <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#333">${project.name}</div>
       <div style="font-size:12px;color:#666;margin-bottom:8px">${formatAddr(project.address)}</div>
-      <a href="/projects/${project.id}" style="font-size:12px;color:#61619e;font-weight:600;text-decoration:none" id="map-link-${project.id}">Projekt ansehen →</a>
+      <a href="/projects/${project.id}" style="font-size:12px;color:#61619e;font-weight:600;text-decoration:none" class="map-project-link" data-project-id="${project.id}">Projekt ansehen →</a>
     </div>
   `;
 
-  const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+  const marker = L.marker([lat, lng], { icon }).addTo(map);
+  marker.bindPopup(popup);
 
-  marker.addListener("click", () => {
-    infoWindow.open(map, marker);
+  marker.on("popupopen", () => {
     setTimeout(() => {
-      const link = document.getElementById(`map-link-${project.id}`);
+      const link = document.querySelector(`.map-project-link[data-project-id="${project.id}"]`);
       if (link) {
-        link.addEventListener("click", (e) => {
+        link.addEventListener("click", (e: Event) => {
           e.preventDefault();
           closeDialog(false);
           navigate(`/projects/${project.id}`);
         });
       }
-    }, 100);
+    }, 50);
   });
 }
 
