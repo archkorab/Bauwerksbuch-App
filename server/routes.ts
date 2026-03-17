@@ -210,6 +210,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/maps-key", isAuthenticated, (req: any, res) => {
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Google Maps API key not configured" });
+    res.json({ key: apiKey });
+  });
+
+  app.get("/api/geocode", isAuthenticated, async (req: any, res) => {
+    try {
+      const address = req.query.address as string;
+      if (!address) return res.status(400).json({ error: "Address required" });
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "Google Maps API key not configured" });
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
+      const response = await fetch(url);
+      const data = await response.json() as any;
+      if (data.results && data.results.length > 0) {
+        const loc = data.results[0].geometry.location;
+        res.json({ lat: loc.lat, lng: loc.lng });
+      } else {
+        res.json({ lat: null, lng: null });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Geocoding failed" });
+    }
+  });
+
   // --- Profiles ---
   app.get(api.profiles.get.path, isAuthenticated, async (req: any, res) => {
     try {

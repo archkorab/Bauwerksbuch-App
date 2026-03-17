@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Layout } from "@/components/layout";
 import { displayName, displayInitials, formatAddr } from "@/lib/utils";
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
@@ -24,9 +24,11 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Map
 } from "lucide-react";
 import { format } from "date-fns";
+import type { Project } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -55,6 +57,147 @@ const mangelLabels: Record<string, string> = {
   grober_mangel: "Schwerer Mangel",
 };
 
+function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[]; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [, navigate] = useLocation();
+
+  const initMap = useCallback(async () => {
+    if (!mapRef.current || !open) return;
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/maps-key", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch maps key");
+      const { key } = await res.json();
+
+      if (!(window as any).google?.maps) {
+        await new Promise<void>((resolve, reject) => {
+          if ((window as any).google?.maps) return resolve();
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker`;
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load Google Maps"));
+          document.head.appendChild(script);
+        });
+      }
+
+      const google = (window as any).google;
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: 48.2082, lng: 16.3738 },
+        zoom: 12,
+        mapId: "project-map",
+        styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
+      });
+      mapInstanceRef.current = map;
+
+      const bounds = new google.maps.LatLngBounds();
+      let markersPlaced = 0;
+
+      const geocodeQueue: Project[] = [];
+
+      for (const p of projects) {
+        if (p.latitude && p.longitude) {
+          const lat = parseFloat(p.latitude);
+          const lng = parseFloat(p.longitude);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            addMarker(google, map, lat, lng, p, navigate, onOpenChange);
+            bounds.extend({ lat, lng });
+            markersPlaced++;
+            continue;
+          }
+        }
+        geocodeQueue.push(p);
+      }
+
+      for (const p of geocodeQueue) {
+        try {
+          const geoRes = await fetch(`/api/geocode?address=${encodeURIComponent(p.address)}`, { credentials: "include" });
+          const geo = await geoRes.json();
+          if (geo.lat && geo.lng) {
+            addMarker(google, map, geo.lat, geo.lng, p, navigate, onOpenChange);
+            bounds.extend({ lat: geo.lat, lng: geo.lng });
+            markersPlaced++;
+          }
+        } catch {
+        }
+      }
+
+      if (markersPlaced > 1) {
+        map.fitBounds(bounds, 60);
+      } else if (markersPlaced === 1) {
+        map.setCenter(bounds.getCenter());
+        map.setZoom(15);
+      }
+    } catch (err) {
+      console.error("Map init error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [open, projects, navigate, onOpenChange]);
+
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(initMap, 100);
+      return () => clearTimeout(t);
+    }
+  }, [open, initMap]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl w-[95vw] h-[80vh] flex flex-col p-0 gap-0 bg-card border-border">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <Map className="w-5 h-5 text-primary" /> Kartenansicht
+          </DialogTitle>
+        </DialogHeader>
+        <div className="relative flex-1">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/80">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+          <div ref={mapRef} className="w-full h-full rounded-b-lg" />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function addMarker(google: any, map: any, lat: number, lng: number, project: Project, navigate: (path: string) => void, closeDialog: (open: boolean) => void) {
+  const marker = new google.maps.Marker({
+    position: { lat, lng },
+    map,
+    title: project.name,
+  });
+
+  const infoContent = `
+    <div style="font-family:sans-serif;max-width:250px;padding:4px 0">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#333">${project.name}</div>
+      <div style="font-size:12px;color:#666;margin-bottom:8px">${formatAddr(project.address)}</div>
+      <a href="/projects/${project.id}" style="font-size:12px;color:#61619e;font-weight:600;text-decoration:none" id="map-link-${project.id}">Projekt ansehen →</a>
+    </div>
+  `;
+
+  const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+
+  marker.addListener("click", () => {
+    infoWindow.open(map, marker);
+    setTimeout(() => {
+      const link = document.getElementById(`map-link-${project.id}`);
+      if (link) {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          closeDialog(false);
+          navigate(`/projects/${project.id}`);
+        });
+      }
+    }, 100);
+  });
+}
+
 export default function ProjektePage() {
   const { data: projects, isLoading } = useProjects();
   const { data: profile } = useProfile();
@@ -70,6 +213,7 @@ export default function ProjektePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [mapOpen, setMapOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "address">("address");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -349,6 +493,16 @@ export default function ProjektePage() {
             <span className="text-xs">Kacheln</span>
           </Button>
         </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMapOpen(true)}
+            className="px-3 h-8"
+            data-testid="button-map-view"
+          >
+            <Map className="w-4 h-4 mr-1.5" />
+            <span className="text-xs">Kartenansicht</span>
+          </Button>
         </div>
       </div>
 
@@ -661,6 +815,8 @@ export default function ProjektePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ProjectMapDialog projects={projects || []} open={mapOpen} onOpenChange={setMapOpen} />
     </Layout>
   );
 }
