@@ -53,8 +53,8 @@ type CreateProjectForm = z.infer<typeof createProjectSchema>;
 
 const mangelLabels: Record<string, string> = {
   kein_mangel: "Kein Mangel",
-  leichter_mangel: "Leichter Mangel",
-  grober_mangel: "Schwerer Mangel",
+  leichter_mangel: "Leichter M.",
+  grober_mangel: "Schwerer M.",
 };
 
 function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[]; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -604,7 +604,7 @@ export default function ProjektePage() {
                         {project.nextInspectionDue ? format(new Date(project.nextInspectionDue), 'dd.MM.yyyy') : '—'}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border uppercase tracking-wider
+                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border whitespace-nowrap
                           ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
                             mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
                             'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}
@@ -662,7 +662,7 @@ export default function ProjektePage() {
                       <Building className="w-6 h-6 text-primary" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border uppercase tracking-wider
+                      <span className={`px-3 py-1 text-xs font-semibold rounded-full border whitespace-nowrap
                         ${mangel === 'grober_mangel' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
                           mangel === 'leichter_mangel' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
                           'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}

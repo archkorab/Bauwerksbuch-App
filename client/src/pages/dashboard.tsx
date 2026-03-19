@@ -54,8 +54,8 @@ const statusLabels: Record<string, string> = {
 
 const mangelLabels: Record<string, string> = {
   kein_mangel: "Kein Mangel",
-  leichter_mangel: "Leichter Mangel",
-  grober_mangel: "Schwerer Mangel",
+  leichter_mangel: "Leichter M.",
+  grober_mangel: "Schwerer M.",
 };
 
 export default function Dashboard() {
