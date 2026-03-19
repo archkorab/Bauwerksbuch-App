@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout";
 import { displayName, displayInitials, formatAddr } from "@/lib/utils";
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject, useDefectSummary } from "@/hooks/use-projects";
@@ -58,104 +58,24 @@ const mangelLabels: Record<string, string> = {
 };
 
 function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[]; open: boolean; onOpenChange: (open: boolean) => void }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [, navigate] = useLocation();
+  const mapQuery = projects
+    .filter(p => p.latitude && p.longitude)
+    .map(p => `${p.latitude},${p.longitude}`)
+    .join("|");
 
-  const initMap = useCallback(async () => {
-    if (!mapRef.current || !open) return;
-    setLoading(true);
+  const firstProject = projects.find(p => p.latitude && p.longitude);
+  const center = firstProject
+    ? `${firstProject.latitude},${firstProject.longitude}`
+    : "48.2082,16.3738";
 
-    try {
-      const L = (await import("leaflet")).default;
+  const markers = projects
+    .filter(p => p.latitude && p.longitude)
+    .map(p => `markers=color:red|${p.latitude},${p.longitude}`)
+    .join("&");
 
-      if (!document.getElementById("leaflet-css")) {
-        const link = document.createElement("link");
-        link.id = "leaflet-css";
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-        await new Promise((r) => setTimeout(r, 200));
-      }
-
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-
-      const map = L.map(mapRef.current).setView([48.2082, 16.3738], 12);
-      mapInstanceRef.current = map;
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
-
-      const bounds = L.latLngBounds([]);
-      let markersPlaced = 0;
-
-      const geocodeQueue: Project[] = [];
-
-      for (const p of projects) {
-        if (p.latitude && p.longitude) {
-          const lat = parseFloat(p.latitude);
-          const lng = parseFloat(p.longitude);
-          if (!isNaN(lat) && !isNaN(lng)) {
-            addLeafletMarker(L, map, lat, lng, p, navigate, onOpenChange);
-            bounds.extend([lat, lng]);
-            markersPlaced++;
-            continue;
-          }
-        }
-        geocodeQueue.push(p);
-      }
-
-      for (const p of geocodeQueue) {
-        try {
-          const geoRes = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(p.address)}&limit=1`,
-            { headers: { "Accept-Language": "de" } }
-          );
-          const results = await geoRes.json();
-          if (results.length > 0) {
-            const lat = parseFloat(results[0].lat);
-            const lng = parseFloat(results[0].lon);
-            addLeafletMarker(L, map, lat, lng, p, navigate, onOpenChange);
-            bounds.extend([lat, lng]);
-            markersPlaced++;
-          }
-        } catch {
-        }
-      }
-
-      setTimeout(() => {
-        map.invalidateSize();
-        if (markersPlaced > 1) {
-          map.fitBounds(bounds, { padding: [40, 40] });
-        } else if (markersPlaced === 1) {
-          map.setView(bounds.getCenter(), 15);
-        }
-      }, 200);
-    } catch (err) {
-      console.error("Map init error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [open, projects, navigate, onOpenChange]);
-
-  useEffect(() => {
-    if (open) {
-      const t = setTimeout(initMap, 150);
-      return () => clearTimeout(t);
-    }
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [open, initMap]);
+  const query = firstProject
+    ? `${center}`
+    : projects[0]?.address || "Wien, Österreich";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,51 +86,20 @@ function ProjectMapDialog({ projects, open, onOpenChange }: { projects: Project[
           </DialogTitle>
         </DialogHeader>
         <div className="relative flex-1">
-          {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/80">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          )}
-          <div ref={mapRef} className="w-full h-full rounded-b-lg" />
+          <iframe
+            className="w-full h-full rounded-b-lg"
+            style={{ border: 0 }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={`https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=m&z=13&output=embed&iwloc=near`}
+            allowFullScreen
+          />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function addLeafletMarker(L: any, map: any, lat: number, lng: number, project: Project, navigate: (path: string) => void, closeDialog: (open: boolean) => void) {
-  const icon = L.divIcon({
-    className: "custom-map-pin",
-    html: `<div style="background:#61619e;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><div style="transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700">🏠</div></div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
-  });
-
-  const popup = `
-    <div style="font-family:sans-serif;max-width:250px;padding:4px 0">
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#333">${project.name}</div>
-      <div style="font-size:12px;color:#666;margin-bottom:8px">${formatAddr(project.address)}</div>
-      <a href="/projects/${project.id}" style="font-size:12px;color:#61619e;font-weight:600;text-decoration:none" class="map-project-link" data-project-id="${project.id}">Projekt ansehen →</a>
-    </div>
-  `;
-
-  const marker = L.marker([lat, lng], { icon }).addTo(map);
-  marker.bindPopup(popup);
-
-  marker.on("popupopen", () => {
-    setTimeout(() => {
-      const link = document.querySelector(`.map-project-link[data-project-id="${project.id}"]`);
-      if (link) {
-        link.addEventListener("click", (e: Event) => {
-          e.preventDefault();
-          closeDialog(false);
-          navigate(`/projects/${project.id}`);
-        });
-      }
-    }, 50);
-  });
-}
 
 export default function ProjektePage() {
   const { data: projects, isLoading } = useProjects();
