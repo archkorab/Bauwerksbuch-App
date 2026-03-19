@@ -798,11 +798,14 @@ export async function registerRoutes(
 
   async function updateNextInspectionDue(projectId: number) {
     const inspections = await storage.getInspections(projectId);
-    if (inspections.length === 0) {
+    const relevant = inspections.filter(
+      (i: any) => i.type === "erstpruefung" || i.type === "folgepruefung"
+    );
+    if (relevant.length === 0) {
       await storage.updateProject(projectId, { nextInspectionDue: null });
       return;
     }
-    const latestDate = inspections
+    const latestDate = relevant
       .map(i => new Date(i.date))
       .sort((a, b) => b.getTime() - a.getTime())[0];
     const nextDue = new Date(latestDate);
