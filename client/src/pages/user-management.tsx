@@ -199,7 +199,11 @@ export default function UserManagement() {
 
   const getProjectCount = (userId: string) => {
     if (!allProjects) return 0;
-    return allProjects.filter(p => p.clientId === userId || p.verwaltungId === userId).length;
+    return allProjects.filter((p: any) =>
+      p.clientId === userId ||
+      p.verwaltungId === userId ||
+      p.assignedUsers?.some((u: any) => u.id === userId)
+    ).length;
   };
 
   const getRoleIcon = (role: string) => {
