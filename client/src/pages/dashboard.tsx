@@ -213,7 +213,7 @@ export default function Dashboard() {
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-leichter-label">Leichter Mangel</p>
-            <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-leichter-count">{leichterCount}</h3>
+            <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-leichter-count">{leichterCount} <span className="text-sm font-medium text-muted-foreground">Liegenschaften</span></h3>
           </div>
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
@@ -222,7 +222,7 @@ export default function Dashboard() {
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-1" data-testid="text-grober-label">Schwerer Mangel</p>
-            <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-grober-count">{groberCount}</h3>
+            <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-grober-count">{groberCount} <span className="text-sm font-medium text-muted-foreground">Liegenschaften</span></h3>
           </div>
         </div>
       </div>
