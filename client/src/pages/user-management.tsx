@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout";
 import { displayName } from "@/lib/utils";
 import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdateUser } from "@/hooks/use-users";
-import { useProjects } from "@/hooks/use-projects";
+import { useProjects, useUpdateProject } from "@/hooks/use-projects";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { 
-  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil, Lock, Eye, EyeOff, LogIn
+  Users, Shield, UserCog, Trash2, Loader2, Mail, Building, AlertTriangle, UserPlus, Home, Briefcase, Pencil, Lock, Eye, EyeOff, LogIn, FolderGit2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,7 @@ export default function UserManagement() {
   const deleteUser = useDeleteUser();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const updateProject = useUpdateProject();
   const { toast } = useToast();
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -50,6 +51,7 @@ export default function UserManagement() {
   const [editTarget, setEditTarget] = useState<any>(null);
   const [showCreatePw, setShowCreatePw] = useState(false);
   const [showEditPw, setShowEditPw] = useState(false);
+  const [editAssignedProjects, setEditAssignedProjects] = useState<number[]>([]);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: { title: "", firstName: "", lastName: "", email: "", role: "hausverwaltung", company: "", phone: "", password: "" }
@@ -73,15 +75,42 @@ export default function UserManagement() {
       newPassword: "",
     });
     setShowEditPw(false);
+    const userProjects = (allProjects || []).filter((p: any) =>
+      p.clientId === user.id ||
+      p.verwaltungId === user.id ||
+      p.assignedUsers?.some((u: any) => u.id === user.id)
+    ).map((p: any) => p.id);
+    setEditAssignedProjects(userProjects);
     setEditTarget(user);
   };
 
-  const onEditUser = (data: any) => {
+  const onEditUser = async (data: any) => {
     if (!editTarget) return;
     const payload = { ...data };
     if (!payload.newPassword) delete payload.newPassword;
     updateUser.mutate({ userId: editTarget.id, data: payload }, {
-      onSuccess: () => {
+      onSuccess: async () => {
+        const currentProjects = (allProjects || []).filter((p: any) =>
+          p.assignedUsers?.some((u: any) => u.id === editTarget.id)
+        ).map((p: any) => p.id);
+        const toAdd = editAssignedProjects.filter(id => !currentProjects.includes(id));
+        const toRemove = currentProjects.filter((id: number) => !editAssignedProjects.includes(id));
+        for (const projectId of toAdd) {
+          const project = (allProjects || []).find((p: any) => p.id === projectId);
+          if (project) {
+            const existing = project.assignedUsers?.map((u: any) => u.id) || [];
+            if (!existing.includes(editTarget.id)) {
+              await updateProject.mutateAsync({ id: projectId, updates: { assignedUserIds: [...existing, editTarget.id] } as any });
+            }
+          }
+        }
+        for (const projectId of toRemove) {
+          const project = (allProjects || []).find((p: any) => p.id === projectId);
+          if (project) {
+            const existing = project.assignedUsers?.map((u: any) => u.id) || [];
+            await updateProject.mutateAsync({ id: projectId, updates: { assignedUserIds: existing.filter((uid: string) => uid !== editTarget.id) } as any });
+          }
+        }
         toast({ title: "Benutzer aktualisiert", description: `${data.firstName} ${data.lastName} wurde aktualisiert.` });
         setEditTarget(null);
       },
@@ -421,7 +450,7 @@ export default function UserManagement() {
       </AlertDialog>
 
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Benutzer bearbeiten</DialogTitle></DialogHeader>
           <form onSubmit={handleEditSubmit(onEditUser)} className="space-y-4">
             <div className="space-y-2">
@@ -462,6 +491,37 @@ export default function UserManagement() {
             <div className="space-y-2">
               <Label>Telefon (optional)</Label>
               <Input {...editReg("phone")} className="bg-background" data-testid="input-edit-user-phone" />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5"><FolderGit2 className="w-3.5 h-3.5" /> Projekte zuweisen</Label>
+              <div className="max-h-40 overflow-y-auto border border-border rounded-md p-2 space-y-1 bg-background" data-testid="edit-user-project-list">
+                {allProjects && allProjects.length > 0 ? allProjects.map((project: any) => (
+                  <div key={project.id} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      id={`edit-assign-project-${project.id}`}
+                      checked={editAssignedProjects.includes(project.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditAssignedProjects(prev => [...prev, project.id]);
+                        } else {
+                          setEditAssignedProjects(prev => prev.filter(id => id !== project.id));
+                        }
+                      }}
+                      className="rounded border-border"
+                      data-testid={`checkbox-edit-assign-project-${project.id}`}
+                    />
+                    <label htmlFor={`edit-assign-project-${project.id}`} className="text-sm cursor-pointer flex-1 truncate">
+                      {project.name}
+                    </label>
+                  </div>
+                )) : (
+                  <p className="text-xs text-muted-foreground py-2 text-center">Keine Projekte vorhanden</p>
+                )}
+              </div>
+              {editAssignedProjects.length > 0 && (
+                <p className="text-xs text-muted-foreground">{editAssignedProjects.length} Projekt{editAssignedProjects.length !== 1 ? 'e' : ''} zugewiesen</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Neues Passwort (optional)</Label>
