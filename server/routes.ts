@@ -602,7 +602,10 @@ export async function registerRoutes(
     const profile = await storage.getProfile(userId);
     if (profile?.role === "admin") return true;
     const project = await storage.getProject(projectId);
-    return project?.clientId === userId;
+    if (!project) return false;
+    if (project.clientId === userId) return true;
+    const isAssigned = project.assignedUsers?.some((u: any) => u.id === userId);
+    return !!isAssigned;
   }
 
   // --- Documents ---
@@ -757,8 +760,20 @@ export async function registerRoutes(
   // --- Inspections ---
   app.get(api.inspections.listAll.path, isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      const role = profile?.role || "eigentuemer";
+
       const allInsps = await storage.getAllInspections();
-      res.json(allInsps);
+
+      if (role === "admin") {
+        return res.json(allInsps);
+      }
+
+      const userProjects = await storage.getProjects(userId);
+      const userProjectIds = new Set(userProjects.map(p => p.id));
+      const filtered = allInsps.filter(insp => userProjectIds.has(insp.projectId));
+      res.json(filtered);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch inspections" });
     }
@@ -838,7 +853,13 @@ export async function registerRoutes(
   // --- Defects ---
   app.get(api.defects.summary.path, isAuthenticated, async (req: any, res) => {
     try {
-      const allProjects = await storage.getProjects();
+      const userId = req.user.claims.sub;
+      const profile = await storage.getProfile(userId);
+      const role = profile?.role || "eigentuemer";
+
+      const allProjects = role === "admin"
+        ? await storage.getProjects()
+        : await storage.getProjects(userId);
       const results: { projectId: number; mangelStatus: string }[] = [];
       for (const project of allProjects) {
         const projectInspections = await storage.getInspections(project.id);
