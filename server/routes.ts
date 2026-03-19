@@ -567,8 +567,11 @@ export async function registerRoutes(
       if (rawCreatedAt) {
         input.createdAt = new Date(rawCreatedAt);
       }
-      const project = await storage.updateProject(id, input);
-      if (!project) return res.status(404).json({ message: "Project not found" });
+      const hasFields = Object.keys(input).length > 0;
+      if (hasFields) {
+        const project = await storage.updateProject(id, input);
+        if (!project) return res.status(404).json({ message: "Project not found" });
+      }
       if (Array.isArray(assignedUserIds)) {
         await storage.setProjectAssignedUsers(id, assignedUserIds);
       }
