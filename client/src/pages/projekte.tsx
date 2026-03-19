@@ -233,6 +233,7 @@ export default function ProjektePage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filterClientId, setFilterClientId] = useState<string>("all");
   const [filterPlz, setFilterPlz] = useState<string>("all");
+  const [filterMangel, setFilterMangel] = useState<string>("all");
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
@@ -328,6 +329,7 @@ export default function ProjektePage() {
       if (s && !p.name.toLowerCase().includes(s) && !(p.address || "").toLowerCase().includes(s)) return false;
       if (filterClientId !== "all" && p.clientId !== filterClientId) return false;
       if (filterPlz !== "all" && getPlzStr(p.address || p.name || "") !== filterPlz) return false;
+      if (filterMangel !== "all" && getMangelStatus(p.id) !== filterMangel) return false;
       return true;
     });
     const extractPlz = (addr: string): number => {
@@ -521,7 +523,7 @@ export default function ProjektePage() {
       </div>
 
       {/* Filter Row */}
-      {(filterClientId !== "all" || filterPlz !== "all" || clients?.length > 0 || availablePlzs.length > 0) && (
+      {(filterClientId !== "all" || filterPlz !== "all" || filterMangel !== "all" || clients?.length > 0 || availablePlzs.length > 0) && (
         <div className="flex flex-wrap items-center gap-3 mb-5 px-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
             <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -555,9 +557,20 @@ export default function ProjektePage() {
               </SelectContent>
             </Select>
           )}
-          {(filterClientId !== "all" || filterPlz !== "all") && (
+          <Select value={filterMangel} onValueChange={setFilterMangel}>
+            <SelectTrigger className="h-8 w-48 text-xs bg-card border-border" data-testid="select-filter-mangel">
+              <SelectValue placeholder="Alle Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="kein_mangel">Kein Mangel</SelectItem>
+              <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+              <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
+            </SelectContent>
+          </Select>
+          {(filterClientId !== "all" || filterPlz !== "all" || filterMangel !== "all") && (
             <button
-              onClick={() => { setFilterClientId("all"); setFilterPlz("all"); }}
+              onClick={() => { setFilterClientId("all"); setFilterPlz("all"); setFilterMangel("all"); }}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
               data-testid="button-clear-filters"
             >
