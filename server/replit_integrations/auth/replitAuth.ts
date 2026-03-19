@@ -32,10 +32,13 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName } = req.body;
+      const { email, password, firstName, lastName, role } = req.body;
       if (!email || !password) {
         return res.status(400).json({ message: "E-Mail und Passwort sind erforderlich" });
       }
+
+      const validRoles = ["hausverwaltung", "eigentuemer"];
+      const selectedRole = validRoles.includes(role) ? role : "eigentuemer";
 
       const existing = await authStorage.getUserByEmail(email);
       if (existing) {
@@ -49,6 +52,9 @@ export async function setupAuth(app: Express) {
         firstName: firstName || null,
         lastName: lastName || null,
       });
+
+      const { storage } = await import("../../storage");
+      await storage.upsertProfile({ userId: user.id, role: selectedRole });
 
       (req.session as any).userId = user.id;
       const { password: _, ...safeUser } = user;

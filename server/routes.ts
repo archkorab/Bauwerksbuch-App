@@ -242,8 +242,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const profile = await storage.getProfile(userId);
       if (!profile) {
-        const allProfiles = await storage.getAllProfiles();
-        const role = allProfiles.length === 0 ? "admin" : "eigentuemer";
+        const role = "eigentuemer";
         const newProfile = await storage.upsertProfile({ userId, role });
         return res.json(newProfile);
       }

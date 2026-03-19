@@ -52,7 +52,7 @@ export default function UserManagement() {
   const [showEditPw, setShowEditPw] = useState(false);
 
   const { register, handleSubmit, reset, setValue, watch } = useForm({
-    defaultValues: { title: "", firstName: "", lastName: "", email: "", role: "eigentuemer", company: "", phone: "", password: "" }
+    defaultValues: { title: "", firstName: "", lastName: "", email: "", role: "hausverwaltung", company: "", phone: "", password: "" }
   });
   const selectedRole = watch("role");
 
@@ -227,9 +227,9 @@ export default function UserManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Administrator</SelectItem>
                       <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
                       <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                      <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -343,9 +343,9 @@ export default function UserManagement() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Administrator</SelectItem>
                             <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
                             <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                            <SelectItem value="admin">Administrator</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -454,9 +454,9 @@ export default function UserManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Administrator</SelectItem>
                   <SelectItem value="hausverwaltung">Hausverwaltung</SelectItem>
                   <SelectItem value="eigentuemer">Eigentümer</SelectItem>
+                  <SelectItem value="admin">Administrator</SelectItem>
                 </SelectContent>
               </Select>
             </div>

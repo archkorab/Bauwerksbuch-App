@@ -9,6 +9,7 @@ export default function LandingPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState<"hausverwaltung" | "eigentuemer">("hausverwaltung");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,7 +28,7 @@ export default function LandingPage() {
         setError("Passwort muss mindestens 6 Zeichen lang sein");
         return;
       }
-      register.mutate({ email, password, firstName, lastName }, {
+      register.mutate({ email, password, firstName, lastName, role }, {
         onError: (err: any) => setError(err.message),
       });
     }
@@ -111,30 +112,61 @@ export default function LandingPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vorname</label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                    placeholder="Max"
-                    data-testid="input-register-firstname"
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vorname</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                      placeholder="Max"
+                      data-testid="input-register-firstname"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nachname</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                      placeholder="Mustermann"
+                      data-testid="input-register-lastname"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nachname</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                    placeholder="Mustermann"
-                    data-testid="input-register-lastname"
-                  />
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kontotyp</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRole("hausverwaltung")}
+                      className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                        role === "hausverwaltung"
+                          ? "bg-primary/10 border-primary text-primary ring-2 ring-primary/30"
+                          : "bg-background border-border text-foreground hover:border-primary/50"
+                      }`}
+                      data-testid="button-role-hausverwaltung"
+                    >
+                      Hausverwaltung
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole("eigentuemer")}
+                      className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                        role === "eigentuemer"
+                          ? "bg-primary/10 border-primary text-primary ring-2 ring-primary/30"
+                          : "bg-background border-border text-foreground hover:border-primary/50"
+                      }`}
+                      data-testid="button-role-eigentuemer"
+                    >
+                      Eigentümer
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="space-y-1.5">
