@@ -251,9 +251,20 @@ export class DatabaseStorage implements IStorage {
         .leftJoin(users, eq(projects.clientId, users.id))
         .orderBy(desc(projects.createdAt));
       if (assignedIds.length > 0) {
-        result = await baseQuery.where(or(eq(projects.clientId, clientId), inArray(projects.id, assignedIds)));
+        result = await baseQuery.where(
+          or(
+            eq(projects.clientId, clientId),
+            eq(projects.verwaltungId, clientId),
+            inArray(projects.id, assignedIds)
+          )
+        );
       } else {
-        result = await baseQuery.where(eq(projects.clientId, clientId));
+        result = await baseQuery.where(
+          or(
+            eq(projects.clientId, clientId),
+            eq(projects.verwaltungId, clientId)
+          )
+        );
       }
     } else {
       result = await db
