@@ -337,7 +337,12 @@ export default function ProjektePage() {
     const base = (projects || []).filter(p => {
       const s = search.toLowerCase().trim();
       if (s && !p.name.toLowerCase().includes(s) && !(p.address || "").toLowerCase().includes(s)) return false;
-      if (filterClientId !== "all" && p.clientId !== filterClientId) return false;
+      if (filterClientId !== "all") {
+        const isMatch = p.clientId === filterClientId ||
+          (p as any).verwaltungId === filterClientId ||
+          (p as any).assignedUsers?.some((u: any) => u.id === filterClientId);
+        if (!isMatch) return false;
+      }
       if (filterPlz !== "all" && getPlzStr(p.address || p.name || "") !== filterPlz) return false;
       if (filterMangel !== "all" && getMangelStatus(p.id) !== filterMangel) return false;
       return true;
