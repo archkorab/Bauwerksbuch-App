@@ -796,6 +796,20 @@ export async function registerRoutes(
     }
   });
 
+  async function updateNextInspectionDue(projectId: number) {
+    const inspections = await storage.getInspections(projectId);
+    if (inspections.length === 0) {
+      await storage.updateProject(projectId, { nextInspectionDue: null });
+      return;
+    }
+    const latestDate = inspections
+      .map(i => new Date(i.date))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    const nextDue = new Date(latestDate);
+    nextDue.setFullYear(nextDue.getFullYear() + 1);
+    await storage.updateProject(projectId, { nextInspectionDue: nextDue });
+  }
+
   app.post(api.inspections.create.path, isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -812,6 +826,7 @@ export async function registerRoutes(
         date: new Date(body.date),
       };
       const insp = await storage.createInspection(input);
+      await updateNextInspectionDue(projectId);
       res.status(201).json(insp);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -829,6 +844,7 @@ export async function registerRoutes(
       const input = api.inspections.update.input.parse(body);
       const insp = await storage.updateInspection(id, input);
       if (!insp) return res.status(404).json({ message: "Inspection not found" });
+      await updateNextInspectionDue(insp.projectId);
       res.json(insp);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -846,7 +862,9 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Nur Administratoren können Prüfungen löschen" });
       }
       const id = parseInt(req.params.id, 10);
+      const inspection = await storage.getInspection(id);
       await storage.deleteInspection(id);
+      if (inspection) await updateNextInspectionDue(inspection.projectId);
       res.json({ message: "Inspection deleted" });
     } catch (err) {
       res.status(500).json({ message: "Failed to delete inspection" });
