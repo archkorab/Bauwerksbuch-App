@@ -291,7 +291,7 @@ export default function Dashboard() {
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
-              <FolderPlus className="w-5 h-5 text-primary" /> Zuletzt hinzugefügt
+              <FolderPlus className="w-5 h-5 text-primary" /> Letzte Prüfungen
             </h2>
             <Link href="/projekte">
               <span className="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1" data-testid="link-all-projects">
