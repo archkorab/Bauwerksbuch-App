@@ -210,7 +210,7 @@ export default function Dashboard() {
         </div>
         <div
           className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5 cursor-pointer hover:border-amber-500/40 transition-colors"
-          onClick={() => navigate("/projects?mangel=leichter_mangel")}
+          onClick={() => navigate("/projekte?mangel=leichter_mangel")}
           data-testid="card-leichter-mangel"
         >
           <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
@@ -223,7 +223,7 @@ export default function Dashboard() {
         </div>
         <div
           className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5 cursor-pointer hover:border-red-500/40 transition-colors"
-          onClick={() => navigate("/projects?mangel=grober_mangel")}
+          onClick={() => navigate("/projekte?mangel=grober_mangel")}
           data-testid="card-grober-mangel"
         >
           <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">

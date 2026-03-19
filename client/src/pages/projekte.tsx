@@ -222,9 +222,8 @@ export default function ProjektePage() {
   const deleteProject = useDeleteProject();
   const { toast } = useToast();
 
-  const [, navigate] = useLocation();
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialMangel = urlParams.get("mangel") || "all";
+  const [location, navigate] = useLocation();
+  const initialMangel = new URLSearchParams(window.location.search).get("mangel") || "all";
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
@@ -242,6 +241,15 @@ export default function ProjektePage() {
     defaultValues: { status: "active", address: "", name: "" }
   });
   const addressValue = watch("address");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const m = params.get("mangel");
+    if (m && ["kein_mangel", "leichter_mangel", "grober_mangel"].includes(m)) {
+      setFilterMangel(m);
+    }
+  }, [location]);
+
 
   const onSubmit = (data: CreateProjectForm) => {
     createProject.mutate(data, {
