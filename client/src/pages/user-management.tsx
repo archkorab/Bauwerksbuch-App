@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
-import { displayName, displayInitials } from "@/lib/utils";
+import { displayName } from "@/lib/utils";
 import { useAllUsers, useUpdateUserRole, useDeleteUser, useCreateUser, useUpdateUser } from "@/hooks/use-users";
 import { useProjects } from "@/hooks/use-projects";
 import { useAuth } from "@/hooks/use-auth";
@@ -304,14 +304,9 @@ export default function UserManagement() {
                 return (
                   <tr key={user.id} className="hover:bg-muted/40 transition-colors" data-testid={`user-row-${user.id}`}>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-primary border border-border">
-                          {displayInitials(user)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground">{userName}</p>
-                          {isCurrentUser && <span className="text-xs text-primary font-medium">(Sie)</span>}
-                        </div>
+                      <div>
+                        <p className="font-semibold text-foreground">{userName}</p>
+                        {isCurrentUser && <span className="text-xs text-primary font-medium">(Sie)</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4">
