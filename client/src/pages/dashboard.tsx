@@ -6,7 +6,7 @@ import { useAllInspections } from "@/hooks/use-inspections";
 import { useClients } from "@/hooks/use-users";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Building, 
   MapPin, 
@@ -59,6 +59,7 @@ const mangelLabels: Record<string, string> = {
 };
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: projects, isLoading } = useProjects();
   const { data: allInspections } = useAllInspections();
   const { data: profile } = useProfile();
@@ -207,7 +208,11 @@ export default function Dashboard() {
             <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-total-count">{projects?.length || 0}</h3>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
+        <div
+          className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5 cursor-pointer hover:border-amber-500/40 transition-colors"
+          onClick={() => navigate("/projects?mangel=leichter_mangel")}
+          data-testid="card-leichter-mangel"
+        >
           <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
             <AlertCircle className="w-7 h-7 text-amber-500" />
           </div>
@@ -216,7 +221,11 @@ export default function Dashboard() {
             <h3 className="text-3xl font-display font-bold text-foreground" data-testid="text-leichter-count">{leichterCount}</h3>
           </div>
         </div>
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5">
+        <div
+          className="bg-card border border-border rounded-2xl p-6 shadow-sm flex items-center gap-5 cursor-pointer hover:border-red-500/40 transition-colors"
+          onClick={() => navigate("/projects?mangel=grober_mangel")}
+          data-testid="card-grober-mangel"
+        >
           <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
             <AlertTriangle className="w-7 h-7 text-red-500" />
           </div>

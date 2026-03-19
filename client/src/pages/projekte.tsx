@@ -223,6 +223,8 @@ export default function ProjektePage() {
   const { toast } = useToast();
 
   const [, navigate] = useLocation();
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialMangel = urlParams.get("mangel") || "all";
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
@@ -233,7 +235,7 @@ export default function ProjektePage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [filterClientId, setFilterClientId] = useState<string>("all");
   const [filterPlz, setFilterPlz] = useState<string>("all");
-  const [filterMangel, setFilterMangel] = useState<string>("all");
+  const [filterMangel, setFilterMangel] = useState<string>(initialMangel);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateProjectForm>({
     resolver: zodResolver(createProjectSchema),
