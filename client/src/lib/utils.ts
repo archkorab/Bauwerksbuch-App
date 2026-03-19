@@ -29,6 +29,12 @@ export function displayInitials(user: { firstName?: string | null; lastName?: st
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`;
   }
   const company = user.profile?.company;
-  if (company) return company.substring(0, 2).toUpperCase();
+  if (company) {
+    const words = company.split(/\s+/).filter(w => w.length > 0);
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+    return company.substring(0, 2).toUpperCase();
+  }
   return '??';
 }
