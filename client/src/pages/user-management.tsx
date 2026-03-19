@@ -208,12 +208,12 @@ export default function UserManagement() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Vorname {!watch("company") && <span className="text-destructive">*</span>}</Label>
-                    <Input {...register("firstName")} required={!watch("company")} className="bg-background" data-testid="input-user-firstname" />
+                    <Label>Vorname</Label>
+                    <Input {...register("firstName")} className="bg-background" data-testid="input-user-firstname" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Nachname {!watch("company") && <span className="text-destructive">*</span>}</Label>
-                    <Input {...register("lastName")} required={!watch("company")} className="bg-background" data-testid="input-user-lastname" />
+                    <Label>Nachname</Label>
+                    <Input {...register("lastName")} className="bg-background" data-testid="input-user-lastname" />
                   </div>
                 </div>
                 <div className="space-y-2">
