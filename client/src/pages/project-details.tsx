@@ -2886,8 +2886,8 @@ export default function ProjectDetails() {
               <div className="space-y-2">
                 <Label>Verwaltung</Label>
                 <Select
-                  defaultValue={project.verwaltungId || ""}
-                  onValueChange={(val) => setEditValue("verwaltungId", val)}
+                  defaultValue={project.verwaltungId || "__privat__"}
+                  onValueChange={(val) => setEditValue("verwaltungId", val === "__privat__" ? "" : val)}
                 >
                   <SelectTrigger
                     className="bg-background border-border"
@@ -2896,6 +2896,7 @@ export default function ProjectDetails() {
                     <SelectValue placeholder="Verwaltung wählen..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__privat__">Privat</SelectItem>
                     {clients?.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {displayName(client)}
@@ -2984,7 +2985,7 @@ export default function ProjectDetails() {
                 Verwaltung
               </p>
               <p className="font-medium" data-testid="text-verwaltung">
-                {project.verwaltung ? displayName(project.verwaltung) : "—"}
+                {project.verwaltung ? displayName(project.verwaltung) : "Privat"}
               </p>
             </div>
             <div>

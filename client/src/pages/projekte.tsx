@@ -426,11 +426,12 @@ export default function ProjektePage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Verwaltung</Label>
-                  <Select onValueChange={(val) => setValue("verwaltungId", val)}>
+                  <Select onValueChange={(val) => setValue("verwaltungId", val === "__privat__" ? "" : val)}>
                     <SelectTrigger className="bg-background border-border" data-testid="select-verwaltung-projekte">
                       <SelectValue placeholder="Verwaltung wählen..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__privat__">Privat</SelectItem>
                       {clients?.map(client => (
                         <SelectItem key={client.id} value={client.id}>
                           {client.firstName} {client.lastName}{client.profile?.company ? `, ${client.profile.company}` : ''}
@@ -798,11 +799,12 @@ export default function ProjektePage() {
             </div>
             <div className="space-y-2">
               <Label>Verwaltung</Label>
-              <Select value={watchEdit("verwaltungId")} onValueChange={(val) => setEditVal("verwaltungId", val)}>
+              <Select value={watchEdit("verwaltungId") || "__privat__"} onValueChange={(val) => setEditVal("verwaltungId", val === "__privat__" ? "" : val)}>
                 <SelectTrigger className="bg-background border-border" data-testid="select-edit-verwaltung-projekte">
                   <SelectValue placeholder="Verwaltung wählen..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__privat__">Privat</SelectItem>
                   {clients?.map(client => (
                     <SelectItem key={client.id} value={client.id}>
                       {displayName(client)}
