@@ -1,12 +1,13 @@
 import { Layout } from "@/components/layout";
-import { useProjects } from "@/hooks/use-projects";
+import { useProjects, useDefectSummary } from "@/hooks/use-projects";
 import { useAllInspections } from "@/hooks/use-inspections";
 import { format, isFuture, differenceInDays, isToday } from "date-fns";
 import { de } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Building, ChevronRight, Loader2, AlertTriangle, CheckCircle2, ClipboardCheck, Search, X } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Building, ChevronRight, Loader2, AlertTriangle, CheckCircle2, ClipboardCheck, Search, X, SlidersHorizontal } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { formatAddr } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Project, Inspection } from "@shared/schema";
 
 const inspTypeLabels: Record<string, string> = {
@@ -81,7 +82,9 @@ function matchesSearch(query: string, project: Project): boolean {
 export default function CalendarPage() {
   const { data: projects, isLoading: projLoading } = useProjects();
   const { data: allInspections, isLoading: inspLoading } = useAllInspections();
+  const { data: defectSummary } = useDefectSummary();
   const [search, setSearch] = useState("");
+  const [filterMangel, setFilterMangel] = useState<string>("all");
 
   const isLoading = projLoading || inspLoading;
 
@@ -97,7 +100,17 @@ export default function CalendarPage() {
   const inspections: Inspection[] = allInspections || [];
   const q = search.trim();
 
-  const filteredProjects = q ? projectList.filter((p) => matchesSearch(q, p)) : projectList;
+  const getMangelStatus = (projectId: number) => {
+    if (!defectSummary) return "kein_mangel";
+    const entry = defectSummary.find((s: any) => s.projectId === projectId);
+    return entry?.mangelStatus || "kein_mangel";
+  };
+
+  const filteredProjects = projectList.filter((p) => {
+    if (q && !matchesSearch(q, p)) return false;
+    if (filterMangel !== "all" && getMangelStatus(p.id) !== filterMangel) return false;
+    return true;
+  });
   const filteredProjectIds = new Set(filteredProjects.map((p) => p.id));
 
   const inspByProject = new Map<number, Inspection[]>();
@@ -144,8 +157,8 @@ export default function CalendarPage() {
         <p className="text-muted-foreground">Übersicht aller Projekte mit anstehenden und durchgeführten Prüfungen.</p>
       </div>
 
-      <div className="mb-8">
-        <div className="relative max-w-md">
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <div className="relative max-w-md flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
@@ -165,6 +178,29 @@ export default function CalendarPage() {
             </button>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+          <Select value={filterMangel} onValueChange={setFilterMangel}>
+            <SelectTrigger className="h-9 w-48 text-xs bg-card border-border" data-testid="select-filter-mangel-calendar">
+              <SelectValue placeholder="Alle Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              <SelectItem value="kein_mangel">Kein Mangel</SelectItem>
+              <SelectItem value="leichter_mangel">Leichter Mangel</SelectItem>
+              <SelectItem value="grober_mangel">Schwerer Mangel</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {(search || filterMangel !== "all") && (
+          <button
+            onClick={() => { setSearch(""); setFilterMangel("all"); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="button-clear-filters-calendar"
+          >
+            <X className="w-3.5 h-3.5" /> Filter zurücksetzen
+          </button>
+        )}
       </div>
 
       {overdue.length > 0 && (

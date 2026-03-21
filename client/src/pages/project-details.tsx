@@ -634,6 +634,8 @@ async function generateInspectionPdf(inspection: any) {
           img.onerror = () => resolve({ data: src, w: 4, h: 3 });
           img.src = src;
         });
+
+      // ✅ FIXED: Added credentials, absolute URL resolution, and robust error handling
       for (const defect of defectsInOrder) {
         const urls: string[] = defect.imageUrls?.length
           ? defect.imageUrls
@@ -644,10 +646,25 @@ async function generateInspectionPdf(inspection: any) {
         const dims: { w: number; h: number }[] = [];
         for (const url of urls) {
           try {
-            const blob = await (await fetch(url)).blob();
-            const raw = await new Promise<string>((res) => {
+            const absoluteUrl = url.startsWith("http")
+              ? url
+              : `${window.location.origin}${url}`;
+            const response = await fetch(absoluteUrl, {
+              credentials: "include",
+            });
+            if (!response.ok) {
+              dims.push({ w: 4, h: 3 });
+              continue;
+            }
+            const blob = await response.blob();
+            if (!blob || blob.size === 0) {
+              dims.push({ w: 4, h: 3 });
+              continue;
+            }
+            const raw = await new Promise<string>((res, rej) => {
               const r = new FileReader();
               r.onload = () => res(r.result as string);
+              r.onerror = rej;
               r.readAsDataURL(blob);
             });
             const { data, w, h } = await compressImg(raw, 473, 355);
@@ -1861,7 +1878,6 @@ export default function ProjectDetails() {
     );
   };
 
-  // ✅ FIX: Added missing rotate functions for the CREATE (new inspection) flow
   const rotateBauteilMangelFile = async (
     bauteilIndex: number,
     mangelIndex: number,
