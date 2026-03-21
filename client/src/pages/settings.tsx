@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout";
 import { useProfile } from "@/hooks/use-profile";
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { UserCog, HardDrive, Database, FileArchive, Loader2, ChevronDown } from "lucide-react";
+import { UserCog, HardDrive, Database, FileArchive, Loader2, ChevronDown, User, Lock, Building2, Phone } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 function formatBytes(bytes: number): string {
@@ -16,6 +17,7 @@ function formatBytes(bytes: number): string {
 
 export default function SettingsPage() {
   const { data: profile } = useProfile();
+  const { user } = useAuth();
   const isAdmin = profile?.role === "admin";
   const [storageExpanded, setStorageExpanded] = useState(false);
 
@@ -40,6 +42,24 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+        <Link href="/profile" className="block" data-testid="link-settings-profile">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
+                {user?.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="Profilbild" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-primary" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors" data-testid="text-profile-settings-title">Profil</h3>
+                <p className="text-sm text-muted-foreground">Persönliche Daten, Passwort und Profilbild bearbeiten</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+
         {isAdmin && (
           <Link href="/admin/users" className="block" data-testid="link-settings-user-management">
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group">
