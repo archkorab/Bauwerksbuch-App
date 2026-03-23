@@ -635,44 +635,18 @@ async function generateInspectionPdf(inspection: any) {
           img.src = src;
         });
 
-      // ✅ FIXED: Added credentials, absolute URL resolution, and robust error handling
       for (const defect of defectsInOrder) {
-        const urls: string[] = defect.imageUrls?.length
-          ? defect.imageUrls
-          : defect.imageUrl
-            ? [defect.imageUrl]
-            : [];
+        const urls: string[] = defect.imageUrls?.length ? defect.imageUrls : (defect.imageUrl ? [defect.imageUrl] : []);
         const loaded: string[] = [];
         const dims: { w: number; h: number }[] = [];
         for (const url of urls) {
           try {
-            const absoluteUrl = url.startsWith("http")
-              ? url
-              : `${window.location.origin}${url}`;
-            const response = await fetch(absoluteUrl, {
-              credentials: "include",
-            });
-            if (!response.ok) {
-              dims.push({ w: 4, h: 3 });
-              continue;
-            }
-            const blob = await response.blob();
-            if (!blob || blob.size === 0) {
-              dims.push({ w: 4, h: 3 });
-              continue;
-            }
-            const raw = await new Promise<string>((res, rej) => {
-              const r = new FileReader();
-              r.onload = () => res(r.result as string);
-              r.onerror = rej;
-              r.readAsDataURL(blob);
-            });
+            const blob = await (await fetch(url)).blob();
+            const raw = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.readAsDataURL(blob); });
             const { data, w, h } = await compressImg(raw, 473, 355);
             loaded.push(data);
             dims.push({ w, h });
-          } catch {
-            dims.push({ w: 4, h: 3 });
-          }
+          } catch { dims.push({ w: 4, h: 3 }); }
         }
         defectImagesList.push(loaded);
         defectImageDims.push(dims);
