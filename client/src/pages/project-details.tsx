@@ -58,7 +58,6 @@ import {
   FileUp,
   Trash2,
   ImagePlus,
-  Image,
   X,
   LayoutGrid,
   List,
